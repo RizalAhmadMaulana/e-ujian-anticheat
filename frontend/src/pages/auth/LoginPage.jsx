@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useExamStore } from '../../store/useExamStore';
 import { loginApi } from '../../api/authApi';
@@ -18,25 +18,24 @@ import {
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { setCurrentUser, loginAsTeacher, loginAsStudent } = useExamStore();
+  const { setCurrentUser, loginAsTeacher, loginAsStudent, schoolSettings, fetchSchoolSettings } = useExamStore();
 
   const [activeRole, setActiveRole] = useState('TEACHER'); // 'TEACHER' | 'STUDENT'
-  const [username, setUsername] = useState('guru');
-  const [password, setPassword] = useState('guru123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  useEffect(() => {
+    fetchSchoolSettings?.();
+  }, [fetchSchoolSettings]);
+
   const handleRoleChange = (role) => {
     setActiveRole(role);
     setErrorMessage('');
-    if (role === 'TEACHER') {
-      setUsername('guru');
-      setPassword('guru123');
-    } else {
-      setUsername('siswa');
-      setPassword('siswa123');
-    }
+    setUsername('');
+    setPassword('');
   };
 
   const handleManualLogin = async (e) => {
@@ -54,7 +53,7 @@ export default function LoginPage() {
           fullName: res.user.full_name,
           role: res.user.role,
           classroom: res.user.classroom_name,
-          schoolName: 'SMK Negeri 1 Informatika',
+          schoolName: schoolSettings?.name || 'MIS RISALAH',
         });
 
         if (res.user.role === 'TEACHER') {
@@ -83,49 +82,6 @@ export default function LoginPage() {
       }
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleQuickTeacherLogin = async () => {
-    setIsLoading(true);
-    try {
-      const res = await loginApi('guru', 'guru123');
-      if (res && res.user) {
-        setCurrentUser({
-          id: res.user.id,
-          username: res.user.username,
-          fullName: res.user.full_name,
-          role: res.user.role,
-          schoolName: 'SMK Negeri 1 Informatika',
-        });
-      }
-    } catch {
-      loginAsTeacher();
-    } finally {
-      setIsLoading(false);
-      navigate('/teacher/dashboard');
-    }
-  };
-
-  const handleQuickStudentLogin = async () => {
-    setIsLoading(true);
-    try {
-      const res = await loginApi('siswa', 'siswa123');
-      if (res && res.user) {
-        setCurrentUser({
-          id: res.user.id,
-          username: res.user.username,
-          fullName: res.user.full_name,
-          role: res.user.role,
-          classroom: res.user.classroom_name,
-          schoolName: 'SMK Negeri 1 Informatika',
-        });
-      }
-    } catch {
-      loginAsStudent();
-    } finally {
-      setIsLoading(false);
-      navigate('/student/gatekeeper');
     }
   };
 
@@ -244,14 +200,6 @@ export default function LoginPage() {
                 </>
               )}
             </button>
-
-            <div className="text-[11px] text-center text-slate-400 mt-2">
-              {activeRole === 'TEACHER' ? (
-                <span>Akun Guru: <code className="text-indigo-300 font-mono font-bold">guru</code> / <code className="text-indigo-300 font-mono font-bold">guru123</code></span>
-              ) : (
-                <span>Akun Siswa: <code className="text-indigo-300 font-mono font-bold">siswa</code> / <code className="text-indigo-300 font-mono font-bold">siswa123</code></span>
-              )}
-            </div>
           </form>
 
           {/* Zero-Tolerance Security Footnote */}

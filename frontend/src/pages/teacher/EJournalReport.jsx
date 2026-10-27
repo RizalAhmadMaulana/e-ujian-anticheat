@@ -292,12 +292,12 @@ export default function EJournalReport() {
           </div>
         </div>
 
-        {/* Action Buttons Ekspor Resmi */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        {/* Action Buttons Ekspor Resmi (Responsive on Mobile) */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
           <button
             onClick={handleExportPDF}
             disabled={isExportingPdf || !currentSession}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm shadow-indigo-600/30 disabled:opacity-50"
+            className="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-sm shadow-indigo-600/30 disabled:opacity-50"
             title="Unduh Berita Acara Format PDF Resmi"
           >
             <FileDown className="w-4 h-4" />
@@ -307,7 +307,7 @@ export default function EJournalReport() {
           <button
             onClick={handleExportExcel}
             disabled={isExportingExcel || !currentSession}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm shadow-emerald-600/30 disabled:opacity-50"
+            className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-sm shadow-emerald-600/30 disabled:opacity-50"
             title="Ekspor Rekapitulasi Nilai Format Excel .xlsx"
           >
             <Download className="w-4 h-4" />
@@ -317,7 +317,7 @@ export default function EJournalReport() {
           <button
             onClick={() => window.print()}
             disabled={!currentSession}
-            className="p-2 text-slate-600 hover:text-slate-900 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition disabled:opacity-50"
+            className="hidden sm:flex p-2 text-slate-600 hover:text-slate-900 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition disabled:opacity-50 items-center justify-center"
             title="Cetak Langsung Lembar Dokumen (Print Preview)"
           >
             <Printer className="w-4 h-4" />

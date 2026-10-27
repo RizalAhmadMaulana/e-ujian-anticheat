@@ -111,6 +111,7 @@ class ExamSessionSerializer(serializers.ModelSerializer):
             'duration_minutes',
             'entry_password',
             'exit_password',
+            'supervisor_pin',
             'strict_lockdown',
             'is_active',
             'created_at'
@@ -127,6 +128,7 @@ class ExamSessionSerializer(serializers.ModelSerializer):
         data['durationMinutes'] = instance.duration_minutes
         data['entryPassword'] = instance.entry_password
         data['exitPassword'] = instance.exit_password
+        data['supervisorPin'] = instance.supervisor_pin or 'PIN-1234'
         data['strictLockdown'] = instance.strict_lockdown
         data['isActive'] = instance.is_active
         data['createdAt'] = instance.created_at.isoformat() if instance.created_at else None

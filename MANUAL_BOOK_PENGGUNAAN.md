@@ -210,11 +210,15 @@ Ruang ujian harus dibuka terlebih dahulu agar siswa dapat mulai mengerjakan.
   7. Atur **Password Keluar**:
      - Dibuat otomatis atau klik ikon acak (contoh: `KLR-8H2P`).
      - **PENTING:** *Jangan berikan Password Keluar kepada siswa sebelum waktu ujian selesai atau sebelum siswa telah menyelesaikan seluruh pekerjaannya.*
-  8. Klik **"Buka Ruang Ujian Sekarang"**.
+  8. Atur **PIN Pengawas Ruangan**:
+     - Dibuat otomatis atau klik ikon acak (contoh: `PIN-8821`).
+     - **Fungsi:** Dipegang khusus oleh guru pengawas untuk membuka kunci layar siswa yang terblokir secara mandiri langsung di gawai siswa (jalur darurat jika koneksi WebSocket terkendala).
+  9. Klik **"Buka Ruang Ujian Sekarang"**.
 
 - **Fitur Salin Password Instan (One-Click Copy ke Keyboard):**
   - **Salin Password Masuk:** Cukup **klik langsung kotak Password Masuk** (berwarna biru/indigo) pada kartu sesi. Token ujian otomatis langsung tersalin ke clipboard/keyboard perangkat Anda (muncul indikator hijau *"Tersalin!"* dan notifikasi pop-up). Anda tinggal langsung menempelkannya (`Ctrl+V` atau *Paste*) ke grup WA kelas atau catatan pengawas.
   - **Salin Password Keluar:** Cukup **klik langsung kotak Password Keluar** (berwarna merah muda) pada kartu sesi. Password keluar otomatis langsung tersalin ke clipboard/keyboard.
+  - **Salin PIN Pengawas:** Cukup **klik langsung kotak PIN Pengawas** (berwarna oranye/amber) pada kartu sesi untuk menyalin PIN pembuka kunci darurat.
   - **Edit & Hapus Sesi:** Gunakan tombol **"Edit"** untuk mengubah durasi atau waktu ujian, dan tombol **"Hapus"** untuk menghapus sesi yang sudah tidak digunakan.
 
 ---
@@ -358,8 +362,8 @@ Jika siswa melakukan salah satu hal berikut:
 **Cara Membuka Kunci:**
 1. Siswa wajib angkat tangan dan melapor kepada Guru Pengawas di ruang kelas.
 2. Guru Pengawas dapat membuka kunci dengan salah satu dari 2 cara:
-   - **Cara 1 (Dari Meja Guru):** Guru membuka menu *Live Proctoring* di laptopnya dan mengklik tombol **"Buka Kunci Layar"**.
-   - **Cara 2 (Di Meja Siswa):** Guru menghampiri gawai siswa, memasukkan PIN Pengawas lokal, lalu klik **"Buka Kunci"**.
+   - **Cara 1 (Dari Meja Guru - Remote):** Guru membuka menu *Live Proctoring* di laptopnya dan mengklik tombol hijau **"Buka Kunci Layar"**. Layar siswa seketika terbuka kembali via WebSocket.
+   - **Cara 2 (Di Meja Siswa - Darurat / Manual):** Guru menghampiri gawai siswa, memasukkan **PIN Pengawas** yang tertera pada kartu Jadwal & Sesi Ujian guru (atau master PIN `GURU123`), lalu klik **"Buka Kunci"**.
 3. Siswa kembali masuk ke mode fullscreen dan melanjutkan ujian.
 
 ---

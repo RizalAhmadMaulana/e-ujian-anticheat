@@ -69,24 +69,24 @@ export default function DashboardTeacher() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full md:w-auto shrink-0">
             <button
               onClick={() => navigate('/teacher/sessions')}
-              className="px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition"
+              className="px-4 py-2.5 sm:py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition"
             >
               <CalendarClock className="w-4 h-4" />
               <span>Jadwalkan Sesi Ujian</span>
             </button>
             <button
               onClick={() => navigate('/teacher/proctoring')}
-              className="px-4 py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-red-600/30 flex items-center gap-2 transition"
+              className="px-4 py-2.5 sm:py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs sm:text-sm font-bold shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 transition"
             >
               <Radio className="w-4 h-4 animate-pulse" />
               <span>Ruang Pengawas ({lockedStudents.length} Terkunci)</span>
             </button>
             <button
               onClick={() => navigate('/teacher/packages')}
-              className="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs sm:text-sm font-semibold border border-slate-700 flex items-center gap-2 transition"
+              className="px-4 py-2.5 sm:py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs sm:text-sm font-semibold border border-slate-700 flex items-center justify-center gap-2 transition"
             >
               <PlusCircle className="w-4 h-4 text-indigo-400" />
               <span>Buat Paket Soal</span>
@@ -96,84 +96,84 @@ export default function DashboardTeacher() {
       </div>
 
       {/* ======================================================== */}
-      {/* 2. 4 KARTU STATISTIK UTAMA */}
+      {/* 2. 4 KARTU STATISTIK UTAMA (2x2 di HP, 4 di Desktop) */}
       {/* ======================================================== */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         {/* Kartu 1: Total Paket Soal */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm hover:shadow-md transition">
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-sm hover:shadow-md transition">
           <div className="flex items-center justify-between">
-            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <div className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">
               Total Paket Soal
             </div>
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <FolderKanban className="w-5 h-5" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <FolderKanban className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
-          <div className="text-3xl font-black text-slate-800 mt-2">{examPackages.length}</div>
-          <div className="text-[11px] text-slate-500 mt-1 flex items-center gap-1.5">
-            <span className="font-semibold text-indigo-600">Hybrid Source:</span>
-            <span>Soal Mandiri & Link GForm</span>
+          <div className="text-2xl sm:text-3xl font-black text-slate-800 mt-2">{examPackages.length}</div>
+          <div className="text-[10px] sm:text-[11px] text-slate-500 mt-1 flex items-center gap-1.5">
+            <span className="font-semibold text-indigo-600">Hybrid:</span>
+            <span className="truncate">Mandiri & GForm</span>
           </div>
         </div>
 
         {/* Kartu 2: Sesi Ujian Aktif */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm hover:shadow-md transition">
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-sm hover:shadow-md transition">
           <div className="flex items-center justify-between">
-            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <div className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">
               Sesi Ujian Aktif
             </div>
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <Clock className="w-5 h-5" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
-          <div className="text-3xl font-black text-slate-800 mt-2">{activeSessions.length}</div>
-          <div className="text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Siap dikerjakan siswa di kelas
+          <div className="text-2xl sm:text-3xl font-black text-slate-800 mt-2">{activeSessions.length}</div>
+          <div className="text-[10px] sm:text-[11px] text-emerald-600 font-semibold mt-1 flex items-center gap-1">
+            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">Siap diakses kelas</span>
           </div>
         </div>
 
         {/* Kartu 3: Siswa Sedang Mengerjakan */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm hover:shadow-md transition">
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-sm hover:shadow-md transition">
           <div className="flex items-center justify-between">
-            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Siswa Mengerjakan
+            <div className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Siswa Fokus
             </div>
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-              <Users className="w-5 h-5" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <Users className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
-          <div className="text-3xl font-black text-slate-800 mt-2">{workingStudents.length}</div>
-          <div className="text-[11px] text-blue-600 font-semibold mt-1">
-            {submittedStudents.length} dari {proctoringStudents.length} siswa telah selesai
+          <div className="text-2xl sm:text-3xl font-black text-slate-800 mt-2">{workingStudents.length}</div>
+          <div className="text-[10px] sm:text-[11px] text-blue-600 font-semibold mt-1 truncate">
+            {submittedStudents.length} dari {proctoringStudents.length} siswa selesai
           </div>
         </div>
 
         {/* Kartu 4: Total Pelanggaran Terdeteksi */}
-        <div className={`bg-white rounded-2xl p-5 border transition ${
+        <div className={`bg-white rounded-2xl p-4 sm:p-5 border transition ${
           lockedStudents.length > 0 
             ? 'border-red-400 ring-4 ring-red-100 shadow-md' 
             : 'border-slate-200/90 shadow-sm'
         }`}>
           <div className="flex items-center justify-between">
-            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Total Pelanggaran
+            <div className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Pelanggaran
             </div>
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center ${
               lockedStudents.length > 0 ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-600'
             }`}>
-              <ShieldAlert className="w-5 h-5" />
+              <ShieldAlert className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
           </div>
-          <div className={`text-3xl font-black mt-2 ${lockedStudents.length > 0 ? 'text-red-600' : 'text-slate-800'}`}>
+          <div className={`text-2xl sm:text-3xl font-black mt-2 ${lockedStudents.length > 0 ? 'text-red-600' : 'text-slate-800'}`}>
             {totalViolationsCount}
           </div>
-          <div className="text-[11px] font-bold mt-1">
+          <div className="text-[10px] sm:text-[11px] font-bold mt-1">
             {lockedStudents.length > 0 ? (
-              <span className="text-red-600 flex items-center gap-1 animate-pulse">
-                <AlertTriangle className="w-3.5 h-3.5" /> {lockedStudents.length} siswa layar terkunci
+              <span className="text-red-600 flex items-center gap-1 animate-pulse truncate">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" /> {lockedStudents.length} siswa terkunci
               </span>
             ) : (
-              <span className="text-emerald-600">Tidak ada penguncian aktif</span>
+              <span className="text-emerald-600 truncate">Kondusif</span>
             )}
           </div>
         </div>

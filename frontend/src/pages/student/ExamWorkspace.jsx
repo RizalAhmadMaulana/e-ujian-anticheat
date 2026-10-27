@@ -36,7 +36,8 @@ export default function ExamWorkspace() {
     setStudentAnswer, 
     decrementTimer,
     currentUser,
-    unlockStudent
+    unlockStudent,
+    examSessions
   } = useExamStore();
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -166,8 +167,18 @@ export default function ExamWorkspace() {
     e.preventDefault();
     setUnlockError('');
 
+    const matchedSession = examSessions?.find(
+      s => s.id === activeAttempt.sessionId || 
+           s.package === selectedPackage?.id || 
+           (s.package && s.package.id === selectedPackage?.id) || 
+           s.packageId === selectedPackage?.id
+    ) || examSessions?.[0];
+    const sessionPin = (matchedSession?.supervisorPin || matchedSession?.supervisor_pin || '').trim().toUpperCase();
+
     const pin = supervisorUnlockPin.trim().toUpperCase();
-    if (pin === 'GURU123' || pin === 'MASUK123' || pin === '12345') {
+    const isValid = (sessionPin && pin === sessionPin) || pin === 'GURU123' || pin === 'MASUK123' || pin === '12345';
+
+    if (isValid) {
       if (activeAttempt.attemptId) {
         try {
           await proctoringApi.unlockStudent(activeAttempt.attemptId, supervisorUnlockPin);
@@ -180,7 +191,7 @@ export default function ExamWorkspace() {
       setSupervisorUnlockPin('');
       alert('Layar berhasil dibuka kembali oleh Pengawas!');
     } else {
-      setUnlockError('PIN Pengawas salah!');
+      setUnlockError('PIN Pengawas salah! Silakan periksa PIN Pengawas di menu Jadwal & Sesi Ujian.');
     }
   };
 

@@ -114,6 +114,7 @@ class ExamSession(models.Model):
     duration_minutes = models.IntegerField(default=60, verbose_name="Durasi (Menit)")
     entry_password = models.CharField(max_length=50, verbose_name="Password Masuk (Token Masuk)")
     exit_password = models.CharField(max_length=50, verbose_name="Password Keluar (Token Keluar)")
+    supervisor_pin = models.CharField(max_length=50, default='PIN-1234', verbose_name="PIN Pengawas Ruangan")
     strict_lockdown = models.BooleanField(default=True, verbose_name="Zero-Tolerance Lockdown Aktif")
     is_active = models.BooleanField(default=True, verbose_name="Status Sesi Aktif")
     created_at = models.DateTimeField(auto_now_add=True)

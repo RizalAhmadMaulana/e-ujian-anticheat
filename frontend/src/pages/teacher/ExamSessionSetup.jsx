@@ -41,6 +41,7 @@ export default function ExamSessionSetup() {
   const [durationMinutes, setDurationMinutes] = useState(60);
   const [entryPassword, setEntryPassword] = useState('MASUK' + Math.floor(100 + Math.random() * 900));
   const [exitPassword, setExitPassword] = useState('KELUAR' + Math.floor(100 + Math.random() * 900));
+  const [supervisorPin, setSupervisorPin] = useState('PIN-' + Math.floor(1000 + Math.random() * 9000));
 
   // Copy Feedback State
   const [copiedKey, setCopiedKey] = useState(null);
@@ -81,7 +82,11 @@ export default function ExamSessionSetup() {
     }
 
     const key = `${sessionId}-${type}`;
-    const label = type === 'entry' ? 'Password Masuk' : 'Password Keluar';
+    const label = type === 'entry' 
+      ? 'Password Masuk' 
+      : type === 'exit' 
+        ? 'Password Keluar' 
+        : 'PIN Pengawas';
     setCopiedKey(key);
     setToastMessage(`${label} "${token}" berhasil disalin ke keyboard! Tinggal paste (Ctrl+V).`);
     setTimeout(() => {
@@ -132,6 +137,15 @@ export default function ExamSessionSetup() {
     setExitPassword(res);
   };
 
+  const handleGenerateSupervisorPin = () => {
+    const chars = '0123456789';
+    let res = 'PIN-';
+    for (let i = 0; i < 4; i++) {
+      res += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setSupervisorPin(res);
+  };
+
   const handleOpenAddSession = () => {
     setIsEditing(false);
     setEditingSessionId(null);
@@ -147,6 +161,7 @@ export default function ExamSessionSetup() {
     setDurationMinutes(60);
     handleGenerateEntryPassword();
     handleGenerateExitPassword();
+    handleGenerateSupervisorPin();
     setIsModalOpen(true);
   };
 
@@ -175,6 +190,7 @@ export default function ExamSessionSetup() {
 
     setEntryPassword(session.entryPassword || session.entry_password || '');
     setExitPassword(session.exitPassword || session.exit_password || '');
+    setSupervisorPin(session.supervisorPin || session.supervisor_pin || 'PIN-1234');
     setIsModalOpen(true);
   };
 
@@ -220,6 +236,7 @@ export default function ExamSessionSetup() {
         end_time: `${examDate}T${endTime}:00Z`,
         entry_password: entryPassword.toUpperCase(),
         exit_password: exitPassword.toUpperCase(),
+        supervisor_pin: (supervisorPin || 'PIN-1234').toUpperCase(),
       };
 
       if (isEditing && editingSessionId && editingSessionId.length > 10) {
@@ -243,7 +260,7 @@ export default function ExamSessionSetup() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
             Jadwal & Sesi Ujian
@@ -254,37 +271,38 @@ export default function ExamSessionSetup() {
         </div>
         <button
           onClick={handleOpenAddSession}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-xs sm:text-sm font-bold hover:bg-indigo-700 shadow-md shadow-indigo-600/25 transition"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-indigo-600/25 transition duration-150 shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span>Buka Sesi Ujian Baru</span>
         </button>
       </div>
 
-      {/* Mandatory Security Information Panel */}
-      <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-950 via-slate-900 to-slate-900 border border-emerald-500/40 text-emerald-200 shadow-lg relative overflow-hidden">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
-              <ShieldCheck className="w-6 h-6" />
+      {/* Mandatory Security Information Panel - Compact & Responsive */}
+      <div className="rounded-2xl bg-gradient-to-r from-emerald-950 via-slate-900 to-slate-900 border border-emerald-500/30 text-emerald-200 shadow-md p-3.5 sm:p-5 relative overflow-hidden">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 shrink-0">
+              <ShieldCheck className="w-5 h-5" />
             </div>
-            <div className="space-y-1">
+            <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-extrabold text-white text-sm">
-                  Protokol Keamanan Zero-Tolerance Lockdown
+                <span className="font-extrabold text-white text-xs sm:text-sm tracking-tight">
+                  Zero-Tolerance Lockdown
                 </span>
-                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500 text-slate-950 uppercase tracking-wider">
-                  AKTIF PERMANEN (Mandatory ON)
+                <span className="text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-slate-950 uppercase tracking-wider">
+                  Mandatory ON
                 </span>
               </div>
-              <p className="text-xs text-slate-300 max-w-3xl leading-relaxed">
-                Seluruh sesi ujian menerapkan penguncian layar penuh (*Mandatory Fullscreen*), deteksi buka tab lain (*Page Visibility*), deteksi ganti aplikasi (*Window Blur* dengan *Iframe Focus Guard* untuk Google Form), serta pemblokiran klik kanan, copy-paste, dan pintasan keyboard secara mutlak.
+              <p className="text-[11px] text-slate-300 hidden sm:block mt-1 leading-relaxed max-w-3xl">
+                Penguncian layar penuh (*Mandatory Fullscreen*), deteksi pindah tab & aplikasi (*Window Blur & Focus Guard*), serta pemblokiran copy-paste aktif otomatis pada setiap sesi.
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-xs px-3 py-1.5 rounded-lg bg-emerald-900/60 border border-emerald-500/30 text-emerald-300 font-bold flex items-center gap-1.5">
-              <Check className="w-3.5 h-3.5" /> Terproteksi Sistem
+          <div className="shrink-0">
+            <span className="text-[10px] sm:text-xs px-2.5 py-1 rounded-lg bg-emerald-900/60 border border-emerald-500/30 text-emerald-300 font-bold flex items-center gap-1.5">
+              <Check className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden xs:inline">Terproteksi</span>
             </span>
           </div>
         </div>
@@ -293,7 +311,7 @@ export default function ExamSessionSetup() {
       {/* Grid Kartu Sesi Ujian Aktif */}
       <div className="space-y-4">
         {examSessions.length === 0 && (
-          <div className="bg-white rounded-2xl p-12 text-center border border-dashed border-slate-300">
+          <div className="bg-white rounded-2xl p-8 sm:p-12 text-center border border-dashed border-slate-300">
             <CalendarClock className="w-12 h-12 text-slate-300 mx-auto mb-3" />
             <h4 className="font-bold text-slate-700 text-base">Belum Ada Sesi Ujian Aktif</h4>
             <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
@@ -306,125 +324,168 @@ export default function ExamSessionSetup() {
           const displayDate = session.date || (session.start_time ? session.start_time.split('T')[0] : '-');
           const displayStart = session.startTime || (session.start_time?.includes('T') ? session.start_time.split('T')[1].substring(0, 5) : '08:00');
           const displayEnd = session.endTime || (session.end_time?.includes('T') ? session.end_time.split('T')[1].substring(0, 5) : '09:30');
+          const isGForm = session.examType === 'EXTERNAL_LINK' || session.exam_type === 'EXTERNAL_LINK';
+          const entryVal = session.entryPassword || session.entry_password || '-';
+          const exitVal = session.exitPassword || session.exit_password || '-';
+          const pinVal = session.supervisorPin || session.supervisor_pin || 'PIN-1234';
 
           return (
             <div
               key={session.id}
-              className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-sm hover:border-indigo-300 transition flex flex-col lg:flex-row lg:items-center justify-between gap-6"
+              className="bg-white rounded-2xl p-5 sm:p-6 border-2 border-slate-300 hover:border-indigo-500 shadow-md hover:shadow-xl transition-all duration-200 space-y-4"
             >
-              {/* Bagian Kiri: Info Sesi & Mapel */}
-              <div className="space-y-2">
+              {/* Baris 1: Header Kartu (Kelas, Tipe Soal, & Tombol Aksi Edit/Hapus Tebal) */}
+              <div className="flex items-center justify-between gap-2 border-b-2 border-slate-100 pb-3.5">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-bold px-3 py-1 rounded-md bg-indigo-100 text-indigo-800">
+                  <span className="text-xs font-black px-3 py-1 rounded-lg bg-indigo-600 text-white shadow-sm uppercase tracking-wider border-2 border-indigo-500">
                     {session.classroom || session.classroom_name || 'Semua Kelas'}
                   </span>
-                  <span className="text-xs font-medium px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 flex items-center gap-1">
-                    <CalendarClock className="w-3.5 h-3.5 text-slate-500" />
-                    {displayDate} ({displayStart} - {displayEnd})
-                  </span>
-                  <span className="text-xs font-bold px-2.5 py-1 rounded-md bg-amber-100 text-amber-800 flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 text-amber-600" />
-                    Durasi: {session.durationMinutes || session.duration_minutes || 60} Menit
-                  </span>
-                  {(session.examType === 'EXTERNAL_LINK' || session.exam_type === 'EXTERNAL_LINK') ? (
-                    <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-purple-100 text-purple-700 flex items-center gap-1">
-                      <ExternalLink className="w-3 h-3" /> Google Form
+                  {isGForm ? (
+                    <span className="text-xs font-black px-3 py-1 rounded-lg bg-purple-100 text-purple-900 border-2 border-purple-300 flex items-center gap-1.5 shadow-sm">
+                      <ExternalLink className="w-3.5 h-3.5 text-purple-600" /> Google Form
                     </span>
                   ) : (
-                    <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-100 text-emerald-700 flex items-center gap-1">
-                      <BookOpen className="w-3 h-3" /> Soal Mandiri
+                    <span className="text-xs font-black px-3 py-1 rounded-lg bg-emerald-100 text-emerald-900 border-2 border-emerald-300 flex items-center gap-1.5 shadow-sm">
+                      <BookOpen className="w-3.5 h-3.5 text-emerald-600" /> Soal Mandiri
                     </span>
                   )}
+                  <span className="text-xs font-black px-2.5 py-1 rounded-lg bg-amber-100 text-amber-900 border-2 border-amber-300 flex items-center gap-1 shadow-sm">
+                    <Clock className="w-3.5 h-3.5 text-amber-600" />
+                    {session.durationMinutes || session.duration_minutes || 60} Menit
+                  </span>
                 </div>
 
-                <h3 className="font-extrabold text-slate-900 text-base lg:text-lg">
-                  {session.title}
-                </h3>
-                <div className="text-xs text-slate-500">
-                  Mata Pelajaran: <strong className="text-indigo-700">{session.subjectName || session.subject_name}</strong>
-                </div>
-              </div>
-
-              {/* Bagian Kanan: Box Password & Tombol Aksi */}
-              <div className="flex flex-wrap items-center gap-3 self-start lg:self-center">
-                {/* Box Password Masuk (Klik untuk Salin) */}
-                <button
-                  type="button"
-                  onClick={() => handleCopyToken(session.entryPassword || session.entry_password, 'entry', session.id)}
-                  className={`p-2.5 sm:p-3 rounded-xl border text-xs text-left transition-all duration-200 group relative cursor-pointer select-none ${
-                    copiedKey === `${session.id}-entry`
-                      ? 'bg-emerald-50 border-emerald-400 ring-2 ring-emerald-300 shadow-sm'
-                      : 'bg-indigo-50/90 hover:bg-indigo-100 border-indigo-200 hover:border-indigo-300 hover:shadow-md'
-                  }`}
-                  title="Klik untuk menyalin Password Masuk ke keyboard"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-[10px] text-indigo-700 font-bold uppercase tracking-wider flex items-center gap-1">
-                      <KeyRound className="w-3 h-3 text-indigo-600" /> Password Masuk
-                    </span>
-                    {copiedKey === `${session.id}-entry` ? (
-                      <span className="text-[10px] font-extrabold text-emerald-700 flex items-center gap-0.5 animate-pulse bg-emerald-100 px-1.5 py-0.5 rounded">
-                        <Check className="w-3 h-3" /> Tersalin!
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-semibold text-indigo-600 opacity-60 group-hover:opacity-100 flex items-center gap-0.5 transition-opacity">
-                        <Copy className="w-3 h-3" /> Salin
-                      </span>
-                    )}
-                  </div>
-                  <div className="font-mono font-black text-indigo-950 text-base mt-0.5 tracking-wider">
-                    {session.entryPassword || session.entry_password}
-                  </div>
-                </button>
-
-                {/* Box Password Keluar (Klik untuk Salin) */}
-                <button
-                  type="button"
-                  onClick={() => handleCopyToken(session.exitPassword || session.exit_password, 'exit', session.id)}
-                  className={`p-2.5 sm:p-3 rounded-xl border text-xs text-left transition-all duration-200 group relative cursor-pointer select-none ${
-                    copiedKey === `${session.id}-exit`
-                      ? 'bg-emerald-50 border-emerald-400 ring-2 ring-emerald-300 shadow-sm'
-                      : 'bg-red-50/90 hover:bg-red-100 border-red-200 hover:border-red-300 hover:shadow-md'
-                  }`}
-                  title="Klik untuk menyalin Password Keluar ke keyboard"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-[10px] text-red-700 font-bold uppercase tracking-wider flex items-center gap-1">
-                      <Lock className="w-3 h-3 text-red-600" /> Password Keluar
-                    </span>
-                    {copiedKey === `${session.id}-exit` ? (
-                      <span className="text-[10px] font-extrabold text-emerald-700 flex items-center gap-0.5 animate-pulse bg-emerald-100 px-1.5 py-0.5 rounded">
-                        <Check className="w-3 h-3" /> Tersalin!
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-semibold text-red-600 opacity-60 group-hover:opacity-100 flex items-center gap-0.5 transition-opacity">
-                        <Copy className="w-3 h-3" /> Salin
-                      </span>
-                    )}
-                  </div>
-                  <div className="font-mono font-black text-red-950 text-base mt-0.5 tracking-wider">
-                    {session.exitPassword || session.exit_password}
-                  </div>
-                </button>
-
-                <div className="flex items-center gap-2">
+                {/* Tombol Aksi Cepat Edit & Hapus (Tebal & Berdimensi) */}
+                <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     onClick={() => handleOpenEditSession(session)}
-                    className="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                    className="px-3 py-1.5 bg-slate-50 hover:bg-indigo-50 border-2 border-slate-200 hover:border-indigo-400 text-slate-800 hover:text-indigo-700 rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow-sm active:scale-95"
                     title="Edit Sesi Ujian"
                   >
-                    <Edit3 className="w-3.5 h-3.5" />
-                    <span>Edit</span>
+                    <Edit3 className="w-3.5 h-3.5 text-indigo-600" />
+                    <span className="hidden sm:inline">Edit</span>
                   </button>
                   <button
                     onClick={() => handleDeleteSession(session.id, session.title)}
-                    className="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                    className="px-3 py-1.5 bg-slate-50 hover:bg-rose-50 border-2 border-slate-200 hover:border-rose-400 text-slate-800 hover:text-rose-700 rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow-sm active:scale-95"
                     title="Hapus Sesi Ujian"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Hapus</span>
+                    <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                    <span className="hidden sm:inline">Hapus</span>
                   </button>
                 </div>
+              </div>
+
+              {/* Baris 2: Judul Sesi, Mapel, & Jadwal */}
+              <div className="space-y-1">
+                <h3 className="font-black text-slate-900 text-base sm:text-xl tracking-tight leading-snug">
+                  {session.title}
+                </h3>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs sm:text-sm text-slate-600 font-semibold">
+                  <div>
+                    Mata Pelajaran: <strong className="text-indigo-700 font-black">{session.subjectName || session.subject_name || '-'}</strong>
+                  </div>
+                  <div className="flex items-center gap-1 text-slate-700 font-bold">
+                    <CalendarClock className="w-4 h-4 text-indigo-500" />
+                    <span>{displayDate} ({displayStart} - {displayEnd})</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Baris 3: TRIO TOKEN BOX TEBAL (Password Masuk, Password Keluar, PIN Pengawas) */}
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 pt-1">
+                {/* 1. Box Password Masuk (Tebal & Kontras) */}
+                <button
+                  type="button"
+                  onClick={() => handleCopyToken(entryVal, 'entry', session.id)}
+                  className={`p-2.5 sm:p-3.5 rounded-2xl border-2 text-center transition-all duration-200 group relative cursor-pointer active:scale-95 select-none shadow-sm hover:shadow-md ${
+                    copiedKey === `${session.id}-entry`
+                      ? 'bg-emerald-50 border-emerald-500 ring-4 ring-emerald-300'
+                      : 'bg-indigo-50/90 hover:bg-indigo-100 border-indigo-300 hover:border-indigo-600'
+                  }`}
+                  title="Klik untuk menyalin Password Masuk ke keyboard"
+                >
+                  <div className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-indigo-700 flex items-center justify-center gap-1.5 mb-0.5">
+                    <KeyRound className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                    <span className="truncate">Masuk</span>
+                  </div>
+                  <div className="font-mono font-black text-sm sm:text-base md:text-lg text-indigo-950 tracking-wider truncate py-0.5">
+                    {entryVal}
+                  </div>
+                  <div className="text-[9px] sm:text-xs font-black mt-0.5">
+                    {copiedKey === `${session.id}-entry` ? (
+                      <span className="text-emerald-700 flex items-center justify-center gap-0.5 animate-pulse">
+                        <Check className="w-3 h-3" /> Tersalin!
+                      </span>
+                    ) : (
+                      <span className="text-indigo-600 group-hover:text-indigo-800 flex items-center justify-center gap-1 opacity-90 group-hover:opacity-100">
+                        <Copy className="w-3 h-3" /> Salin
+                      </span>
+                    )}
+                  </div>
+                </button>
+
+                {/* 2. Box Password Keluar (Tebal & Kontras) */}
+                <button
+                  type="button"
+                  onClick={() => handleCopyToken(exitVal, 'exit', session.id)}
+                  className={`p-2.5 sm:p-3.5 rounded-2xl border-2 text-center transition-all duration-200 group relative cursor-pointer active:scale-95 select-none shadow-sm hover:shadow-md ${
+                    copiedKey === `${session.id}-exit`
+                      ? 'bg-emerald-50 border-emerald-500 ring-4 ring-emerald-300'
+                      : 'bg-rose-50/90 hover:bg-rose-100 border-rose-300 hover:border-rose-600'
+                  }`}
+                  title="Klik untuk menyalin Password Keluar ke keyboard"
+                >
+                  <div className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-rose-700 flex items-center justify-center gap-1.5 mb-0.5">
+                    <Lock className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                    <span className="truncate">Keluar</span>
+                  </div>
+                  <div className="font-mono font-black text-sm sm:text-base md:text-lg text-rose-950 tracking-wider truncate py-0.5">
+                    {exitVal}
+                  </div>
+                  <div className="text-[9px] sm:text-xs font-black mt-0.5">
+                    {copiedKey === `${session.id}-exit` ? (
+                      <span className="text-emerald-700 flex items-center justify-center gap-0.5 animate-pulse">
+                        <Check className="w-3 h-3" /> Tersalin!
+                      </span>
+                    ) : (
+                      <span className="text-rose-600 group-hover:text-rose-800 flex items-center justify-center gap-1 opacity-90 group-hover:opacity-100">
+                        <Copy className="w-3 h-3" /> Salin
+                      </span>
+                    )}
+                  </div>
+                </button>
+
+                {/* 3. Box PIN Pengawas Ruangan (Tebal & Kontras) */}
+                <button
+                  type="button"
+                  onClick={() => handleCopyToken(pinVal, 'supervisor', session.id)}
+                  className={`p-2.5 sm:p-3.5 rounded-2xl border-2 text-center transition-all duration-200 group relative cursor-pointer active:scale-95 select-none shadow-sm hover:shadow-md ${
+                    copiedKey === `${session.id}-supervisor`
+                      ? 'bg-emerald-50 border-emerald-500 ring-4 ring-emerald-300'
+                      : 'bg-amber-50/90 hover:bg-amber-100 border-amber-300 hover:border-amber-600'
+                  }`}
+                  title="Klik untuk menyalin PIN Pengawas ke keyboard"
+                >
+                  <div className="text-[10px] sm:text-xs font-black uppercase tracking-wider text-amber-700 flex items-center justify-center gap-1.5 mb-0.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <span className="truncate">PIN Guru</span>
+                  </div>
+                  <div className="font-mono font-black text-sm sm:text-base md:text-lg text-amber-950 tracking-wider truncate py-0.5">
+                    {pinVal}
+                  </div>
+                  <div className="text-[9px] sm:text-xs font-black mt-0.5">
+                    {copiedKey === `${session.id}-supervisor` ? (
+                      <span className="text-emerald-700 flex items-center justify-center gap-0.5 animate-pulse">
+                        <Check className="w-3 h-3" /> Tersalin!
+                      </span>
+                    ) : (
+                      <span className="text-amber-700 group-hover:text-amber-900 flex items-center justify-center gap-1 opacity-90 group-hover:opacity-100">
+                        <Copy className="w-3 h-3" /> Salin
+                      </span>
+                    )}
+                  </div>
+                </button>
               </div>
             </div>
           );
@@ -438,7 +499,7 @@ export default function ExamSessionSetup() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={isEditing ? 'Edit Ruang Sesi Ujian' : 'Buka Ruang Sesi Ujian Baru'}
-        maxWidth="max-w-xl"
+        maxWidth="max-w-2xl"
       >
         <form onSubmit={handleSaveSession} className="space-y-4">
           <div>
@@ -561,8 +622,8 @@ export default function ExamSessionSetup() {
             </div>
           </div>
 
-          {/* Konfigurasi Password Masuk & Password Keluar */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+          {/* Konfigurasi Password Masuk, Password Keluar & PIN Pengawas */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2">
             <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-200 space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-bold text-indigo-900 uppercase tracking-wider flex items-center gap-1">
@@ -607,6 +668,29 @@ export default function ExamSessionSetup() {
                 className="w-full px-3 py-2 border border-red-300 rounded-lg text-sm font-mono font-bold tracking-wider text-red-950 bg-white uppercase text-center"
               />
               <span className="text-[10px] text-slate-500 block">Diberikan setelah jawaban dikirim</span>
+            </div>
+
+            <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-600" /> PIN Pengawas
+                </label>
+                <button
+                  type="button"
+                  onClick={handleGenerateSupervisorPin}
+                  className="text-[10px] text-amber-600 hover:underline flex items-center gap-0.5"
+                >
+                  <Shuffle className="w-3 h-3" /> Acak
+                </button>
+              </div>
+              <input
+                type="text"
+                required
+                value={supervisorPin}
+                onChange={(e) => setSupervisorPin(e.target.value.toUpperCase())}
+                className="w-full px-3 py-2 border border-amber-300 rounded-lg text-sm font-mono font-bold tracking-wider text-amber-950 bg-white uppercase text-center"
+              />
+              <span className="text-[10px] text-slate-500 block">Dipegang guru untuk buka kunci lokal</span>
             </div>
           </div>
 

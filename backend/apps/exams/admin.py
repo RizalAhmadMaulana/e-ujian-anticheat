@@ -47,11 +47,12 @@ class ExamSessionAdmin(admin.ModelAdmin):
         'duration_minutes', 
         'entry_password', 
         'exit_password', 
+        'supervisor_pin',
         'is_active', 
         'start_time'
     )
     list_filter = ('is_active', 'classroom', 'package__subject_name')
-    search_fields = ('package__title', 'classroom__name', 'entry_password', 'exit_password')
+    search_fields = ('package__title', 'classroom__name', 'entry_password', 'exit_password', 'supervisor_pin')
     ordering = ('-created_at',)
 
     def package_title(self, obj):

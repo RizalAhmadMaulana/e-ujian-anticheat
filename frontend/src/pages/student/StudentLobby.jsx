@@ -23,7 +23,14 @@ import {
 
 export default function StudentLobby() {
   const navigate = useNavigate();
-  const { currentUser, setScreenOrientation, logout, examSessions } = useExamStore();
+  const { 
+    currentUser, 
+    setScreenOrientation, 
+    logout, 
+    examSessions, 
+    schoolSettings, 
+    fetchSchoolSettings 
+  } = useExamStore();
 
   // Modals State
   const [isOrientationModalOpen, setIsOrientationModalOpen] = useState(false);
@@ -34,11 +41,12 @@ export default function StudentLobby() {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
+    fetchSchoolSettings?.();
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [fetchSchoolSettings]);
 
   // Format Jam Digital Real-Time
   const hours = currentTime.getHours();
@@ -221,7 +229,7 @@ export default function StudentLobby() {
 
       {/* Footer Info */}
       <footer className="py-4 text-center text-slate-500 text-xs border-t border-slate-900">
-        SMK Negeri 1 Informatika • Portal Ujian Anti-Cheat Berbasis Web & ExamBrowser
+        {schoolSettings?.name || 'Portal Asesmen Sekolah'} • Portal Ujian Anti-Cheat Berbasis Web & ExamBrowser
       </footer>
 
       {/* ======================================================== */}

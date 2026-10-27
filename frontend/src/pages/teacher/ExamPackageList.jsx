@@ -308,7 +308,7 @@ export default function ExamPackageList() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
       {/* Header Halaman */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
             Bank Soal & Paket Ujian
@@ -319,7 +319,7 @@ export default function ExamPackageList() {
         </div>
         <button
           onClick={handleOpenAdd}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-xs sm:text-sm font-bold hover:bg-indigo-700 shadow-md shadow-indigo-600/25 transition"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-indigo-600/25 transition shrink-0"
         >
           <Plus className="w-4 h-4" />
           <span>Tambah Paket Soal Baru</span>
@@ -327,9 +327,9 @@ export default function ExamPackageList() {
       </div>
 
       {/* Grid Kartu Paket Ujian */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
         {examPackages.length === 0 ? (
-          <div className="col-span-full py-16 text-center bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-3">
+          <div className="col-span-full py-12 sm:py-16 text-center bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-3">
             <FolderKanban className="w-12 h-12 text-slate-300 mx-auto" />
             <h3 className="font-bold text-slate-700 text-base">Belum Ada Paket Soal Terdaftar</h3>
             <p className="text-xs text-slate-400">Silakan buat paket soal asesmen baru untuk memulai ujian.</p>
@@ -353,93 +353,95 @@ export default function ExamPackageList() {
           return (
             <div
               key={pkg.id}
-              className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-sm hover:border-indigo-400 hover:shadow-md transition flex flex-col justify-between"
+              className="bg-white rounded-2xl p-5 sm:p-6 border-2 border-slate-300 hover:border-indigo-500 shadow-md hover:shadow-xl transition-all duration-200 flex flex-col justify-between space-y-4"
             >
               <div>
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <span
-                    className={`text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5 ${
+                    className={`text-xs font-black px-3 py-1 rounded-lg flex items-center gap-1.5 shadow-sm border-2 ${
                       pkgExamType === 'NATIVE_QUESTIONS'
-                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                        : 'bg-purple-100 text-purple-800 border border-purple-200'
+                        ? 'bg-emerald-100 text-emerald-950 border-emerald-400'
+                        : 'bg-purple-100 text-purple-950 border-purple-400'
                     }`}
                   >
                     {pkgExamType === 'NATIVE_QUESTIONS' ? (
                       <>
-                        <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Soal Mandiri (Native)</span>
+                        <BookOpen className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>Soal Mandiri</span>
                       </>
                     ) : (
                       <>
-                        <ExternalLink className="w-3.5 h-3.5 text-purple-600" />
-                        <span>Tautan Google Form</span>
+                        <ExternalLink className="w-3.5 h-3.5 text-purple-700" />
+                        <span>Google Form</span>
                       </>
                     )}
                   </span>
                   {pkgClass && (
-                    <span className="text-xs font-bold px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-600">
+                    <span className="text-xs font-black px-3 py-1 rounded-lg bg-slate-100 text-slate-800 border-2 border-slate-300 uppercase tracking-wider shadow-sm">
                       {pkgClass}
                     </span>
                   )}
                 </div>
 
-                <h3 className="font-extrabold text-slate-900 text-base mb-1.5 leading-snug">
+                <h3 className="font-black text-slate-900 text-base sm:text-lg mb-1 leading-snug tracking-tight">
                   {pkgTitle}
                 </h3>
-                <div className="text-xs text-slate-500 mb-4">
-                  Mata Pelajaran: <strong className="text-indigo-700">{pkgSubject}</strong>
+                <div className="text-xs sm:text-sm text-slate-600 font-semibold mb-3">
+                  Mata Pelajaran: <strong className="text-indigo-700 font-black">{pkgSubject}</strong>
                 </div>
 
                 {pkgExamType === 'NATIVE_QUESTIONS' ? (
-                  <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70 text-xs text-slate-700 space-y-1 mb-4">
-                    <div className="flex items-center justify-between font-semibold">
-                      <span>Jumlah Butir Soal:</span>
-                      <span className="text-emerald-700 font-bold">{pkg.questions?.length || 0} Soal</span>
+                  <div className="p-3.5 rounded-xl bg-slate-50/90 border-2 border-slate-200 text-xs text-slate-700 space-y-1.5 mb-2 shadow-sm">
+                    <div className="flex items-center justify-between font-bold">
+                      <span className="text-slate-600">Jumlah Butir Soal:</span>
+                      <span className="text-emerald-800 font-black bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-md">
+                        {pkg.questions?.length || 0} Soal
+                      </span>
                     </div>
-                    <div className="text-[11px] text-slate-500">
+                    <div className="text-[11px] text-slate-500 font-medium">
                       Otomatisasi kalkulasi nilai pilihan ganda & penilaian esai.
                     </div>
                   </div>
                 ) : (
-                  <div className="p-3.5 rounded-xl bg-purple-50/70 border border-purple-200/70 text-xs text-purple-900 space-y-1.5 mb-4">
-                    <div className="font-semibold flex items-center gap-1.5">
-                      <ExternalLink className="w-3.5 h-3.5 text-purple-600" />
+                  <div className="p-3.5 rounded-xl bg-purple-50/80 border-2 border-purple-200 text-xs text-purple-950 space-y-2 mb-2 shadow-sm">
+                    <div className="font-bold flex items-center gap-1.5 text-purple-900">
+                      <ExternalLink className="w-3.5 h-3.5 text-purple-700" />
                       <span>Link Terproteksi (Secure Iframe):</span>
                     </div>
-                    <div className="font-mono text-[11px] text-slate-600 truncate bg-white p-2 rounded-lg border border-purple-200">
+                    <div className="font-mono text-xs text-purple-950 truncate bg-white p-2.5 rounded-lg border-2 border-purple-200 font-bold shadow-inner">
                       {pkgUrl}
                     </div>
                   </div>
                 )}
               </div>
 
-              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                <span className="text-[11px] text-slate-400">
+              <div className="flex items-center justify-between pt-3.5 border-t-2 border-slate-100 flex-wrap gap-2">
+                <span className="text-xs font-semibold text-slate-400">
                   Dibuat: {formattedDate}
                 </span>
-                <div className="flex items-center gap-1.5 flex-wrap">
+                <div className="flex items-center gap-2">
                   {pkgExamType === 'EXTERNAL_LINK' && (
                     <button
                       onClick={() => handleOpenPreview(pkgUrl)}
-                      className="px-2.5 py-1.5 text-xs font-bold text-purple-700 bg-purple-100 hover:bg-purple-200 rounded-lg transition flex items-center gap-1"
+                      className="px-3 py-1.5 text-xs font-black text-purple-800 bg-purple-50 hover:bg-purple-100 border-2 border-purple-300 rounded-xl transition flex items-center gap-1.5 shadow-sm active:scale-95"
                     >
-                      <Eye className="w-3.5 h-3.5" /> Preview
+                      <Eye className="w-3.5 h-3.5 text-purple-700" /> Preview
                     </button>
                   )}
                   <button
                     onClick={() => handleOpenEdit(pkg)}
-                    className="px-2.5 py-1.5 text-xs font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition flex items-center gap-1"
+                    className="px-3 py-1.5 text-xs font-black text-amber-800 bg-amber-50 hover:bg-amber-100 border-2 border-amber-300 rounded-xl transition flex items-center gap-1.5 shadow-sm active:scale-95"
                     title="Edit Paket Soal"
                   >
-                    <Edit3 className="w-3.5 h-3.5" />
+                    <Edit3 className="w-3.5 h-3.5 text-amber-700" />
                     <span>Edit</span>
                   </button>
                   <button
                     onClick={() => handleDeletePackage(pkg.id, pkgTitle)}
-                    className="p-1.5 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition flex items-center gap-1"
+                    className="p-2 text-xs font-black text-rose-700 bg-rose-50 hover:bg-rose-100 border-2 border-rose-300 rounded-xl transition flex items-center gap-1.5 shadow-sm active:scale-95"
                     title="Hapus Paket Soal"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-3.5 h-3.5 text-rose-600" />
                   </button>
                 </div>
               </div>

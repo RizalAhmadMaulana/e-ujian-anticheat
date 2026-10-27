@@ -265,18 +265,18 @@ export default function LiveProctoring() {
         </div>
       </div>
 
-      {/* Bar Filter Sesi Ujian & Ringkasan Status */}
-      <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-sm space-y-4">
+      {/* Bar Filter Sesi Ujian & Ringkasan Status (Tebal & Berdimensi) */}
+      <div className="bg-white rounded-2xl p-5 border-2 border-slate-200 shadow-md space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
           {/* Pilih Sesi Ujian */}
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+            <label className="block text-[11px] font-black uppercase tracking-wider text-slate-600 mb-1">
               Pilih Sesi Ujian Aktif:
             </label>
             <select
               value={selectedSessionId}
               onChange={(e) => setSelectedSessionId(e.target.value)}
-              className="w-full text-xs sm:text-sm font-semibold rounded-xl border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 py-2.5 bg-slate-50 text-slate-800"
+              className="w-full text-xs sm:text-sm font-bold rounded-xl border-2 border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 py-2.5 bg-slate-50 text-slate-900 shadow-sm"
             >
               {availableSessions.map((ses) => (
                 <option key={ses.id} value={ses.id}>
@@ -288,63 +288,63 @@ export default function LiveProctoring() {
 
           {/* Bar Pencarian Siswa */}
           <div className="md:col-span-2">
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+            <label className="block text-[11px] font-black uppercase tracking-wider text-slate-600 mb-1">
               Cari Nama atau NISN Siswa:
             </label>
             <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
               <input
                 type="text"
                 placeholder="Ketik nama atau nomor induk..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 text-xs sm:text-sm rounded-xl border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 bg-white"
+                className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl border-2 border-slate-300 focus:border-indigo-500 focus:ring-indigo-500 bg-white shadow-sm"
               />
             </div>
           </div>
         </div>
 
-        {/* 4 Tombol Filter Tab Status */}
-        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
+        {/* 4 Tombol Filter Tab Status (Mobile Scrollable & Tebal) */}
+        <div className="flex items-center gap-2 pt-2 border-t-2 border-slate-100 overflow-x-auto pb-1.5 sm:flex-wrap">
           <button
             onClick={() => setStatusFilter('ALL')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition flex items-center gap-1.5 shrink-0 border-2 ${
               statusFilter === 'ALL'
-                ? 'bg-slate-900 text-white shadow-sm'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
+                : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200 hover:border-slate-300'
             }`}
           >
             <span>Semua Siswa</span>
-            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-slate-700 text-white">
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-slate-700 text-white font-bold">
               {totalCount}
             </span>
           </button>
 
           <button
             onClick={() => setStatusFilter('WORKING')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition flex items-center gap-1.5 shrink-0 border-2 ${
               statusFilter === 'WORKING'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                : 'bg-emerald-50 text-emerald-900 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300'
             }`}
           >
             <span className="w-2 h-2 rounded-full bg-emerald-400" />
             <span>Sedang Fokus</span>
-            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-200 text-emerald-900 font-bold">
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-emerald-200 text-emerald-900 font-black">
               {workingCount}
             </span>
           </button>
 
           <button
             onClick={() => setStatusFilter('LOCKED_VIOLATION')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition flex items-center gap-1.5 shrink-0 border-2 ${
               statusFilter === 'LOCKED_VIOLATION'
-                ? 'bg-red-600 text-white shadow-md shadow-red-500/20 animate-pulse'
-                : 'bg-red-50 text-red-800 hover:bg-red-100'
+                ? 'bg-red-600 text-white border-red-600 shadow-md shadow-red-500/20 animate-pulse'
+                : 'bg-red-50 text-red-900 border-red-200 hover:bg-red-100 hover:border-red-300'
             }`}
           >
             <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-            <span>Layar Terkunci (Pelanggaran)</span>
+            <span>Layar Terkunci</span>
             <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-red-200 text-red-900 font-black">
               {lockedCount}
             </span>
@@ -352,23 +352,23 @@ export default function LiveProctoring() {
 
           <button
             onClick={() => setStatusFilter('SUBMITTED')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition flex items-center gap-1.5 shrink-0 border-2 ${
               statusFilter === 'SUBMITTED'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-blue-50 text-blue-800 hover:bg-blue-100'
+                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                : 'bg-blue-50 text-blue-900 border-blue-200 hover:bg-blue-100 hover:border-blue-300'
             }`}
           >
             <span className="w-2 h-2 rounded-full bg-blue-400" />
             <span>Selesai Terkirim</span>
-            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-blue-200 text-blue-900 font-bold">
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-blue-200 text-blue-900 font-black">
               {submittedCount}
             </span>
           </button>
         </div>
       </div>
 
-      {/* Grid Kartu Siswa Real-Time */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {/* Grid Kartu Siswa Real-Time (Desain Tebal & Berkarakter) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
         {filteredStudents.length > 0 ? (
           filteredStudents.map((student) => {
             const isLocked = student.status === 'LOCKED_VIOLATION';
@@ -377,104 +377,119 @@ export default function LiveProctoring() {
             return (
               <div
                 key={student.studentId || student.nisn}
-                className={`rounded-2xl p-5 border transition-all duration-200 flex flex-col justify-between ${
+                className={`rounded-2xl p-5 border-2 transition-all duration-200 flex flex-col justify-between space-y-3.5 ${
                   isLocked
-                    ? 'bg-red-50/90 border-red-400 shadow-xl ring-4 ring-red-400/40 animate-pulse-fast'
+                    ? 'bg-red-50/95 border-red-500 shadow-xl ring-4 ring-red-400/40 animate-pulse-fast'
                     : isSubmitted
-                    ? 'bg-blue-50/40 border-blue-200 shadow-sm'
-                    : 'bg-white border-slate-200/90 shadow-sm hover:border-emerald-300'
+                    ? 'bg-white border-blue-400 hover:border-blue-600 shadow-md hover:shadow-xl'
+                    : 'bg-white border-emerald-400 hover:border-emerald-600 shadow-md hover:shadow-xl'
                 }`}
               >
                 <div>
                   {/* Bar Atas Kartu Siswa */}
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div>
-                      <h3 className="font-extrabold text-slate-900 text-sm leading-snug">
+                      <h3 className="font-black text-slate-900 text-base leading-tight tracking-tight">
                         {student.fullName}
                       </h3>
-                      <div className="text-[11px] text-slate-500 mt-0.5">
-                        NISN: <span className="font-mono font-medium">{student.nisn}</span> • {student.classroom}
+                      <div className="text-[11px] text-slate-600 mt-1 flex items-center gap-1.5 flex-wrap">
+                        <span className="font-mono font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                          {student.nisn}
+                        </span>
+                        <span>•</span>
+                        <span className="font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">
+                          {student.classroom}
+                        </span>
                       </div>
                     </div>
                     <StatusBadge status={student.status} />
                   </div>
 
-                  {/* Info Device & Waktu */}
-                  <div className="space-y-1.5 text-xs text-slate-700 bg-slate-50/80 p-3 rounded-xl border border-slate-100 mb-3">
+                  {/* Info Device & Waktu (Kotak Tebal Berdimensi) */}
+                  <div className="space-y-2 text-xs bg-slate-50/90 border-2 border-slate-200 rounded-xl p-3.5 shadow-sm mb-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-500 flex items-center gap-1">
+                      <span className="text-slate-600 font-bold flex items-center gap-1.5">
                         {student.screenOrientation === 'LANDSCAPE' ? (
-                          <Monitor className="w-3.5 h-3.5 text-indigo-500" />
+                          <Monitor className="w-3.5 h-3.5 text-indigo-600" />
                         ) : (
-                          <Smartphone className="w-3.5 h-3.5 text-indigo-500" />
+                          <Smartphone className="w-3.5 h-3.5 text-indigo-600" />
                         )}
                         Orientasi Layar:
                       </span>
-                      <span className="font-bold text-slate-800">{student.screenOrientation}</span>
+                      <span className="font-black text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200">
+                        {student.screenOrientation}
+                      </span>
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-500">Mulai Pengerjaan:</span>
-                      <span className="font-medium text-slate-800">{student.startedAt || '-'}</span>
+                      <span className="text-slate-600 font-bold">Mulai Pengerjaan:</span>
+                      <span className="font-bold text-slate-800">{student.startedAt || '-'}</span>
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-500">Waktu Selesai:</span>
-                      <span className="font-medium text-slate-800">{student.finishedAt || 'Sedang Berjalan'}</span>
+                      <span className="text-slate-600 font-bold">Waktu Selesai:</span>
+                      <span className="font-bold text-slate-800">{student.finishedAt || 'Sedang Berjalan'}</span>
                     </div>
 
-                    <div className="flex items-center justify-between border-t border-slate-200/60 pt-1 mt-1">
-                      <span className="text-slate-500">Total Pelanggaran:</span>
-                      <span className={`font-black ${student.violationCount > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                        {student.violationCount} Kali Terdeteksi
+                    <div className="flex items-center justify-between border-t-2 border-slate-200/80 pt-1.5 mt-1">
+                      <span className="text-slate-600 font-bold">Total Pelanggaran:</span>
+                      <span className={`font-black px-2 py-0.5 rounded border ${
+                        student.violationCount > 0 
+                          ? 'text-red-700 bg-red-100 border-red-300 animate-pulse' 
+                          : 'text-emerald-800 bg-emerald-100 border-emerald-300'
+                      }`}>
+                        {student.violationCount > 0 ? `${student.violationCount} Kali Terdeteksi` : '0 Kali (Kondusif)'}
                       </span>
                     </div>
 
                     {student.score !== null && student.score !== undefined && (
-                      <div className="flex items-center justify-between border-t border-slate-200/60 pt-1 mt-1 font-bold">
+                      <div className="flex items-center justify-between border-t-2 border-slate-200/80 pt-1.5 mt-1 font-bold">
                         <span className="text-slate-700">Skor Nilai:</span>
-                        <span className="text-indigo-700 text-sm">{student.score} Poin</span>
+                        <span className="text-indigo-700 font-black text-sm bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                          {student.score} Poin
+                        </span>
                       </div>
                     )}
                   </div>
 
                   {/* Kotak Peringatan Pelanggaran Terakhir */}
                   {isLocked && student.lastViolation && (
-                    <div className="p-3 bg-red-100/90 border border-red-300 rounded-xl mb-4 text-xs text-red-950 space-y-1">
-                      <div className="flex items-center gap-1.5 font-bold text-red-800">
+                    <div className="p-3 bg-red-100 border-2 border-red-400 rounded-xl mb-4 text-xs text-red-950 space-y-1 shadow-sm">
+                      <div className="flex items-center gap-1.5 font-black text-red-900">
                         <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
-                        <span>Pelanggaran Terdeteksi ({student.lastViolation.time}):</span>
+                        <span>Pelanggaran ({student.lastViolation.time}):</span>
                       </div>
-                      <div className="text-[11px] leading-relaxed font-medium">
+                      <div className="text-[11px] leading-relaxed font-bold">
                         {student.lastViolation.description}
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* Tombol Aksi Pengawas */}
-                <div className="pt-2 border-t border-slate-100 flex items-center gap-2">
+                {/* Tombol Aksi Pengawas (Tebal & Berdimensi) */}
+                <div className="pt-2 border-t-2 border-slate-100 flex items-center gap-2">
                   {isLocked ? (
                     <button
                       onClick={() => handleUnlock(student)}
-                      className="flex-1 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/30"
+                      className="flex-1 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/30 active:scale-95 border-2 border-emerald-500"
                     >
                       <Unlock className="w-4 h-4" /> Buka Kunci Layar Siswa
                     </button>
                   ) : isSubmitted ? (
-                    <div className="flex-1 py-2 px-3 bg-blue-50 text-blue-700 border border-blue-200 rounded-xl text-xs font-semibold text-center">
-                      Sudah Dikumpulkan
+                    <div className="flex-1 py-2.5 px-3 bg-blue-50 text-blue-900 border-2 border-blue-300 rounded-xl text-xs font-black text-center shadow-sm flex items-center justify-center gap-1.5">
+                      <CheckCircle className="w-3.5 h-3.5 text-blue-600" />
+                      Selesai Terkirim
                     </div>
                   ) : (
-                    <div className="flex-1 py-2 px-3 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5">
-                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    <div className="flex-1 py-2.5 px-3 bg-emerald-50 text-emerald-900 border-2 border-emerald-300 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-sm">
+                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
                       Aman & Terkunci
                     </div>
                   )}
 
                   <button
                     onClick={() => handleDisqualify(student)}
-                    className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl border border-transparent hover:border-red-200 transition"
+                    className="p-2.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl border-2 border-slate-200 hover:border-red-300 transition active:scale-95"
                     title="Diskualifikasi Siswa dari Ujian"
                   >
                     <Ban className="w-4 h-4" />

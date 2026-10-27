@@ -19,7 +19,14 @@ import {
 
 export default function GatekeeperPin() {
   const navigate = useNavigate();
-  const { verifyEntryPassword, currentUser, logout, examSessions } = useExamStore();
+  const { 
+    verifyEntryPassword, 
+    currentUser, 
+    logout, 
+    examSessions, 
+    schoolSettings, 
+    fetchSchoolSettings 
+  } = useExamStore();
   const [pin, setPin] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [isChecking, setIsChecking] = useState(false);
@@ -28,6 +35,7 @@ export default function GatekeeperPin() {
   const [availableSessions, setAvailableSessions] = useState(examSessions);
 
   useEffect(() => {
+    fetchSchoolSettings?.();
     const fetchSessions = async () => {
       try {
         const sessions = await getSessionsApi();
@@ -39,7 +47,7 @@ export default function GatekeeperPin() {
       }
     };
     fetchSessions();
-  }, []);
+  }, [fetchSchoolSettings]);
 
   const currentSession = availableSessions[0] || examSessions[0];
 
@@ -124,7 +132,7 @@ export default function GatekeeperPin() {
           <ShieldCheck className="w-10 h-10 text-white" />
         </div>
         <div className="text-[11px] font-extrabold uppercase tracking-widest text-indigo-400">
-          SMK NEGERI 1 INFORMATIKA JAKARTA
+          {schoolSettings?.name || currentUser?.schoolName || 'PORTAL ASESMEN SEKOLAH'}
         </div>
         <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
           PORTAL E-UJIAN ANTI-CHEAT
@@ -144,10 +152,10 @@ export default function GatekeeperPin() {
             </div>
             <div>
               <div className="text-xs font-bold text-white">
-                {currentUser?.fullName || 'Ahmad Fadhil Ramadhan'}
+                {currentUser?.fullName || 'Peserta Asesmen'}
               </div>
               <div className="text-[11px] text-slate-400">
-                NISN: {currentUser?.username || '0067829101'} • Kelas: {currentUser?.classroom || 'X TKJ 1'}
+                NISN: {currentUser?.username || '-'} • Kelas: {currentUser?.classroom || '-'}
               </div>
             </div>
           </div>
@@ -200,8 +208,8 @@ export default function GatekeeperPin() {
               />
             </div>
             <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2 px-1">
-              <span>Demo Password: <strong className="font-mono text-indigo-300">{currentSession?.entryPassword || 'MASUK123'}</strong></span>
-              <span className="text-slate-500">Huruf Besar / Angka</span>
+              <span className="text-slate-400">Format: Huruf Besar / Angka</span>
+              <span className="text-slate-500">Minta token ke guru pengawas</span>
             </div>
           </div>
 
