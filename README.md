@@ -116,8 +116,8 @@ Asesmen daring konvensional kerap menghadapi tantangan integritas: siswa mudah m
 
 ### Langkah 1: Kloning Repositori
 ```bash
-git clone https://github.com/RizalAhmadMaulana/E-UJIAN.git
-cd E-UJIAN
+git clone https://github.com/RizalAhmadMaulana/e-ujian-anticheat.git
+cd e-ujian-anticheat
 ```
 
 ---
@@ -142,6 +142,9 @@ pip install -r requirements.txt
 # Jalankan migrasi basis data
 python manage.py migrate
 
+# (Rekomendasi) Buat Akun Superuser Administrator Anda sendiri
+python manage.py createsuperuser
+
 # Jalankan server Django (Daphne ASGI di port 8001)
 python manage.py runserver 0.0.0.0:8001
 ```
@@ -164,15 +167,25 @@ npm run dev
 
 ---
 
-## 🔑 Kredensial Akun Default & Django Administrator
+## 🔑 Hak Akses Pengguna & Manajemen Kredensial
 
-Sistem telah dilengkapi dengan basis data awal siap pakai:
+Sistem ini menerapkan arsitektur **Role-Based Access Control (RBAC)** yang memisahkan hak akses secara ketat demi menjamin keamanan dan integritas asesmen:
 
-| Hak Akses / Role | URL Akses | Username / NIP / NISN | Password Default | Keterangan |
-|---|---|---|---|---|
-| **Django Administrator** | `http://localhost:8001/admin/` | `admin` | `admin123` | Akses basis data mentah seluruh tabel |
-| **Guru Pengawas** | `http://localhost:5173/login` | `guru` *(atau `guru01`)* | `guru123` | Portal pengawas, bank soal, & e-jurnal |
-| **Siswa Peserta** | `http://localhost:5173/login` | `siswa` *(atau `siswa01`)* | `siswa123` | Ahmad Fadhil Ramadhan (Kelas IX) |
+| Hak Akses / Role | Portal Akses | Metode Autentikasi | Keterangan & Kewenangan |
+|---|---|---|---|
+| **Django Administrator** | `http://localhost:8001/admin/` | Superuser CLI / Django Auth | Mengelola basis data teknis, audit log forensik, dan struktur tabel |
+| **Guru Pengawas** | `http://localhost:5173/login` | NIP / Username & Password Guru | Mengelola bank soal, sesi ujian, live proctoring, & e-jurnal |
+| **Siswa Peserta** | `http://localhost:5173/login` | NISN & Password Siswa | Mengakses lembar soal dengan penguncian layar penuh (lockdown) |
+
+> [!IMPORTANT]
+> **Praktik Keamanan & Proteksi Akses:**
+> - Demi menjaga integritas data asesmen dan mencegah celah keamanan, kredensial akun administrator maupun pengawas **tidak dipublikasikan secara terbuka** di dokumentasi publik.
+> - Administrator sekolah dapat membuat akun superuser baru secara aman langsung melalui terminal backend:
+>   ```bash
+>   python manage.py createsuperuser
+>   ```
+> - Akun Guru Pengawas dan Siswa Peserta dikelola dan didaftarkan langsung oleh panitia ujian melalui menu **Manajemen Pengguna** (`/teacher/users`) pada portal guru.
+> - Seluruh kata sandi terenkripsi menggunakan algoritma hashing aman Django (`PBKDF2 SHA256`).
 
 ---
 
@@ -210,7 +223,7 @@ Setelah masuk melalui tab **"Guru Pengawas"** di halaman login (`/login`), guru 
 - **Langkah-langkah:**
   1. Klik **"+ Tambah Pengguna Baru"**.
   2. Isi NISN/NIP, Nama Lengkap, Peran (`Siswa Peserta` atau `Guru Pengawas`), dan Kelas Siswa.
-  3. Tentukan kata sandi (default: `123456`).
+  3. Tentukan kata sandi akun yang aman.
   4. Jika siswa lupa kata sandi di tengah ujian, guru dapat mengklik ikon pensil untuk langsung me-reset sandinya.
 
 ---

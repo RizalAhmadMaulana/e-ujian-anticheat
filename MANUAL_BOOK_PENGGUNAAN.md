@@ -64,15 +64,17 @@ Platform ini mengintegrasikan perlindungan berlapis di sisi klien (*client-side 
 
 ---
 
-## 1. Informasi Kredensial Akun & Akses Django Administrator
+## 1. Manajemen Akun, Hak Akses & Keamanan Sistem
 
-Sistem telah dilengkapi dengan basis data PostgreSQL/SQLite nyata dan akun awal siap pakai untuk masing-masing hak akses:
+Sistem menerapkan arsitektur **Role-Based Access Control (RBAC)** dengan 3 tingkatan hak akses yang terisolasi secara ketat:
 
 ### A. Akses Django Administrator (Superuser)
 - **URL Admin:** `http://localhost:8001/admin/`
-- **Username:** `admin`
-- **Password:** `admin123`
-- **Fungsi:** Mengelola seluruh data mentah tabel basis data:
+- **Metode Autentikasi:** Akun Superuser yang dibuat oleh Administrator Sistem via terminal:
+  ```bash
+  python manage.py createsuperuser
+  ```
+- **Fungsi Utama:** Mengelola seluruh data mentah tabel basis data:
   1. `Daftar Kelas (Classrooms)`: Menambah, mengubah, dan menghapus rombel.
   2. `Daftar Pengguna (Users)`: Mengelola seluruh akun guru, staf, dan siswa.
   3. `Daftar Paket Ujian (Exam Packages)`: Memeriksa paket soal mandiri dan tautan Google Form.
@@ -82,17 +84,19 @@ Sistem telah dilengkapi dengan basis data PostgreSQL/SQLite nyata dan akun awal 
   7. `Log Pelanggaran (Violation Logs)`: Rekaman forensik setiap kali siswa mencoba berpindah tab atau keluar layar penuh.
   8. `Daftar E-Jurnal Ujian (Exam Journals)`: Rekapitulasi berita acara resmi pengawas.
 
-### B. Akun Role GURU Pengawas
+### B. Akun Role GURU (Pengawas Asesmen)
 - **URL Web Portal:** `http://localhost:5173/login` (atau via IP LAN: `http://192.168.1.74:5173/login`)
-- **Username:** `guru` *(atau NIP: `guru01`)*
-- **Password:** `guru123`
-- **Nama Pengguna:** Drs. Budi Santoso, M.Kom
+- **Kredensial Akun:** Didaftarkan oleh Administrator Sekolah / Panitia Ujian saat penugasan pengawas.
+- **Wewenang:** Membuka ruangan sesi ujian, live proctoring real-time, remote unlock siswa terkunci, dan mengunduh berita acara/rekap nilai.
 
-### C. Akun Role SISWA Peserta
+### C. Akun Role SISWA (Peserta Asesmen)
 - **URL Web Portal:** `http://localhost:5173/login`
-- **Username / NISN:** `siswa` *(atau `siswa01`)*
-- **Password:** `siswa123`
-- **Nama Peserta:** Ahmad Fadhil Ramadhan (Kelas X TKJ 1)
+- **Kredensial Akun:** Menggunakan **NISN Siswa** yang terdaftar pada rombel dan kata sandi yang dibagikan oleh panitia asesmen.
+- **Wewenang:** Mengerjakan lembar asesmen dalam mode terkunci (lockdown) hingga verifikasi password keluar.
+
+> [!IMPORTANT]
+> **Pemberitahuan Keamanan Penting:**
+> Demi menjaga kerahasiaan soal dan data nilai sekolah, jangan pernah mempublikasikan kata sandi nyata akun guru, pengawas, atau admin ke ruang publik / repositori terbuka. Seluruh kata sandi pada basis data telah terenkripsi menggunakan PBKDF2 SHA256.
 
 ---
 
@@ -122,7 +126,7 @@ npm run dev
 ### 3.1. Login ke Portal Guru
 1. Buka peramban (Chrome/Edge) dan akses `http://localhost:5173/login`.
 2. Klik tab **"Guru Pengawas"**.
-3. Masukkan Username: `guru` dan Password: `guru123`.
+3. Masukkan **Username / NIP** dan **Kata Sandi** yang telah didaftarkan oleh administrator.
 4. Klik tombol **"MASUK SEBAGAI GURU"**. Sistem akan mengarahkan ke halaman Dashboard Guru.
 
 ---
@@ -157,7 +161,7 @@ Menu ini berfungsi untuk mendaftarkan akun Guru dan Siswa yang berhak mengikuti 
   3. Pilih **Peran Pengguna** (`Siswa Peserta` atau `Guru Pengawas`).
   4. Masukkan **Nama Lengkap** siswa/guru.
   5. Jika peran adalah `Siswa Peserta`, pilih **Kelas Siswa** dari dropdown kelas dinamis.
-  6. Masukkan **Kata Sandi** (jika dikosongkan, kata sandi bawaan adalah `123456`).
+  6. Masukkan **Kata Sandi** aman yang ditentukan untuk pengguna tersebut.
   7. Klik **"Buat Pengguna"**.
 - **Mengedit & Reset Kata Sandi Siswa:**
   - Klik ikon pensil pada siswa yang lupa sandi, ketik kata sandi baru pada kolom sandi, lalu klik **"Simpan Perubahan"**.
@@ -285,7 +289,7 @@ Berikut urutan langkah wajib bagi siswa dari mulai membuka aplikasi hingga seles
 ### 4.1. Login Peserta Siswa
 1. Buka peramban di laptop atau gawai siswa, akses alamat ujian (contoh: `http://192.168.1.74:5173/login`).
 2. Pilih tab **"Siswa Peserta"**.
-3. Masukkan NISN (contoh: `siswa` atau `0067829101`) dan Kata Sandi: `siswa123`.
+3. Masukkan **NISN** dan **Kata Sandi** akun peserta Anda.
 4. Klik **"MASUK SEBAGAI SISWA"**.
 
 ---
@@ -355,7 +359,7 @@ Jika siswa melakukan salah satu hal berikut:
 1. Siswa wajib angkat tangan dan melapor kepada Guru Pengawas di ruang kelas.
 2. Guru Pengawas dapat membuka kunci dengan salah satu dari 2 cara:
    - **Cara 1 (Dari Meja Guru):** Guru membuka menu *Live Proctoring* di laptopnya dan mengklik tombol **"Buka Kunci Layar"**.
-   - **Cara 2 (Di Meja Siswa):** Guru menghampiri gawai siswa, memasukkan PIN Pengawas (contoh: `GURU123`), lalu klik **"Buka Kunci"**.
+   - **Cara 2 (Di Meja Siswa):** Guru menghampiri gawai siswa, memasukkan PIN Pengawas lokal, lalu klik **"Buka Kunci"**.
 3. Siswa kembali masuk ke mode fullscreen dan melanjutkan ujian.
 
 ---
