@@ -1,0 +1,99 @@
+# ==============================================================================
+# DAFTAR REQUIREMENT & DEPENDENCIES FRONTEND
+# Project: Website E-Jurnal & E-Ujian Anti-Cheat Asesmen Sekolah
+# Path: e-ujian/frontend/
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. SPESIFIKASI LINGKUNGAN SISTEM (SYSTEM ENVIRONMENT)
+# ------------------------------------------------------------------------------
+# Runtime: Node.js v18.x - v22.x (Rekomendasi: Node.js 20 LTS atau 22 LTS)
+# Package Manager: npm (v9.x - v10.x) atau pnpm / yarn
+# Browser Target: Modern Chromium (Google Chrome, MS Edge), Safari, Firefox
+
+
+# ------------------------------------------------------------------------------
+# 2. DEPENDENCIES UTAMA (PRODUCTION RUNTIME DEPENDENCIES)
+# ------------------------------------------------------------------------------
+# Untuk menginstall seluruh dependencies utama sekaligus di server produksi:
+# npm install react react-dom react-router-dom zustand axios lucide-react
+
+react@^18.3.1
+# Fungsi: Core UI library berbasis komponen reaktif.
+
+react-dom@^18.3.1
+# Fungsi: Rendering DOM reaktif untuk web browser.
+
+react-router-dom@^6.26.2
+# Fungsi: Manajemen routing halaman (RoleRouteGuard, /login, /teacher/*, /student/*).
+
+zustand@^4.5.5
+# Fungsi: Global State Management terpusat (auth role, paket ujian, live proctoring, timer, pelanggaran, dsb).
+
+axios@^1.7.7
+# Fungsi: HTTP client berbasis Promise dengan request/response interceptors untuk JWT Auth ke backend Django.
+
+lucide-react@^0.441.0
+# Fungsi: Kumpulan ikon modern & ringan (Shield, Lock, Users, Alert, Clock, dsb).
+
+
+# ------------------------------------------------------------------------------
+# 3. DEV DEPENDENCIES (BUILD TOOLS & CSS COMPILER)
+# ------------------------------------------------------------------------------
+# Untuk menginstall seluruh dev dependencies:
+# npm install -D vite @vitejs/plugin-react tailwindcss postcss autoprefixer
+
+vite@^5.4.2
+# Fungsi: Build tool & bundler ultra-cepat dengan Hot Module Replacement (HMR).
+
+@vitejs/plugin-react@^4.3.1
+# Fungsi: Plugin Vite resmi untuk kompilasi JSX/Fast Refresh React.
+
+tailwindcss@^3.4.10
+# Fungsi: Utility-first CSS framework untuk antarmuka responsif (Laptop, HP Portrait & Landscape).
+
+postcss@^8.4.45
+# Fungsi: Tool transformasi CSS dengan JavaScript.
+
+autoprefixer@^10.4.20
+# Fungsi: Menambahkan vendor prefix otomatis pada CSS untuk kompatibilitas lintas browser.
+
+
+# ------------------------------------------------------------------------------
+# 4. DEPENDENCIES FASE CAPACITORJS (UNTUK KONVERSI APK ANDROID - TAHAP 4)
+# ------------------------------------------------------------------------------
+# Akan diinstall pada Tahap 4 saat pembungkusan web menjadi aplikasi Android:
+# npm install @capacitor/core @capacitor/cli @capacitor/android @capacitor-community/privacy-screen
+
+# @capacitor/core@^6.0.0               -> Runtime bridge aplikasi native Capacitor
+# @capacitor/cli@^6.0.0                -> CLI untuk build & sync native Android project
+# @capacitor/android@^6.0.0            -> Engine platform OS Android
+# @capacitor-community/privacy-screen   -> Pengaktif atribut FLAG_SECURE (Anti-Screenshot & Screen Recording)
+
+
+# ------------------------------------------------------------------------------
+# 5. PANDUAN PERINTAH EKSEKUSI PRODUKSI (PRODUCTION WORKFLOW)
+# ------------------------------------------------------------------------------
+
+# A. Instalasi Dependencies dari Nol:
+#    cd e-ujian/frontend
+#    npm install
+
+# B. Menjalankan Server Pengembangan (Local Development):
+#    npm run dev
+#    (Akses: http://localhost:5173)
+
+# C. Melakukan Kompilasi Produksi (Production Build):
+#    npm run build
+#    (Hasil file statis yang siap di-deploy ke Nginx/Apache berada di folder: e-ujian/frontend/dist/)
+
+# D. Meninjau Hasil Build Produksi secara Lokal:
+#    npm run preview
+
+
+# ------------------------------------------------------------------------------
+# 6. VARIABEL LINGKUNGAN (.env / .env.production)
+# ------------------------------------------------------------------------------
+# VITE_API_URL=http://localhost:8000/api
+# VITE_WS_URL=ws://localhost:8000/ws/proctoring
+
