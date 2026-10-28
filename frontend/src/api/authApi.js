@@ -70,6 +70,41 @@ export const deleteUserApi = async (id) => {
 };
 
 /**
+ * Mengunduh template Excel (.xlsx) untuk import massal data siswa
+ */
+export const downloadUserTemplateExcelApi = async (filename = 'Template_Import_Siswa_E-Ujian.xlsx') => {
+  const response = await axiosInstance.get('/accounts/users/template-excel/', {
+    responseType: 'blob'
+  });
+  const url = window.URL.createObjectURL(
+    new Blob([response.data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    })
+  );
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  link.parentNode.removeChild(link);
+  window.URL.revokeObjectURL(url);
+};
+
+/**
+ * Mengunggah dan mengimpor file Excel data siswa
+ */
+export const importUsersExcelApi = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await axiosInstance.post('/accounts/users/import-excel/', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+  return response.data;
+};
+
+/**
  * PENGATURAN SEKOLAH (DYNAMIC SCHOOL SETTINGS)
  */
 export const getSchoolSettingsApi = async () => {
@@ -104,6 +139,8 @@ export const authApi = {
   createUserApi,
   updateUserApi,
   deleteUserApi,
+  downloadUserTemplateExcelApi,
+  importUsersExcelApi,
   logoutApi,
   login: loginApi,
   getMe: fetchCurrentUserApi,

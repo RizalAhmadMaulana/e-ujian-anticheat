@@ -57,7 +57,7 @@ export default function SubjectPortal() {
     ) || availableSessions[0];
 
     if (matchingSession) {
-      setSessionId(matchingSession.id);
+      setSessionId(matchingSession.id, matchingSession.supervisor_pin || matchingSession.supervisorPin || '');
       try {
         const res = await startExamAttemptApi(matchingSession.id, activeAttempt.screenOrientation);
         if (res && res.attempt_id) {

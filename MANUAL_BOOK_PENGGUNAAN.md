@@ -147,15 +147,31 @@ Menu ini digunakan untuk mengatur seluruh rombongan belajar sekolah secara dinam
 
 ---
 
-### 3.3. Menu 2: Manajemen Pengguna & Hak Akses (CRUD User)
-Menu ini berfungsi untuk mendaftarkan akun Guru dan Siswa yang berhak mengikuti ujian.
+### 3.3. Menu 2: Manajemen Pengguna & Hak Akses (CRUD User & Import Excel Siswa)
+Menu ini berfungsi untuk mendaftarkan dan mengelola seluruh akun Guru dan Siswa yang berhak mengikuti ujian, baik secara manual satuan maupun secara massal via file Excel (rekapan Google Form/SPSS).
 
 - **Membuka Menu:** Klik menu **"Manajemen Pengguna"** (`/teacher/users`).
 - **Filter & Pencarian:**
   - Gunakan kolom pencarian untuk mencari nama, NIP, atau NISN siswa.
   - Gunakan filter **"Peran"** untuk menyaring akun Guru atau Siswa.
   - Gunakan filter **"Kelas"** untuk menampilkan siswa pada kelas tertentu.
-- **Menambah Pengguna Baru:**
+
+- **Fitur Baru: Import Massal Akun Siswa via Excel (Rekap GForm / SPSS):**
+  Untuk mempermudah guru agar tidak perlu memasukkan data siswa satu per satu, sistem menyediakan fitur impor Excel:
+  1. **Unduh Template Resmi:** Klik tombol **"Unduh Template Excel"** di bagian atas kanan. Sistem akan mengunduh berkas `Template_Import_Siswa_E-Ujian.xlsx` yang sudah memiliki susunan kolom standar:
+     - `NISN` (Nomor Induk Siswa Nasional, contoh: `0067829101`) -> Dijadikan *Username* login siswa.
+     - `Nama Lengkap Siswa` (contoh: `Ahmad Fadilah`).
+     - `Kelas / Rombel` (contoh: `IX A` atau `X RPL 1`). *Jika kelas belum ada di sistem, sistem otomatis mendaftarkannya ke database.*
+     - `Password` (opsional, jika dikosongkan sistem otomatis memberi default password: `siswa123`).
+  2. **GForm & SPSS Flow:** Jika guru telah mengumpulkan biodata murid melalui Google Form atau rekapitulasi data SPSS, salin kolom NISN, Nama, dan Kelas ke dalam format template Excel tersebut.
+  3. **Unggah File Excel:**
+     - Klik tombol **"Import Excel"**.
+     - Pilih atau seret (*drag-and-drop*) file `.xlsx` Anda ke dalam jendela modal.
+     - Klik **"Mulai Impor Akun"**.
+     - Sistem memproses data secara instan, mengenkripsi seluruh password dengan aman, dan menampilkan laporan: berapa akun baru yang berhasil dibuat dan berapa akun yang diperbarui.
+     - Daftar pengguna dan rombel kelas di sistem akan langsung tersegarkan otomatis.
+
+- **Menambah Pengguna Baru (Manual Satuan):**
   1. Klik tombol **"+ Tambah Pengguna Baru"**.
   2. Isi **Username / NIP / NISN** (contoh NISN: `0067829105`).
   3. Pilih **Peran Pengguna** (`Siswa Peserta` atau `Guru Pengawas`).
@@ -163,8 +179,12 @@ Menu ini berfungsi untuk mendaftarkan akun Guru dan Siswa yang berhak mengikuti 
   5. Jika peran adalah `Siswa Peserta`, pilih **Kelas Siswa** dari dropdown kelas dinamis.
   6. Masukkan **Kata Sandi** aman yang ditentukan untuk pengguna tersebut.
   7. Klik **"Buat Pengguna"**.
+
 - **Mengedit & Reset Kata Sandi Siswa:**
   - Klik ikon pensil pada siswa yang lupa sandi, ketik kata sandi baru pada kolom sandi, lalu klik **"Simpan Perubahan"**.
+
+- **Keamanan Form Bebas Rekomendasi Isian & Dialog Password:**
+  - Seluruh formulir sistem (Login, Password Masuk Gatekeeper, PIN Layar Kunci Pengawas, dan Password Keluar) telah dibersihkan dari *autocomplete dropdown* browser Chromium dan bebas dari pop-up *"Update password?"* Google Password Manager sehingga privasi akun dan token ujian 100% terlindungi.
 
 ---
 
@@ -347,24 +367,27 @@ Di arena ujian ini, siswa berada dalam pengawasan ketat:
 ---
 
 ### 4.6. Penanganan Layar Terkunci Akibat Pelanggaran Sensor
-Jika siswa melakukan salah satu hal berikut:
-- Menekan tombol `Alt + Tab`, `Windows Key`, tombol `Home`, atau membuka aplikasi lain.
-- Membuka tab peramban lain (misal: mencari jawaban di Google/AI).
-- Menekan tombol `Esc` atau keluar dari mode layar penuh (*Fullscreen*).
-- Menekan tombol `PrintScreen` atau tombol tangkapan layar.
+Sistem menerapkan protokol **Zero-Tolerance Lockdown**. Jika siswa melakukan salah satu tindakan di bawah ini:
+- Menekan tombol `Alt + Tab`, `Windows Key`, tombol `Home`, atau membuka aplikasi lain (`WINDOW_BLUR_APP_SWITCH`).
+- Membuka tab peramban lain atau me-minimize jendela ujian (`TAB_SWITCH`).
+- Menekan tombol `Esc` atau keluar dari mode layar penuh (`EXIT_FULLSCREEN`).
+- Mencoba mengambil tangkapan layar / screenshot (`PrintScreen`, `Win+Shift+S`, `Meta+Shift+S`, `Cmd+Shift+3/4`).
+- Mencoba klik kanan di lembar soal maupun di dalam formulir (`CONTEXT_MENU_ATTEMPT`).
+- Mencoba menyalin atau menempel teks (`Ctrl+C`, `Ctrl+V`, `Ctrl+X` atau event `copy`/`paste`).
+- Mencoba membuka Developer Tools atau inspect element (`F12`, `Ctrl+Shift+I/J/C`).
 
 **Akibatnya:**
 1. Layar seketika berubah menjadi **Layar Merah Pembekuan Darurat (Penalty Freeze Overlay)**.
 2. **Sirine peringatan suara keras** berbunyi secara berulang-ulang dari perangkat siswa.
-3. Keterangan pelanggaran dan jumlah pelanggaran muncul di layar.
-4. Lembar soal terkunci total dan tidak bisa diklik.
+3. Keterangan pelanggaran dan jumlah akumulasi pelanggaran muncul di layar.
+4. Lembar soal terkunci total, clipboard dikosongkan secara paksa, dan data forensik pelanggaran langsung terkirim ke monitor guru.
 
-**Cara Membuka Kunci:**
-1. Siswa wajib angkat tangan dan melapor kepada Guru Pengawas di ruang kelas.
-2. Guru Pengawas dapat membuka kunci dengan salah satu dari 2 cara:
-   - **Cara 1 (Dari Meja Guru - Remote):** Guru membuka menu *Live Proctoring* di laptopnya dan mengklik tombol hijau **"Buka Kunci Layar"**. Layar siswa seketika terbuka kembali via WebSocket.
-   - **Cara 2 (Di Meja Siswa - Darurat / Manual):** Guru menghampiri gawai siswa, memasukkan **PIN Pengawas** yang tertera pada kartu Jadwal & Sesi Ujian guru (atau master PIN `GURU123`), lalu klik **"Buka Kunci"**.
-3. Siswa kembali masuk ke mode fullscreen dan melanjutkan ujian.
+**Cara Membuka Kunci (Dual-Mode):**
+1. Siswa wajib melapor kepada Guru Pengawas di ruang kelas.
+2. Pengawas dapat membuka kunci melalui 2 opsi:
+   - **Opsi 1 (Mandiri Siswa dengan PIN Pengawas):** Siswa memasukkan **PIN Pengawas Ruangan** (contoh: `PIN-2114` atau `2114`) yang diberikan oleh guru pengawas pada kartu Jadwal & Sesi Ujian, lalu klik tombol **"Buka Kunci"**. Layar langsung pulih ke fullscreen tanpa dialog popup yang menghalangi. Sistem telah bebas dari pop-up Google Password Manager sehingga tampilan tidak akan terhalang oleh pop-up peramban.
+   - **Opsi 2 (Dari Laptop Guru - Remote 1-Click):** Guru membuka menu *Live Proctoring* di laptopnya dan mengklik tombol hijau **"Buka Kunci Layar Siswa"**. Layar siswa seketika terbuka otomatis via WebSocket Daphne Channels.
+3. **Masa Imunitas (5-Second Grace Period):** Setelah kunci terbuka, sensor memberikan masa tenggang 5 detik agar siswa dapat kembali fokus dalam mode fullscreen tanpa memicu sirene palsu.
 
 ---
 

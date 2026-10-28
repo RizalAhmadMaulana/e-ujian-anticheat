@@ -44,13 +44,19 @@ Asesmen daring konvensional kerap menghadapi tantangan integritas: siswa mudah m
 
 ### Fitur Kunci:
 
-1. **🛡️ Zero-Tolerance Lockdown Engine (Anti-Cheat):**
-   - **Mandatory Fullscreen:** Memaksa peramban berada dalam mode layar penuh HTML5 secara mutlak.
-   - **Anti-Tab Switching:** Mendeteksi perpindahan tab browser (`visibilitychange`).
-   - **Anti-Split Screen & Window Blur:** Mendeteksi pembagian layar atau membuka aplikasi lain (`window.onblur`).
-   - **Iframe Focus Guard:** Algoritma cerdas yang membedakan klik di dalam Google Form/MS Teams dengan aksi berpindah aplikasi, mencegah terjadinya *false positive*.
-   - **Sensor Keyboard & Input Blocking:** Memblokir tombol `Alt+Tab`, `Windows Key`, `Esc`, `F12` (DevTools), `PrintScreen`, fungsi klik kanan, dan *copy-cut-paste*.
+1. **🛡️ Zero-Tolerance Lockdown Engine (Anti-Cheat Otomatis):**
+   - **Mandatory Fullscreen (Auto-Lock):** Memaksa peramban berada dalam mode layar penuh HTML5 secara mutlak. Menekan `Esc` atau membatalkan fullscreen langsung membekukan layar ke mode merah dan memicu sirene.
+   - **Anti-Tab Switching (Auto-Lock):** Mendeteksi pembukaan tab baru atau perpindahan tab peramban via `Page Visibility API`. Layar seketika terkunci.
+   - **Anti-Split Screen & Window Blur (Auto-Lock):** Mendeteksi pembagian layar atau membuka aplikasi lain (`window.onblur` & `document.hasFocus()`).
+   - **Heartbeat Sensor Anti-Screenshot & Focus Loss (150ms):** Sistem memonitor status `!document.hasFocus()` secara aktif setiap 150 milidetik. Menangkap aktivasi Windows Snipping Tool (`Win + Shift + S`), menu konteks eksternal, atau pembukaan aplikasi latar belakang, lalu seketika mengunci layar merah.
+   - **Anti-Screenshot Keyboard Lock:** Mencegah penangkapan layar via tombol `PrintScreen`, shortcut Windows Snipping Tool (`Win + Shift + S`, `Meta + Shift + S`, `Ctrl + Shift + S`), dan shortcut Mac (`Cmd + Shift + 3/4`). Sistem seketika mengosongkan buffer clipboard secara instan, mengunci layar, dan membunyikan sirene peringatan.
+   - **Anti-Klik Kanan (Auto-Lock):** Memblokir pembukaan menu konteks (`contextmenu`) di seluruh arena ujian maupun lembar Google Form. Upaya klik kanan langsung memicu pembekuan layar merah.
+   - **Anti-Copy Paste & Text Selection (Auto-Lock):** Memblokir shortcut `Ctrl + C`, `Ctrl + V`, `Ctrl + X`, `Ctrl + P` (Print), `Ctrl + U` (View Source), `Ctrl + S` (Save), serta memblokir event global `copy`, `cut`, dan `paste`. Clipboard dikosongkan secara paksa dan layar otomatis terkunci. Izin clipboard pada iframe formulir juga dinonaktifkan secara ketat.
+   - **Anti-DevTools & Inspect Element (Auto-Lock):** Memblokir tombol `F12` dan shortcut `Ctrl + Shift + I/J/C`.
+   - **Iframe Focus Guard & Window Blur Priority:** Membedakan klik wajar di dalam Google Form dengan upaya memindahkan fokus ke aplikasi eksternal (Snipping Tool, Alt+Tab).
    - **Penalty Freeze Overlay:** Seketika membekukan lembar ujian menjadi layar merah darurat dan memicu **sirine audio peringatan keras berulang** dari *Web Audio API Synthesizer*.
+   - **Dual-Mode Unlock & 5-Second Grace Period:** Layar merah dapat dibuka kembali melalui dua cara yang bekerja simultan: (1) Siswa memasukkan PIN Pengawas Ruangan yang sah secara mandiri, atau (2) Guru mengklik tombol "Buka Kunci Layar Siswa" pada Live Proctoring. Dilengkapi masa imunitas 5 detik agar transisi kembali ke fullscreen berjalan stabil tanpa false alarm.
+   - **Bebas Pop-up Google Password Manager & Rekomendasi Isian:** Menggunakan input disk masking CSS modern tanpa tag form native, `autoComplete="one-time-code"`, dan `role="presentation"` di seluruh 4 form sistem (Login, Gatekeeper, Layar Kunci PIN, dan Password Keluar) sehingga browser Chrome/Edge 100% tidak memunculkan pop-up "Update password?" maupun riwayat autocomplete isian sebelumnya.
 
 2. **📝 Hybrid Exam Engine (Mandiri + Google Form / Teams):**
    - **Soal Mandiri (Native):** Pilihan ganda (opsi A-E dengan kunci jawaban terenkripsi di server) dan soal esai, dilengkapi sistem penilaian otomatis (*auto-grading*).
@@ -217,10 +223,15 @@ Setelah masuk melalui tab **"Guru Pengawas"** di halaman login (`/login`), guru 
 
 ---
 
-### Menu 3: Manajemen Pengguna & Hak Akses (CRUD User)
+### Menu 3: Manajemen Pengguna & Hak Akses (CRUD User & Import Excel Siswa)
 - **Rute:** `/teacher/users`
-- **Fungsi:** Mendaftarkan akun guru dan peserta ujian.
-- **Langkah-langkah:**
+- **Fungsi:** Mendaftarkan akun guru dan peserta ujian secara manual satuan maupun massal melalui file Excel.
+- **Fitur Baru Import Massal Excel (Rekap GForm / SPSS):**
+  1. Klik tombol **"Unduh Template Excel"** untuk mendapatkan format resmi `Template_Import_Siswa_E-Ujian.xlsx` (kolom NISN, Nama Lengkap Siswa, Kelas/Rombel, dan Password opsional).
+  2. Guru dapat menyalin hasil pengisian formulir biodata murid dari Google Form atau olahan SPSS ke template ini.
+  3. Klik tombol **"Import Excel"**, unggah berkas `.xlsx`, dan klik **"Mulai Impor Akun"**.
+  4. Sistem otomatis mendaftarkan seluruh akun siswa, menautkan ke kelas yang sesuai (otomatis membuat kelas jika belum ada), mengenkripsi password dengan aman (default `siswa123`), dan menyegarkan tabel seketika.
+- **Pendaftaran Manual Satuan:**
   1. Klik **"+ Tambah Pengguna Baru"**.
   2. Isi NISN/NIP, Nama Lengkap, Peran (`Siswa Peserta` atau `Guru Pengawas`), dan Kelas Siswa.
   3. Tentukan kata sandi akun yang aman.
@@ -309,16 +320,22 @@ Setelah masuk melalui tab **"Guru Pengawas"** di halaman login (`/login`), guru 
 
 ### Penanganan Layar Terkunci Akibat Pelanggaran Sensor
 Jika siswa mencoba:
-- Menekan `Alt + Tab`, tombol `Windows`, atau membuka aplikasi lain.
-- Membuka tab baru di peramban untuk mencari contekan.
-- Menekan tombol `Esc` atau keluar dari mode layar penuh.
-- Melakukan *screenshot* / tangkapan layar.
+- Menekan `Alt + Tab`, tombol `Windows`, atau membuka aplikasi lain (`WINDOW_BLUR_APP_SWITCH`).
+- Membuka tab baru di peramban atau meminimalkan jendela (`TAB_SWITCH`).
+- Menekan tombol `Esc` atau keluar dari mode layar penuh (`EXIT_FULLSCREEN`).
+- Melakukan tangkapan layar (`PrintScreen`, `Win+Shift+S`, `Meta+Shift+S`, `Cmd+Shift+3/4`).
+- Melakukan klik kanan / membuka menu konteks (`CONTEXT_MENU_ATTEMPT`).
+- Mencoba copy-paste / salin-tempel teks (`Ctrl+C`, `Ctrl+V`, `Ctrl+X` atau event `copy`/`paste`).
+- Mencoba membuka inspect element atau DevTools (`F12`, `Ctrl+Shift+I/J/C`).
 
 **Respon Sistem:**
 - Layar seketika berubah menjadi **Layar Merah Pembekuan Darurat (Penalty Freeze Overlay)**.
 - **Sirine peringatan suara keras** berbunyi berulang-ulang dari gawai siswa.
-- Lembar soal membeku total dan log pelanggaran dikirim ke monitor guru.
-- Siswa harus melapor ke pengawas. Layar hanya bisa dibuka kembali melalui tombol **Unlock** di laptop guru atau dengan memasukkan PIN pengawas langsung di gawai siswa.
+- Lembar soal membeku total dan log forensik pelanggaran langsung terkirim secara real-time ke monitor Live Proctoring guru dan dicatat di E-Jurnal.
+- **Prosedur Buka Kunci (Dual-Mode):**
+  1. **Mandiri Siswa:** Siswa memasukkan **PIN Pengawas Ruangan** (contoh: `PIN-2114` atau `2114`) yang diberikan guru pada form buka kunci, lalu klik **"Buka Kunci"**. Layar langsung pulih ke fullscreen tanpa memunculkan dialog native atau pop-up Google Password Manager.
+  2. **Remote Guru:** Guru menekan tombol hijau **"Buka Kunci Layar Siswa"** di menu Live Proctoring. Layar siswa otomatis terbuka seketika via WebSocket Daphne Channels.
+  3. Sistem memberikan **5-Second Grace Period** (masa imunitas 5 detik) agar browser dapat masuk kembali ke fullscreen dengan stabil tanpa memicu alarm palsu.
 
 ### Penyelesaian Ujian & Verifikasi Password Keluar (Alarm Resmi)
 1. Setelah menyelesaikan seluruh soal atau mengirimkan formulir Google Form, siswa angkat tangan.

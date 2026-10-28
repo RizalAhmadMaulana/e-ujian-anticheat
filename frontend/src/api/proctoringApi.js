@@ -21,12 +21,19 @@ export const proctoringApi = {
   },
 
   /**
-   * Guru membuka kembali layar siswa yang terkunci menggunakan PIN pengawas
+   * Mengambil status terkini attempt siswa (apakah WORKING, LOCKED_VIOLATION, dll)
    */
-  unlockStudent: async (attemptId, supervisorPin = '12345') => {
-    const response = await axiosInstance.post(`/proctoring/attempts/${attemptId}/unlock/`, {
-      supervisor_pin: supervisorPin
-    });
+  getAttemptStatus: async (attemptId) => {
+    const response = await axiosInstance.get(`/proctoring/attempts/${attemptId}/status/`);
+    return response.data;
+  },
+
+  /**
+   * Guru membuka kembali layar siswa yang terkunci menggunakan PIN pengawas (atau tanpa PIN dari Live Proctoring)
+   */
+  unlockStudent: async (attemptId, supervisorPin = null) => {
+    const payload = supervisorPin ? { supervisor_pin: supervisorPin } : {};
+    const response = await axiosInstance.post(`/proctoring/attempts/${attemptId}/unlock/`, payload);
     return response.data;
   },
 

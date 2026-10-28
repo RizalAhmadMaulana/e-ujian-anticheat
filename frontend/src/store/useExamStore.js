@@ -161,11 +161,12 @@ export const useExamStore = create((set, get) => ({
     }));
   },
 
-  setSessionId: (sessionId) => {
+  setSessionId: (sessionId, supervisorPin = '') => {
     set((state) => ({
       activeAttempt: {
         ...state.activeAttempt,
         sessionId,
+        supervisorPin: supervisorPin || state.activeAttempt.supervisorPin || '',
       },
     }));
   },
@@ -390,7 +391,7 @@ export const useExamStore = create((set, get) => ({
     set((state) => {
       // 1. Pulihkan status proctoring
       const updatedProctoring = state.proctoringStudents.map((student) => {
-        if (student.studentId === studentId) {
+        if (!studentId || student.studentId === studentId || student.id === studentId || student.attemptId === studentId) {
           return {
             ...student,
             status: 'WORKING',
@@ -399,17 +400,14 @@ export const useExamStore = create((set, get) => ({
         return student;
       });
 
-      // 2. Jika yang di-unlock adalah currentUser (simulasi), buka kuncinya langsung
-      let updatedActiveAttempt = state.activeAttempt;
-      if (state.currentUser?.id === studentId) {
-        updatedActiveAttempt = {
-          ...state.activeAttempt,
-          isLocked: false,
-          violationLogs: state.activeAttempt.violationLogs.map((log, index) =>
-            index === 0 && !log.unlockedAt ? { ...log, unlockedAt: nowTime } : log
-          ),
-        };
-      }
+      // 2. Selalu pulihkan activeAttempt jika siswa saat ini di-unlock
+      const updatedActiveAttempt = {
+        ...state.activeAttempt,
+        isLocked: false,
+        violationLogs: state.activeAttempt.violationLogs.map((log, index) =>
+          index === 0 && !log.unlockedAt ? { ...log, unlockedAt: nowTime } : log
+        ),
+      };
 
       return {
         proctoringStudents: updatedProctoring,

@@ -187,8 +187,8 @@ export default function GatekeeperPin() {
           </div>
         )}
 
-        {/* Input Form Pin / Password Masuk */}
-        <form onSubmit={handleVerify} className="space-y-4">
+        {/* Input Form Pin / Password Masuk (Bebas Rekomendasi / Autocomplete Browser) */}
+        <div className="space-y-4">
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
@@ -201,8 +201,23 @@ export default function GatekeeperPin() {
                 type="text"
                 required
                 autoFocus
+                readOnly
+                onFocus={(e) => e.target.removeAttribute('readonly')}
+                autoComplete="one-time-code"
+                autoCorrect="off"
+                autoCapitalize="characters"
+                spellCheck="false"
+                role="presentation"
+                data-lpignore="true"
+                data-form-type="other"
                 value={pin}
                 onChange={(e) => setPin(e.target.value.toUpperCase())}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleVerify(e);
+                  }
+                }}
                 placeholder="CONTOH: MASUK123"
                 className="w-full text-center text-lg sm:text-xl font-mono font-black tracking-widest py-3.5 px-4 bg-slate-950 border-2 border-slate-700 hover:border-slate-600 rounded-2xl text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 uppercase transition"
               />
@@ -214,7 +229,8 @@ export default function GatekeeperPin() {
           </div>
 
           <button
-            type="submit"
+            type="button"
+            onClick={handleVerify}
             disabled={isChecking || showPinnedToast}
             className="w-full py-4 px-4 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-extrabold rounded-2xl text-sm shadow-xl shadow-indigo-600/30 transition flex items-center justify-center gap-2 disabled:opacity-50"
           >
@@ -227,7 +243,7 @@ export default function GatekeeperPin() {
               </>
             )}
           </button>
-        </form>
+        </div>
 
         {/* Footer Card */}
         <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-xs">

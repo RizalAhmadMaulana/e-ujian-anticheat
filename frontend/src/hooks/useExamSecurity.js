@@ -14,16 +14,26 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
 
   const isSubmittedRef = useRef(Boolean(activeAttempt.examSubmittedAt));
   const isLockedRef = useRef(activeAttempt.isLocked);
+  const gracePeriodUntilRef = useRef(0);
+  const prevIsLockedRef = useRef(activeAttempt.isLocked);
 
   useEffect(() => {
     isSubmittedRef.current = Boolean(activeAttempt.examSubmittedAt);
     isLockedRef.current = activeAttempt.isLocked;
+
+    // Saat status berubah dari LOCKED (true) menjadi UNLOCKED (false):
+    // Berikan grace period / masa imunitas 5 detik agar browser & siswa dapat memulihkan fullscreen & fokus tanpa false positive
+    if (prevIsLockedRef.current === true && activeAttempt.isLocked === false) {
+      gracePeriodUntilRef.current = Date.now() + 5000;
+    }
+    prevIsLockedRef.current = activeAttempt.isLocked;
   }, [activeAttempt.examSubmittedAt, activeAttempt.isLocked]);
 
   // Handler Pelanggaran
   const handleViolation = useCallback((type, description) => {
-    // Jangan picu pelanggaran jika ujian sudah selesai atau layar sudah dalam status terkunci
+    // Jangan picu pelanggaran jika ujian sudah selesai, layar sedang terkunci, atau masih dalam masa imunitas unlock (grace period)
     if (isSubmittedRef.current || isLockedRef.current || !isExamActive) return;
+    if (Date.now() < gracePeriodUntilRef.current) return;
 
     playViolationWarningSound();
     triggerViolationLock(type, description);
@@ -47,6 +57,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       );
 
       if (!isFullscreen && !isSubmittedRef.current && !isLockedRef.current) {
+        if (Date.now() < gracePeriodUntilRef.current) return;
         handleViolation(
           'EXIT_FULLSCREEN',
           'Siswa keluar dari mode layar penuh (Fullscreen API)'
@@ -59,6 +70,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     // ========================================================
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden' && !isSubmittedRef.current && !isLockedRef.current) {
+        if (Date.now() < gracePeriodUntilRef.current) return;
         handleViolation(
           'TAB_SWITCH',
           'Siswa berpindah tab peramban atau meminimalkan aplikasi ujian'
@@ -70,65 +82,114 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     // SENSOR 3: ANTI-APP SWITCH DENGAN IFRAME FOCUS GUARD (window.onblur)
     // ========================================================
     const handleWindowBlur = () => {
-      // Berikan jeda 150ms untuk memeriksa apakah fokus berpindah ke dalam IFRAME
+      // Berikan jeda 150ms untuk memeriksa status fokus jendela browser
       setTimeout(() => {
         if (isSubmittedRef.current || isLockedRef.current) return;
+        if (Date.now() < gracePeriodUntilRef.current) return;
 
+        // 1. Jika fokus benar-benar hilang dari browser utama (Snipping Tool, ganti aplikasi, Alt+Tab, Windows Key)
+        if (!document.hasFocus()) {
+          handleViolation(
+            'WINDOW_BLUR_APP_SWITCH',
+            'Siswa terdeteksi membuka aplikasi lain atau screenshot tool (Window Blur)'
+          );
+          return;
+        }
+
+        // 2. Jika dokumen masih hasFocus, periksa apakah fokus berada di dalam IFRAME
         const activeEl = document.activeElement;
         const isFocusInsideIframe = 
           activeEl && (activeEl.tagName === 'IFRAME' || activeEl.closest('iframe'));
 
-        // Jika fokus berada di dalam iframe Google Form / Teams: JANGAN KUNCI LAYAR
+        // Jika fokus berada di dalam iframe Google Form: siswa sedang berinteraksi di formulir, jangan kunci
         if (isFocusInsideIframe) {
           return;
-        }
-
-        // Jika fokus benar-benar hilang dari browser utama (buka aplikasi lain / split screen)
-        if (!document.hasFocus()) {
-          handleViolation(
-            'WINDOW_BLUR_APP_SWITCH',
-            'Siswa terdeteksi membuka aplikasi lain di luar browser ujian (Window Blur)'
-          );
         }
       }, 150);
     };
 
     // ========================================================
-    // SENSOR 4: BLOKIR KLIK KANAN, COPY-PASTE, SELEKSI TEKS
+    // SENSOR 4: BLOKIR KLIK KANAN & KUNCI LAYAR OTOMATIS
     // ========================================================
     const handleContextMenu = (e) => {
       e.preventDefault();
+      if (isSubmittedRef.current || isLockedRef.current) return false;
+      if (Date.now() < gracePeriodUntilRef.current) return false;
+
+      handleViolation(
+        'CONTEXT_MENU_ATTEMPT',
+        'Upaya klik kanan (Menu Konteks) terdeteksi dan diblokir sistem'
+      );
       return false;
     };
 
+    // ========================================================
+    // SENSOR 5: BLOKIR COPY, CUT, PASTE & KOSONGKAN CLIPBOARD
+    // ========================================================
     const handleClipboardEvents = (e) => {
+      e.preventDefault();
+      if (e.clipboardData) {
+        try {
+          e.clipboardData.setData('text/plain', '');
+          e.clipboardData.setData('text/html', '');
+        } catch (_) {}
+      }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText('');
+        }
+      } catch (_) {}
+
+      if (isSubmittedRef.current || isLockedRef.current) return false;
+      if (Date.now() < gracePeriodUntilRef.current) return false;
+
+      handleViolation(
+        'CLIPBOARD_ATTEMPT',
+        'Upaya menyalin atau menempel teks (Copy-Paste) terdeteksi dan diblokir sistem'
+      );
+      return false;
+    };
+
+    // ========================================================
+    // SENSOR 6: BLOKIR SELEKSI TEKS DI AREA SOAL
+    // ========================================================
+    const handleSelectStart = (e) => {
+      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+        return true;
+      }
       e.preventDefault();
       return false;
     };
 
     // ========================================================
-    // SENSOR 5: BLOKIR SHORTCUT KEYBOARD & DETEKSI PRINTSCREEN
+    // SENSOR 7: BLOKIR SHORTCUT KEYBOARD & DETEKSI PRINTSCREEN / SCREENSHOT
     // ========================================================
     const handleKeyDown = (e) => {
       const isCtrlOrMeta = e.ctrlKey || e.metaKey;
       const key = e.key ? e.key.toLowerCase() : '';
 
-      // 1. Deteksi Tombol PrintScreen (Screenshot)
-      if (e.key === 'PrintScreen' || e.keyCode === 44) {
+      // 1. Deteksi Tangkapan Layar (PrintScreen, Win+Shift+S, Meta+Shift+S, Alt+PrintScreen)
+      const isScreenshotKey =
+        e.key === 'PrintScreen' ||
+        e.keyCode === 44 ||
+        ((isCtrlOrMeta || e.altKey) && (e.key === 'PrintScreen' || e.keyCode === 44)) ||
+        ((isCtrlOrMeta || e.altKey) && e.shiftKey && (key === 's' || key === '3' || key === '4'));
+
+      if (isScreenshotKey) {
         e.preventDefault();
         try {
           if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(''); // Kosongkan clipboard buffer
+            navigator.clipboard.writeText(''); // Kosongkan clipboard buffer instan
           }
         } catch (_) {}
 
         if (onScreenshotBlocked) {
-          onScreenshotBlocked('Tidak dapat menangkap screenshot! Halaman berisi informasi ujian terproteksi.');
+          onScreenshotBlocked('Tangkapan layar diblokir! Layar ujian Anda dibekukan.');
         }
 
         handleViolation(
           'SHORTCUT_ATTEMPT',
-          'Upaya tangkapan layar (PrintScreen) terdeteksi dan diblokir sistem'
+          'Upaya tangkapan layar (Screenshot / Snipping Tool) terdeteksi dan diblokir sistem'
         );
         return false;
       }
@@ -143,13 +204,19 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         return false;
       }
 
-      // 3. Blokir Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+U (View Source), Ctrl+P (Print), Ctrl+S (Save)
-      if (isCtrlOrMeta && ['c', 'v', 'x', 'u', 'p', 's', 'a'].includes(key)) {
-        // Izinkan Ctrl+A hanya di dalam input / textarea jika diperlukan
-        if (key === 'a' && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
-          return true;
-        }
+      // 3. Blokir Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+P (Print), Ctrl+U (View Source), Ctrl+S (Save) & KUNCI LAYAR
+      if (isCtrlOrMeta && ['c', 'v', 'x', 'p', 'u', 's'].includes(key)) {
         e.preventDefault();
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText('');
+          }
+        } catch (_) {}
+
+        handleViolation(
+          'CLIPBOARD_ATTEMPT',
+          `Mencoba shortcut terlarang (Ctrl+${key.toUpperCase()}) terdeteksi dan diblokir sistem`
+        );
         return false;
       }
 
@@ -165,7 +232,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     };
 
     // ========================================================
-    // SENSOR 6: BLOKIR TOMBOL BACK & BEFOREUNLOAD
+    // SENSOR 8: BLOKIR TOMBOL BACK & BEFOREUNLOAD
     // ========================================================
     window.history.pushState(null, null, window.location.href);
 
@@ -182,7 +249,26 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       }
     };
 
-    // Registrasi Seluruh Event Listener
+    // ========================================================
+    // SENSOR 9: HEARTBEAT MONITORING FOKUS WINDOW & SCREENSHOT
+    // Mengawasi ketiadaan fokus (Loss of Focus / document.hasFocus())
+    // Menangkap Snipping Tool, Win+Shift+S, Buka Aplikasi Lain, & Menu Konteks
+    // bahkan saat kursor/fokus berada di dalam iframe Google Form
+    // ========================================================
+    const heartbeatInterval = setInterval(() => {
+      if (isSubmittedRef.current || isLockedRef.current) return;
+      if (Date.now() < gracePeriodUntilRef.current) return;
+
+      // Jika seluruh jendela peramban kehilangan fokus dari OS
+      if (!document.hasFocus()) {
+        handleViolation(
+          'WINDOW_BLUR_APP_SWITCH',
+          'Siswa terdeteksi membuka aplikasi lain, screenshot tool, atau keluar dari jendela ujian (Loss of Focus)'
+        );
+      }
+    }, 150);
+
+    // Registrasi Seluruh Event Listener dengan capture mode
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
     document.addEventListener('mozfullscreenchange', handleFullscreenChange);
@@ -191,16 +277,37 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('blur', handleWindowBlur);
 
-    document.addEventListener('contextmenu', handleContextMenu);
-    document.addEventListener('copy', handleClipboardEvents);
-    document.addEventListener('cut', handleClipboardEvents);
-    document.addEventListener('paste', handleClipboardEvents);
+    window.addEventListener('contextmenu', handleContextMenu, true);
+    document.addEventListener('contextmenu', handleContextMenu, true);
 
-    window.addEventListener('keydown', handleKeyDown);
+    const handleAuxClick = (e) => {
+      if (e.button === 2) {
+        handleContextMenu(e);
+      }
+    };
+    window.addEventListener('auxclick', handleAuxClick, true);
+    document.addEventListener('auxclick', handleAuxClick, true);
+
+    window.addEventListener('copy', handleClipboardEvents, true);
+    document.addEventListener('copy', handleClipboardEvents, true);
+    window.addEventListener('cut', handleClipboardEvents, true);
+    document.addEventListener('cut', handleClipboardEvents, true);
+    window.addEventListener('paste', handleClipboardEvents, true);
+    document.addEventListener('paste', handleClipboardEvents, true);
+
+    document.addEventListener('selectstart', handleSelectStart, true);
+
+    window.addEventListener('keydown', handleKeyDown, true);
+    document.addEventListener('keydown', handleKeyDown, true);
+    window.addEventListener('keyup', handleKeyDown, true);
+    document.addEventListener('keyup', handleKeyDown, true);
+
     window.addEventListener('popstate', handlePopState);
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
+      clearInterval(heartbeatInterval);
+
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
       document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
@@ -209,12 +316,26 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('blur', handleWindowBlur);
 
-      document.removeEventListener('contextmenu', handleContextMenu);
-      document.removeEventListener('copy', handleClipboardEvents);
-      document.removeEventListener('cut', handleClipboardEvents);
-      document.removeEventListener('paste', handleClipboardEvents);
+      window.removeEventListener('contextmenu', handleContextMenu, true);
+      document.removeEventListener('contextmenu', handleContextMenu, true);
 
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('auxclick', handleAuxClick, true);
+      document.removeEventListener('auxclick', handleAuxClick, true);
+
+      window.removeEventListener('copy', handleClipboardEvents, true);
+      document.removeEventListener('copy', handleClipboardEvents, true);
+      window.removeEventListener('cut', handleClipboardEvents, true);
+      document.removeEventListener('cut', handleClipboardEvents, true);
+      window.removeEventListener('paste', handleClipboardEvents, true);
+      document.removeEventListener('paste', handleClipboardEvents, true);
+
+      document.removeEventListener('selectstart', handleSelectStart, true);
+
+      window.removeEventListener('keydown', handleKeyDown, true);
+      document.removeEventListener('keydown', handleKeyDown, true);
+      window.removeEventListener('keyup', handleKeyDown, true);
+      document.removeEventListener('keyup', handleKeyDown, true);
+
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };

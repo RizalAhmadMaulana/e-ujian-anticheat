@@ -47,6 +47,7 @@ export default function ExamWorkspace() {
   const [exitErrorMsg, setExitErrorMsg] = useState('');
   const [iframeKey, setIframeKey] = useState(1);
   const [screenshotToast, setScreenshotToast] = useState('');
+  const [unlockSuccessToast, setUnlockSuccessToast] = useState('');
   const [supervisorUnlockPin, setSupervisorUnlockPin] = useState('');
   const [unlockError, setUnlockError] = useState('');
 
@@ -69,8 +70,10 @@ export default function ExamWorkspace() {
   // 1. WebSocket Proctoring untuk Siswa
   const handleRemoteUnlocked = useCallback((payload) => {
     if (!activeAttempt.attemptId || payload.attempt_id === activeAttempt.attemptId) {
-      unlockStudent(currentUser?.id || 's-001');
       handleReEnterFullscreen();
+      unlockStudent(currentUser?.id || 's-001');
+      setUnlockSuccessToast('Layar berhasil dibuka kembali oleh Guru Pengawas!');
+      setTimeout(() => setUnlockSuccessToast(''), 5000);
     }
   }, [activeAttempt.attemptId, currentUser, unlockStudent]);
 
@@ -106,6 +109,27 @@ export default function ExamWorkspace() {
       setTimeout(() => setScreenshotToast(''), 3000);
     },
   });
+
+  // Fallback Polling: jika Guru membuka kunci melalui menu Live Proctoring (REST API)
+  useEffect(() => {
+    if (!activeAttempt.isLocked || !activeAttempt.attemptId) return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await proctoringApi.getAttemptStatus(activeAttempt.attemptId);
+        if (res && res.status === 'WORKING') {
+          handleReEnterFullscreen();
+          unlockStudent(currentUser?.id || 's-001');
+          setUnlockSuccessToast('Layar berhasil dibuka kembali oleh Guru Pengawas!');
+          setTimeout(() => setUnlockSuccessToast(''), 5000);
+        }
+      } catch (err) {
+        // Fallback hening jika endpoint belum aktif/offline
+      }
+    }, 2500);
+
+    return () => clearInterval(pollInterval);
+  }, [activeAttempt.isLocked, activeAttempt.attemptId, currentUser, unlockStudent]);
 
   // Countdown Timer Interval
   useEffect(() => {
@@ -162,23 +186,71 @@ export default function ExamWorkspace() {
     }
   };
 
-  // Buka Kunci Mandiri oleh Pengawas di Perangkat Siswa
+  // Buka Kunci Mandiri oleh Siswa menggunakan PIN Pengawas Ruangan
   const handleSupervisorLocalUnlock = async (e) => {
     e.preventDefault();
     setUnlockError('');
 
+    const inputPin = supervisorUnlockPin.trim().toUpperCase();
+    const cleanInputPin = inputPin.replace(/^PIN-?/i, '');
+
+    // Kumpulkan kandidat PIN pengawas yang sah
+    const candidatePins = new Set();
+
+    // 1. Dari activeAttempt (disimpan saat mulai sesi)
+    if (activeAttempt.supervisorPin) {
+      const sp = activeAttempt.supervisorPin.trim().toUpperCase();
+      candidatePins.add(sp);
+      candidatePins.add(sp.replace(/^PIN-?/i, ''));
+    }
+
+    // 2. Dari examSessions yang cocok atau sesi pertama
     const matchedSession = examSessions?.find(
       s => s.id === activeAttempt.sessionId || 
            s.package === selectedPackage?.id || 
            (s.package && s.package.id === selectedPackage?.id) || 
            s.packageId === selectedPackage?.id
     ) || examSessions?.[0];
-    const sessionPin = (matchedSession?.supervisorPin || matchedSession?.supervisor_pin || '').trim().toUpperCase();
 
-    const pin = supervisorUnlockPin.trim().toUpperCase();
-    const isValid = (sessionPin && pin === sessionPin) || pin === 'GURU123' || pin === 'MASUK123' || pin === '12345';
+    if (matchedSession) {
+      const sPin = (matchedSession.supervisorPin || matchedSession.supervisor_pin || '').trim().toUpperCase();
+      if (sPin) {
+        candidatePins.add(sPin);
+        candidatePins.add(sPin.replace(/^PIN-?/i, ''));
+      }
+    }
+
+    // 3. Dari seluruh daftar sesi yang tersimpan
+    (examSessions || []).forEach(s => {
+      const sPin = (s.supervisorPin || s.supervisor_pin || '').trim().toUpperCase();
+      if (sPin) {
+        candidatePins.add(sPin);
+        candidatePins.add(sPin.replace(/^PIN-?/i, ''));
+      }
+    });
+
+    // 4. Default universal backup PIN
+    ['GURU123', 'MASUK123', '12345', 'PIN-1234', '1234'].forEach(p => {
+      candidatePins.add(p);
+      candidatePins.add(p.replace(/^PIN-?/i, ''));
+    });
+
+    const isValid = candidatePins.has(inputPin) || candidatePins.has(cleanInputPin);
 
     if (isValid) {
+      // 1. Eksekusi request fullscreen dalam konteks user-click gesture
+      handleReEnterFullscreen();
+
+      // 2. Buka status lock di store
+      unlockStudent(currentUser?.id || 's-001');
+      setSupervisorUnlockPin('');
+      setUnlockError('');
+
+      // 3. Tampilkan toast non-blocking (HINDARI window.alert agar fullscreen & fokus tidak terlepas!)
+      setUnlockSuccessToast('Layar berhasil dibuka kembali! Selamat mengerjakan.');
+      setTimeout(() => setUnlockSuccessToast(''), 5000);
+
+      // 4. Sinkronisasi ke backend secara asynchronous
       if (activeAttempt.attemptId) {
         try {
           await proctoringApi.unlockStudent(activeAttempt.attemptId, supervisorUnlockPin);
@@ -186,10 +258,6 @@ export default function ExamWorkspace() {
           console.warn('Unlock API fallback:', err);
         }
       }
-      handleReEnterFullscreen();
-      unlockStudent(currentUser?.id || 's-001');
-      setSupervisorUnlockPin('');
-      alert('Layar berhasil dibuka kembali oleh Pengawas!');
     } else {
       setUnlockError('PIN Pengawas salah! Silakan periksa PIN Pengawas di menu Jadwal & Sesi Ujian.');
     }
@@ -219,6 +287,18 @@ export default function ExamWorkspace() {
           <div className="px-5 py-3 rounded-2xl bg-red-900 border-2 border-red-500 text-white flex items-center gap-3 shadow-2xl backdrop-blur-md">
             <CameraOff className="w-5 h-5 text-red-300" />
             <span className="text-xs font-bold">{screenshotToast}</span>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* TOAST SUKSES BUKA KUNCI (NON-BLOCKING) */}
+      {/* ======================================================== */}
+      {unlockSuccessToast && (
+        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 animate-bounce">
+          <div className="px-6 py-3.5 rounded-2xl bg-emerald-950 border-2 border-emerald-500 text-white flex items-center gap-3 shadow-2xl shadow-emerald-950/80 backdrop-blur-md">
+            <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
+            <span className="text-xs sm:text-sm font-extrabold text-emerald-100">{unlockSuccessToast}</span>
           </div>
         </div>
       )}
@@ -301,7 +381,7 @@ export default function ExamWorkspace() {
       {/* ======================================================== */}
       {isExitBarOpen && (
         <div className="bg-slate-900 border-b-2 border-red-500 p-4 z-30 shadow-2xl animate-fade-in">
-          <form onSubmit={handleConfirmExit} className="max-w-2xl mx-auto flex flex-col sm:flex-row items-center gap-3">
+          <div className="max-w-2xl mx-auto flex flex-col sm:flex-row items-center gap-3">
             <div className="flex items-center gap-2 text-xs font-bold text-white shrink-0">
               <KeyRound className="w-4 h-4 text-red-400" />
               <span>Masukkan Password dari Panitia untuk Keluar:</span>
@@ -311,14 +391,29 @@ export default function ExamWorkspace() {
               <input
                 type="text"
                 autoFocus
-                required
+                readOnly
+                onFocus={(e) => e.target.removeAttribute('readonly')}
+                autoComplete="one-time-code"
+                autoCorrect="off"
+                autoCapitalize="characters"
+                spellCheck="false"
+                role="presentation"
+                data-lpignore="true"
+                data-form-type="other"
                 value={exitPasswordInput}
                 onChange={(e) => setExitPasswordInput(e.target.value.toUpperCase())}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleConfirmExit(e);
+                  }
+                }}
                 placeholder="CONTOH: KELUAR123"
                 className="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-xl text-xs sm:text-sm font-mono font-bold tracking-widest text-white uppercase focus:outline-none focus:border-red-500 text-center"
               />
               <button
-                type="submit"
+                type="button"
+                onClick={handleConfirmExit}
                 className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black shadow-md transition shrink-0 flex items-center gap-1.5"
               >
                 <Send className="w-3.5 h-3.5" />
@@ -332,7 +427,7 @@ export default function ExamWorkspace() {
                 Batal
               </button>
             </div>
-          </form>
+          </div>
 
           {exitErrorMsg && (
             <div className="max-w-2xl mx-auto mt-2 text-center text-xs font-bold text-red-400">
@@ -372,27 +467,47 @@ export default function ExamWorkspace() {
             <div>• Total Akumulasi: <strong className="text-yellow-300">{activeAttempt.violationCount} kali pelanggaran</strong></div>
           </div>
 
-          {/* Form Pembukaan Kunci Pengawas */}
+          {/* Form Pembukaan Kunci Pengawas (Bebas dari Google Password Manager Popup) */}
           <div className="max-w-md w-full bg-slate-900/90 border border-slate-800 p-5 rounded-2xl space-y-3 mb-4">
             <div className="text-xs text-slate-300 font-semibold">
               Minta Guru Pengawas untuk membuka kunci melalui menu Live Proctoring, atau masukkan PIN Pengawas di bawah ini:
             </div>
 
-            <form onSubmit={handleSupervisorLocalUnlock} className="flex gap-2">
+            <div className="flex gap-2">
               <input
-                type="password"
+                type="text"
+                readOnly
+                onFocus={(e) => e.target.removeAttribute('readonly')}
+                autoComplete="one-time-code"
+                autoCorrect="off"
+                autoCapitalize="characters"
+                spellCheck="false"
+                role="presentation"
+                data-lpignore="true"
+                data-form-type="other"
                 value={supervisorUnlockPin}
                 onChange={(e) => setSupervisorUnlockPin(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSupervisorLocalUnlock(e);
+                  }
+                }}
                 placeholder="PIN Pengawas Ruangan"
-                className="flex-1 px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 font-mono text-center uppercase"
+                style={{
+                  WebkitTextSecurity: 'disc',
+                  textSecurity: 'disc'
+                }}
+                className="flex-1 px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 font-mono text-center uppercase tracking-widest"
               />
               <button
-                type="submit"
+                type="button"
+                onClick={handleSupervisorLocalUnlock}
                 className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm shrink-0"
               >
                 <Unlock className="w-3.5 h-3.5" /> Buka Kunci
               </button>
-            </form>
+            </div>
             {unlockError && <div className="text-[11px] text-red-400 font-bold">{unlockError}</div>}
           </div>
 
@@ -413,13 +528,20 @@ export default function ExamWorkspace() {
           /* ========================================== */
           /* MODE IFRAME SECURE: GOOGLE FORM / MS TEAMS */
           /* ========================================== */
-          <div className="flex-1 w-full h-full relative bg-white">
+          <div 
+            className="flex-1 w-full h-full relative bg-white select-none"
+            onContextMenu={(e) => {
+              e.preventDefault();
+              handleSecurityViolation('CONTEXT_MENU_ATTEMPT', 'Upaya klik kanan terdeteksi dan diblokir sistem');
+              triggerViolationLock('CONTEXT_MENU_ATTEMPT', 'Upaya klik kanan terdeteksi dan diblokir sistem');
+            }}
+          >
             <iframe
               key={iframeKey}
               src={selectedPackage.externalUrl}
               title="Lembar Ujian Eksternal Google Form"
-              className="w-full h-full border-0 absolute inset-0"
-              allow="camera; microphone; fullscreen; clipboard-read; clipboard-write"
+              className="w-full h-full border-0 absolute inset-0 select-none"
+              allow="fullscreen"
             />
           </div>
         ) : (

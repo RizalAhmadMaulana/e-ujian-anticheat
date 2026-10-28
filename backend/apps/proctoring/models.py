@@ -72,6 +72,8 @@ class ViolationLog(models.Model):
         EXIT_FULLSCREEN = 'EXIT_FULLSCREEN', 'Keluar Mode Layar Penuh'
         WINDOW_BLUR_APP_SWITCH = 'WINDOW_BLUR_APP_SWITCH', 'Membuka Aplikasi Lain (Window Blur)'
         SHORTCUT_ATTEMPT = 'SHORTCUT_ATTEMPT', 'Mencoba Pintasan Terlarang (Screenshot/DevTools)'
+        CONTEXT_MENU_ATTEMPT = 'CONTEXT_MENU_ATTEMPT', 'Mencoba Klik Kanan (Menu Konteks)'
+        CLIPBOARD_ATTEMPT = 'CLIPBOARD_ATTEMPT', 'Mencoba Copy-Paste / Salin Teks'
 
     id = models.BigAutoField(primary_key=True)
     attempt = models.ForeignKey(

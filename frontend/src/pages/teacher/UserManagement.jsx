@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Users, 
   UserPlus, 
@@ -12,7 +12,14 @@ import {
   CheckCircle2, 
   AlertCircle,
   RefreshCw,
-  School
+  School,
+  FileSpreadsheet,
+  UploadCloud,
+  Download,
+  FileCheck,
+  CheckCircle,
+  XCircle,
+  FileUp
 } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import { 
@@ -20,7 +27,9 @@ import {
   createUserApi, 
   updateUserApi, 
   deleteUserApi, 
-  getClassroomsApi 
+  getClassroomsApi,
+  downloadUserTemplateExcelApi,
+  importUsersExcelApi
 } from '../../api/authApi';
 
 export default function UserManagement() {
@@ -33,7 +42,7 @@ export default function UserManagement() {
   const [roleFilter, setRoleFilter] = useState(''); // '' | 'TEACHER' | 'STUDENT'
   const [classFilter, setClassFilter] = useState('');
 
-  // Modal states
+  // Modal states (Tambah / Edit Pengguna Manual)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState(null);
@@ -46,6 +55,15 @@ export default function UserManagement() {
   });
   const [modalError, setModalError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Modal states (Import Massal Excel)
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const [importError, setImportError] = useState('');
+  const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
+  const fileInputRef = useRef(null);
 
   // Fetch Classrooms for dropdowns
   const fetchClassrooms = async () => {
@@ -160,6 +178,64 @@ export default function UserManagement() {
     }
   };
 
+  // Download Template Excel
+  const handleDownloadTemplate = async () => {
+    setIsDownloadingTemplate(true);
+    try {
+      await downloadUserTemplateExcelApi('Template_Import_Siswa_E-Ujian.xlsx');
+    } catch (err) {
+      alert('Gagal mengunduh template Excel: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setIsDownloadingTemplate(false);
+    }
+  };
+
+  // Buka Modal Import Excel
+  const handleOpenImportModal = () => {
+    setImportFile(null);
+    setImportResult(null);
+    setImportError('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    setIsImportModalOpen(true);
+  };
+
+  // Pilih File
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.name.match(/\.(xlsx|xls)$/i)) {
+        setImportError('Format berkas tidak didukung! Harap pilih berkas berekstensi .xlsx atau .xls.');
+        setImportFile(null);
+        return;
+      }
+      setImportFile(file);
+      setImportError('');
+      setImportResult(null);
+    }
+  };
+
+  // Submit Import Excel
+  const handleImportExcel = async (e) => {
+    e.preventDefault();
+    if (!importFile) {
+      setImportError('Silakan pilih berkas Excel terlebih dahulu.');
+      return;
+    }
+
+    setIsImporting(true);
+    setImportError('');
+    try {
+      const res = await importUsersExcelApi(importFile);
+      setImportResult(res);
+      await fetchUsers();
+      await fetchClassrooms();
+    } catch (err) {
+      setImportError(err.response?.data?.error || 'Gagal mengimpor data siswa dari berkas Excel.');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
       {/* Header Halaman */}
@@ -178,13 +254,42 @@ export default function UserManagement() {
           </p>
         </div>
 
-        <button
-          onClick={handleOpenAdd}
-          className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shadow-md shadow-indigo-600/30 self-start sm:self-auto"
-        >
-          <UserPlus className="w-4 h-4" />
-          <span>Tambah Pengguna Baru</span>
-        </button>
+        {/* Tombol Aksi Header */}
+        <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
+          {/* Tombol Unduh Template Excel */}
+          <button
+            onClick={handleDownloadTemplate}
+            disabled={isDownloadingTemplate}
+            className="px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-2 border-emerald-300 hover:border-emerald-500 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shadow-sm disabled:opacity-50"
+            title="Unduh file template Excel (.xlsx) untuk format data siswa"
+          >
+            {isDownloadingTemplate ? (
+              <RefreshCw className="w-4 h-4 animate-spin text-emerald-700" />
+            ) : (
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+            )}
+            <span>Unduh Template Excel</span>
+          </button>
+
+          {/* Tombol Import Excel */}
+          <button
+            onClick={handleOpenImportModal}
+            className="px-3.5 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-2 border-indigo-300 hover:border-indigo-500 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shadow-sm"
+            title="Import data siswa massal dari file Excel / hasil Google Form"
+          >
+            <UploadCloud className="w-4 h-4 text-indigo-600" />
+            <span>Import Excel</span>
+          </button>
+
+          {/* Tombol Tambah Manual */}
+          <button
+            onClick={handleOpenAdd}
+            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shadow-md shadow-indigo-600/30"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>Tambah Manual</span>
+          </button>
+        </div>
       </div>
 
       {/* Bar Filter & Pencarian */}
@@ -477,6 +582,164 @@ export default function UserManagement() {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* ======================================================== */}
+      {/* MODAL 2: IMPORT MASSAL DATA SISWA DARI FILE EXCEL        */}
+      {/* ======================================================== */}
+      <Modal
+        isOpen={isImportModalOpen}
+        onClose={() => {
+          if (!isImporting) {
+            setIsImportModalOpen(false);
+          }
+        }}
+        title="Import Data Siswa dari File Excel"
+      >
+        <div className="space-y-4">
+          {/* Petunjuk Pengisian */}
+          <div className="p-3.5 rounded-xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-900 space-y-2">
+            <div className="font-extrabold flex items-center gap-1.5 text-indigo-950">
+              <FileSpreadsheet className="w-4 h-4 text-indigo-600" />
+              <span>Panduan Import Otomatis Data Siswa:</span>
+            </div>
+            <p className="text-[11px] leading-relaxed text-indigo-800">
+              Unggah file Excel (<strong>.xlsx</strong>) rekapan siswa (misal: hasil Google Form / SPSS atau template kami). 
+              Sistem akan <strong>otomatis membuatkan akun siswa</strong>, menghubungkan ke kelas, dan mengenkripsi kata sandi.
+            </p>
+            <div className="pt-1 flex items-center justify-between border-t border-indigo-200/60">
+              <span className="text-[11px] text-slate-500">Belum punya formatnya?</span>
+              <button
+                type="button"
+                onClick={handleDownloadTemplate}
+                disabled={isDownloadingTemplate}
+                className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 underline flex items-center gap-1"
+              >
+                <Download className="w-3 h-3" />
+                <span>Unduh Template Excel Resmi</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Area Upload File */}
+          <form onSubmit={handleImportExcel} className="space-y-4">
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              className={`p-6 border-2 border-dashed rounded-2xl cursor-pointer text-center transition flex flex-col items-center justify-center gap-2.5 ${
+                importFile 
+                  ? 'bg-emerald-50/60 border-emerald-400 hover:bg-emerald-50' 
+                  : 'bg-slate-50 border-slate-300 hover:border-indigo-400 hover:bg-indigo-50/30'
+              }`}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx, .xls"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+
+              {importFile ? (
+                <>
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                    <FileCheck className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-black text-emerald-900">{importFile.name}</div>
+                    <div className="text-[10px] text-emerald-700 font-semibold mt-0.5">
+                      Ukuran: {(importFile.size / 1024).toFixed(1)} KB • Klik untuk mengganti berkas
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                    <UploadCloud className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-slate-800">
+                      Klik untuk memilih berkas Excel (.xlsx)
+                    </div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">
+                      Maksimal ukuran 10 MB per berkas
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Pesan Error */}
+            {importError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2 text-red-700 text-xs">
+                <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                <span className="leading-relaxed">{importError}</span>
+              </div>
+            )}
+
+            {/* Hasil Ringkasan Import */}
+            {importResult && (
+              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-2">
+                <div className="font-extrabold flex items-center gap-1.5 text-emerald-950">
+                  <CheckCircle className="w-4 h-4 text-emerald-600" />
+                  <span>{importResult.message}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                  <div className="bg-white/80 p-2 rounded-lg border border-emerald-200">
+                    <div className="text-slate-500">Akun Baru Dibuat:</div>
+                    <div className="text-sm font-black text-emerald-700">{importResult.created_count} Siswa</div>
+                  </div>
+                  <div className="bg-white/80 p-2 rounded-lg border border-emerald-200">
+                    <div className="text-slate-500">Akun Diperbarui:</div>
+                    <div className="text-sm font-black text-indigo-700">{importResult.updated_count} Siswa</div>
+                  </div>
+                </div>
+
+                {importResult.errors && importResult.errors.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-emerald-200 text-[10px] text-amber-800 space-y-1">
+                    <div className="font-bold">Catatan Peringatan Baris:</div>
+                    <ul className="list-disc pl-4 space-y-0.5">
+                      {importResult.errors.slice(0, 5).map((err, i) => (
+                        <li key={i}>{err}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Tombol Aksi Modal */}
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                disabled={isImporting}
+                onClick={() => setIsImportModalOpen(false)}
+                className="px-4 py-2 border border-slate-300 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-50 transition"
+              >
+                {importResult ? 'Selesai & Tutup' : 'Batal'}
+              </button>
+
+              {!importResult && (
+                <button
+                  type="submit"
+                  disabled={isImporting || !importFile}
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isImporting ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Sedang Memproses Excel...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FileUp className="w-3.5 h-3.5" />
+                      <span>Mulai Import Data Siswa</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </form>
+        </div>
       </Modal>
     </div>
   );

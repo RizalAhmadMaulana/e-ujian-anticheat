@@ -133,8 +133,8 @@ export default function LoginPage() {
             </button>
           </div>
 
-          {/* Login Form */}
-          <form onSubmit={handleManualLogin} className="space-y-4">
+          {/* Login Form (Bebas Dialog Simpan Password Browser & Rekomendasi Isian) */}
+          <div className="space-y-4">
             {errorMessage && (
               <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-xl flex items-center gap-2 text-red-200 text-xs">
                 <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
@@ -152,8 +152,18 @@ export default function LoginPage() {
                 <input
                   type="text"
                   required
+                  readOnly
+                  onFocus={(e) => e.target.removeAttribute('readonly')}
+                  autoComplete="one-time-code"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck="false"
+                  role="presentation"
+                  data-lpignore="true"
+                  data-form-type="other"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleManualLogin(e)}
                   placeholder={activeRole === 'TEACHER' ? 'Masukkan NIP Anda' : 'Masukkan NISN Anda'}
                   className="block w-full pl-10 pr-3 py-2.5 bg-slate-900/80 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
                 />
@@ -169,12 +179,26 @@ export default function LoginPage() {
                   <Lock className="h-4 w-4" />
                 </div>
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type="text"
                   required
+                  readOnly
+                  onFocus={(e) => e.target.removeAttribute('readonly')}
+                  autoComplete="one-time-code"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck="false"
+                  role="presentation"
+                  data-lpignore="true"
+                  data-form-type="other"
+                  style={{
+                    WebkitTextSecurity: showPassword ? 'none' : 'disc',
+                    textSecurity: showPassword ? 'none' : 'disc'
+                  }}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleManualLogin(e)}
                   placeholder="Masukkan kata sandi"
-                  className="block w-full pl-10 pr-10 py-2.5 bg-slate-900/80 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                  className="block w-full pl-10 pr-10 py-2.5 bg-slate-900/80 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition font-mono"
                 />
                 <button
                   type="button"
@@ -187,7 +211,8 @@ export default function LoginPage() {
             </div>
 
             <button
-              type="submit"
+              type="button"
+              onClick={handleManualLogin}
               disabled={isLoading}
               className="w-full mt-2 py-3 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-sm font-bold shadow-lg shadow-indigo-600/25 transition flex items-center justify-center gap-2 disabled:opacity-50"
             >
@@ -200,7 +225,7 @@ export default function LoginPage() {
                 </>
               )}
             </button>
-          </form>
+          </div>
 
           {/* Zero-Tolerance Security Footnote */}
           <div className="mt-6 pt-5 border-t border-slate-700/60 flex items-center justify-between text-[11px] text-slate-400">

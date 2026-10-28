@@ -6,6 +6,8 @@ from .views import (
     ClassRoomDetailView,
     UserListCreateView,
     UserDetailView,
+    UserExcelTemplateView,
+    UserExcelImportView,
     SchoolSettingView
 )
 
@@ -21,7 +23,9 @@ urlpatterns = [
     path('classrooms/', ClassRoomListCreateView.as_view(), name='classroom_list_create'),
     path('classrooms/<int:pk>/', ClassRoomDetailView.as_view(), name='classroom_detail'),
 
-    # CRUD Manajemen Pengguna
+    # CRUD Manajemen Pengguna & Import Excel
+    path('users/template-excel/', UserExcelTemplateView.as_view(), name='user_template_excel'),
+    path('users/import-excel/', UserExcelImportView.as_view(), name='user_import_excel'),
     path('users/', UserListCreateView.as_view(), name='user_list_create'),
     path('users/<uuid:pk>/', UserDetailView.as_view(), name='user_detail'),
 ]
