@@ -8,6 +8,14 @@ from .views import (
     UserDetailView,
     UserExcelTemplateView,
     UserExcelImportView,
+    StudentListCreateView,
+    StudentDetailView,
+    StudentExcelTemplateView,
+    StudentExcelImportView,
+    TeacherListCreateView,
+    TeacherDetailView,
+    TeacherExcelTemplateView,
+    TeacherExcelImportView,
     SchoolSettingView
 )
 
@@ -22,6 +30,18 @@ urlpatterns = [
     # CRUD Kelas / Rombel
     path('classrooms/', ClassRoomListCreateView.as_view(), name='classroom_list_create'),
     path('classrooms/<int:pk>/', ClassRoomDetailView.as_view(), name='classroom_detail'),
+
+    # CRUD Data Siswa & Import Excel
+    path('students/template-excel/', StudentExcelTemplateView.as_view(), name='student_template_excel'),
+    path('students/import-excel/', StudentExcelImportView.as_view(), name='student_import_excel'),
+    path('students/', StudentListCreateView.as_view(), name='student_list_create'),
+    path('students/<uuid:pk>/', StudentDetailView.as_view(), name='student_detail'),
+
+    # CRUD Data Guru & Import Excel
+    path('teachers/template-excel/', TeacherExcelTemplateView.as_view(), name='teacher_template_excel'),
+    path('teachers/import-excel/', TeacherExcelImportView.as_view(), name='teacher_import_excel'),
+    path('teachers/', TeacherListCreateView.as_view(), name='teacher_list_create'),
+    path('teachers/<uuid:pk>/', TeacherDetailView.as_view(), name='teacher_detail'),
 
     # CRUD Manajemen Pengguna & Import Excel
     path('users/template-excel/', UserExcelTemplateView.as_view(), name='user_template_excel'),

@@ -21,13 +21,15 @@
 5. [👨‍🏫 Panduan Operasional Lengkap: Role GURU (Pengawas Asesmen)](#-panduan-operasional-lengkap-role-guru-pengawas-asesmen)
    - [Menu 1: Pengaturan Identitas Sekolah Dinamis](#menu-1-pengaturan-identitas-sekolah-dinamis)
    - [Menu 2: Data Kelas & Rombel (CRUD Kelas)](#menu-2-data-kelas--rombel-crud-kelas)
-   - [Menu 3: Manajemen Pengguna & Hak Akses (CRUD User)](#menu-3-manajemen-pengguna--hak-akses-crud-user)
-   - [Menu 4: Bank Soal & Paket Ujian (Hybrid Mode)](#menu-4-bank-soal--paket-ujian-hybrid-mode)
-   - [Menu 5: Jadwal & Sesi Ujian (One-Click Copy Password)](#menu-5-jadwal--sesi-ujian-one-click-copy-password)
-   - [Menu 6: Ruang Pengawas Real-Time (Live Proctoring & Remote Unlock)](#menu-6-ruang-pengawas-real-time-live-proctoring--remote-unlock)
-   - [Menu 7: E-Jurnal & Rekapitulasi Berita Acara (Ekspor PDF/Excel)](#menu-7-e-jurnal--rekapitulasi-berita-acara-ekspor-pdfexcel)
+   - [Menu 3: Data Guru (CRUD Guru, Import & Template Excel)](#menu-3-data-guru-crud-guru-import--template-excel)
+   - [Menu 4: Data Siswa (CRUD Siswa, Import & Template Excel)](#menu-4-data-siswa-crud-siswa-import--template-excel)
+   - [Menu 5: Manajemen Pengguna & Hak Akses (Desain Modern & Reset Password)](#menu-5-manajemen-pengguna--hak-akses-gaya-tahfidz_mis--reset-password)
+   - [Menu 6: Bank Soal & Paket Ujian (Hybrid Mode)](#menu-6-bank-soal--paket-ujian-hybrid-mode)
+   - [Menu 7: Jadwal & Sesi Ujian (One-Click Copy Password & PIN Pengawas)](#menu-7-jadwal--sesi-ujian-one-click-copy-password--pin-pengawas)
+   - [Menu 8: Ruang Pengawas Real-Time (Live Proctoring & Dual Unlock)](#menu-8-ruang-pengawas-real-time-live-proctoring--dual-unlock)
+   - [Menu 9: E-Jurnal & Rekapitulasi Berita Acara (Ekspor PDF/Excel)](#menu-9-e-jurnal--rekapitulasi-berita-acara-ekspor-pdfexcel)
 6. [👨‍🎓 Panduan Operasional Lengkap: Role SISWA (Peserta Asesmen)](#-panduan-operasional-lengkap-role-siswa-peserta-asesmen)
-   - [Layar 1: Login & Gatekeeper PIN Masuk](#layar-1-login--gatekeeper-pin-masuk)
+   - [Layar 1: Login Terpadu (NISN) & Gatekeeper PIN Masuk](#layar-1-login-terpadu-nisn--gatekeeper-pin-masuk)
    - [Layar 2: Beranda Peserta & Orientasi Layar (Portrait/Landscape)](#layar-2-beranda-peserta--orientasi-layar-portraitlandscape)
    - [Layar 3: Portal Mata Pelajaran & Masuk Mode Fullscreen](#layar-3-portal-mata-pelajaran--masuk-mode-fullscreen)
    - [Layar 4: Arena Ujian Terkunci (Pengerjaan Soal Mandiri / Google Form)](#layar-4-arena-ujian-terkunci-pengerjaan-soal-mandiri--google-form)
@@ -197,7 +199,7 @@ Sistem ini menerapkan arsitektur **Role-Based Access Control (RBAC)** yang memis
 
 ## 👨‍🏫 Panduan Operasional Lengkap: Role GURU (Pengawas Asesmen)
 
-Setelah masuk melalui tab **"Guru Pengawas"** di halaman login (`/login`), guru memiliki akses ke 7 menu utama pada navigasi samping:
+Setelah masuk melalui portal login terpadu (`/login`) menggunakan **NIP** dan kata sandi (default: sama dengan NIP), sistem secara otomatis mendeteksi peran guru dan mengarahkannya ke dashboard pengawas (`/teacher/dashboard`). Guru memiliki akses ke 9 menu utama pada navigasi samping:
 
 ### Menu 1: Pengaturan Identitas Sekolah Dinamis
 - **Rute:** `/teacher/settings`
@@ -214,7 +216,7 @@ Setelah masuk melalui tab **"Guru Pengawas"** di halaman login (`/login`), guru 
 
 ### Menu 2: Data Kelas & Rombel (CRUD Kelas)
 - **Rute:** `/teacher/classrooms`
-- **Fungsi:** Mengelola daftar rombongan belajar sekolah.
+- **Fungsi:** Mengelola daftar rombongan belajar sekolah secara dinamis.
 - **Langkah-langkah:**
   1. Klik **"+ Tambah Kelas Baru"**.
   2. Isi Nama Kelas (misal: `IX`, `VIII`, `VII`) dan Tahun Ajaran (`2026/2027`).
@@ -223,23 +225,57 @@ Setelah masuk melalui tab **"Guru Pengawas"** di halaman login (`/login`), guru 
 
 ---
 
-### Menu 3: Manajemen Pengguna & Hak Akses (CRUD User & Import Excel Siswa)
-- **Rute:** `/teacher/users`
-- **Fungsi:** Mendaftarkan akun guru dan peserta ujian secara manual satuan maupun massal melalui file Excel.
-- **Fitur Baru Import Massal Excel (Rekap GForm / SPSS):**
-  1. Klik tombol **"Unduh Template Excel"** untuk mendapatkan format resmi `Template_Import_Siswa_E-Ujian.xlsx` (kolom NISN, Nama Lengkap Siswa, Kelas/Rombel, dan Password opsional).
-  2. Guru dapat menyalin hasil pengisian formulir biodata murid dari Google Form atau olahan SPSS ke template ini.
-  3. Klik tombol **"Import Excel"**, unggah berkas `.xlsx`, dan klik **"Mulai Impor Akun"**.
-  4. Sistem otomatis mendaftarkan seluruh akun siswa, menautkan ke kelas yang sesuai (otomatis membuat kelas jika belum ada), mengenkripsi password dengan aman (default `siswa123`), dan menyegarkan tabel seketika.
-- **Pendaftaran Manual Satuan:**
-  1. Klik **"+ Tambah Pengguna Baru"**.
-  2. Isi NISN/NIP, Nama Lengkap, Peran (`Siswa Peserta` atau `Guru Pengawas`), dan Kelas Siswa.
-  3. Tentukan kata sandi akun yang aman.
-  4. Jika siswa lupa kata sandi di tengah ujian, guru dapat mengklik ikon pensil untuk langsung me-reset sandinya.
+### Menu 3: Data Guru (CRUD Guru, Import & Template Excel)
+- **Rute:** `/teacher/teachers`
+- **Fungsi:** Mengelola data dewan guru pengawas asesmen sekolah.
+- **Tampilan Desain (Desain Modern E-Ujian):**
+  - Kolom Tabel: `#`, `NAMA GURU`, `NIP`, `EMAIL`, dan `AKSI` (Tombol Edit & Hapus).
+  - Kontrol: `Show [10] entries`, pencarian `Search: Cari Nama atau NIP...`.
+- **Fitur Tambah Guru & Sinkronisasi 2 Arah:**
+  1. Klik **"+ Tambah Guru"**, isi Nama Lengkap, NIP, dan Email (opsional).
+  2. *Tidak ada input password*: sistem otomatis membuat akun login dengan Username = NIP dan Kata Sandi = NIP.
+  3. Akun baru seketika tersinkronisasi dan otomatis muncul di menu **Manajemen Pengguna**.
+  4. Perubahan data atau penghapusan guru di menu ini otomatis memperbarui/menghapus akun di **Manajemen Pengguna**.
+- **Import Massal Guru via Excel:**
+  1. Klik tombol **"Template Excel"** untuk mengunduh format resmi `Template_Import_Guru_E-Ujian.xlsx` (Header: `NIP, Nama Guru, Email`).
+  2. Klik tombol **"Import Excel"**, unggah berkas `.xlsx`, lalu klik **"Import Sekarang"**.
 
 ---
 
-### Menu 4: Bank Soal & Paket Ujian (Hybrid Mode)
+### Menu 4: Data Siswa (CRUD Siswa, Import & Template Excel)
+- **Rute:** `/teacher/students`
+- **Fungsi:** Mengelola data seluruh peserta didik peserta asesmen.
+- **Tampilan Desain (Desain Modern E-Ujian):**
+  - Kolom Tabel: `#`, `NAMA SISWA`, `NISN`, `KELAS`, `EMAIL`, dan `AKSI` (Tombol Edit & Hapus).
+  - Kontrol: `Show [10] entries`, dropdown dinamis `Filter Kelas`, dan pencarian `Search: Cari Nama atau NISN...`.
+- **Fitur Tambah Siswa & Sinkronisasi 2 Arah:**
+  1. Klik **"+ Tambah Siswa"**, isi Nama Siswa, NISN, pilih Kelas, dan Email (opsional).
+  2. *Tidak ada input password*: sistem otomatis membuat akun login dengan Username = NISN dan Kata Sandi = NISN.
+  3. Akun baru seketika tersinkronisasi dan otomatis muncul di menu **Manajemen Pengguna**.
+  4. Perubahan data atau penghapusan siswa di menu ini otomatis memperbarui/menghapus akun di **Manajemen Pengguna**.
+- **Import Massal Siswa via Excel (Rekap GForm / SPSS):**
+  1. Klik tombol **"Template Excel"** untuk mengunduh `Template_Import_Siswa_E-Ujian.xlsx` (Header: `NISN, Nama Siswa, Kelas, Email`).
+  2. Guru dapat menyalin hasil pengisian Google Form / rekapitulasi data siswa ke template ini.
+  3. Klik tombol **"Import Excel"**, unggah berkas `.xlsx`, lalu klik **"Import Sekarang"**. Sistem otomatis mendaftarkan siswa sekaligus membuat kelas baru jika belum ada di database.
+
+---
+
+### Menu 5: Manajemen Pengguna & Hak Akses (Desain Modern & Reset Password)
+- **Rute:** `/teacher/users`
+- **Fungsi:** Pengendali seluruh akun pengguna sistem (Guru, Siswa, Administrator).
+- **Tampilan Desain & Tata Letak:**
+  - Mengadopsi tata letak resmi `Tahfidz_MIS` dengan kontainer kartu bergaris atas hijau tebal (`border-t-[5px] border-[#2ECC71]`), kontrol `Show [10] entries`, dan `Search: Cari Username / Nama...`.
+  - Kolom Tabel: `#`, `USERNAME`, `NAMA LENGKAP`, `EMAIL`, `ROLE` (Badge GURU / SISWA), dan `AKSI` (Tombol Edit hijau `#2ECC71` dan Hapus merah `#E74C3C`).
+  - *(Bebas tombol Backup DB dan Restore DB sesuai standarisasi).*
+- **Fitur Reset Password Mandiri oleh Pengawas:**
+  - Tersedia input Kata Sandi pada modal Tambah/Edit Pengguna.
+  - Jika siswa atau guru lupa sandi saat ujian berlangsung, pengawas dapat mengklik tombol **Edit** untuk me-reset kata sandinya seketika.
+- **Import Excel Pengguna Multi-Role:**
+  - Tersedia tombol `+ Tambah User`, `Import Excel`, dan `Template Excel` untuk impor akun kustom.
+
+---
+
+### Menu 6: Bank Soal & Paket Ujian (Hybrid Mode)
 - **Rute:** `/teacher/packages`
 - **Fungsi:** Menyusun soal ujian baik mode mandiri maupun integrasi formulir eksternal.
 - **Langkah-langkah Pembuatan:**
@@ -255,50 +291,57 @@ Setelah masuk melalui tab **"Guru Pengawas"** di halaman login (`/login`), guru 
 
 ---
 
-### Menu 5: Jadwal & Sesi Ujian (One-Click Copy Password)
+### Menu 7: Jadwal & Sesi Ujian (One-Click Copy Password & PIN Pengawas)
 - **Rute:** `/teacher/sessions`
 - **Fungsi:** Membuka ruangan asesmen untuk kelas tertentu.
 - **Langkah-langkah:**
   1. Klik **"+ Buka Sesi Ujian Baru"**, pilih Paket Soal, Kelas Peserta, Durasi (menit), dan Jadwal Waktu.
-  2. Sistem otomatis menghasilkan **Password Masuk** (contoh: `MSK-US4T`) dan **Password Keluar** (contoh: `KLR-BLCN`).
+  2. Sistem otomatis menghasilkan **Trio Token Keamanan**:
+     - 🔑 **Password Masuk** (contoh: `MSK-US4T`): Token gerbang gatekeeper pengerjaan soal.
+     - 🔒 **Password Keluar** (contoh: `KLR-BLCN`): Token penutup ujian resmi bersirene.
+     - 🛡️ **PIN Pengawas** (contoh: `PIN-1234`): PIN darurat untuk membuka layar merah siswa yang terkunci secara mandiri.
   3. **Fitur Salin Cepat (One-Click Copy):**
-     - Klik langsung kotak **Password Masuk**: token otomatis tersalin ke keyboard/clipboard (muncul label *"Tersalin!"* dan pop-up konfirmasi) untuk dibagikan ke siswa saat ujian dimulai.
-     - Klik langsung kotak **Password Keluar**: token keluar otomatis tersalin ke keyboard.
-  4. Tersedia tombol **Edit** untuk mengubah durasi dan tombol **Hapus** untuk menghapus sesi.
+     - Klik langsung salah satu kotak token di kartu sesi: token seketika tersalin ke clipboard/keyboard (muncul label *"Tersalin!"* dan pop-up konfirmasi).
+  4. Tersedia tombol **Edit** untuk mengubah durasi/PIN dan tombol **Hapus** untuk menghapus sesi.
 
 ---
 
-### Menu 6: Ruang Pengawas Real-Time (Live Proctoring & Remote Unlock)
+### Menu 8: Ruang Pengawas Real-Time (Live Proctoring & Dual Unlock)
 - **Rute:** `/teacher/proctoring`
-- **Fungsi:** Pusat monitoring ujian live via WebSocket.
+- **Fungsi:** Pusat monitoring ujian live via WebSocket tanpa perlu me-refresh browser.
 - **Langkah-langkah:**
   1. Pilih sesi ujian aktif pada dropdown bagian atas.
-  2. Guru dapat memantau setiap peserta melalui kartu siswa:
+  2. Pantau kartu siswa secara real-time:
      - 🟢 **Fokus Mengerjakan:** Siswa berada dalam mode fullscreen aman.
-     - 🔴 **Layar Terkunci (Pelanggaran):** Siswa mencoba pindah tab, buka aplikasi lain, atau keluar fullscreen. Sirine darurat berbunyi di gawai siswa.
+     - 🔴 **Layar Terkunci (Pelanggaran):** Siswa terdeteksi melanggar sensor anti-cheat (keluar fullscreen, pindah tab, split screen, screenshot, klik kanan, atau copas).
      - 🔵 **Selesai Terkirim:** Siswa telah menyelesaikan pengerjaan.
-  3. **Membuka Kunci Layar (Unlock):** Klik tombol hijau **"Buka Kunci Layar"** pada kartu siswa yang bersangkutan. Layar gawai siswa seketika aktif kembali tanpa reload.
+  3. **Dual Unlock (Buka Kunci Layar 100% Fleksibel):**
+     - **Metode 1 (Remote Guru):** Guru mengklik tombol hijau **"Buka Kunci Layar"** pada kartu siswa; sinyal WebSocket dikirim dan layar siswa seketika terbuka kembali ke fullscreen.
+     - **Metode 2 (Mandiri Siswa):** Siswa memasukkan **PIN Pengawas Ruangan** yang sah pada formulir layar merah lalu klik **"Buka Kunci"**; layar seketika kembali ke arena ujian dengan masa imunitas sensor 5 detik.
 
 ---
 
-### Menu 7: E-Jurnal & Rekapitulasi Berita Acara (Ekspor PDF/Excel)
+### Menu 9: E-Jurnal & Rekapitulasi Berita Acara (Ekspor PDF/Excel)
 - **Rute:** `/teacher/ejournal`
-- **Fungsi:** Merekap nilai, kehadiran, log pelanggaran, dan mencetak berita acara resmi.
+- **Fungsi:** Merekap nilai, kehadiran, log pelanggaran, dan mencetak berita acara resmi standar dinas.
 - **Langkah-langkah:**
   1. Gunakan filter **Paket Soal** dan **Kelas/Rombel** untuk menyaring sesi yang diinginkan.
   2. Periksa ringkasan kehadiran pada **4 Kartu KPI** (Total Peserta, Hadir, Rata-rata Nilai, dan Pelanggaran).
   3. Tulis evaluasi kelas pada kolom **Catatan Kejadian Penting Pengawas**, lalu klik **"Simpan Catatan Berita Acara"**.
-  4. Klik **"Unduh Berita Acara (PDF)"** untuk mencetak dokumen resmi standar dinas dengan kop surat dan kolom tanda tangan.
+  4. Klik **"Unduh Berita Acara (PDF)"** untuk mencetak dokumen resmi standar dinas dengan kop sekolah dan kolom tanda tangan pengawas.
   5. Klik **"Ekspor Rekap (Excel .xlsx)"** untuk mengunduh rekap spreadsheet lengkap.
 
 ---
 
 ## 👨‍🎓 Panduan Operasional Lengkap: Role SISWA (Peserta Asesmen)
 
-### Layar 1: Login & Gatekeeper PIN Masuk
-1. Siswa mengakses alamat web ujian (contoh: `http://192.168.1.74:5173/login`) di HP/Laptop.
-2. Masuk melalui tab **"Siswa Peserta"** dengan NISN dan Kata Sandi.
-3. Di layar **Gatekeeper**, masukkan **Password Masuk Ujian** yang dibagikan oleh pengawas (contoh: `MSK-US4T`).
+### Layar 1: Login Terpadu (NISN) & Gatekeeper PIN Masuk
+1. Siswa mengakses alamat web ujian (contoh: `http://192.168.1.74:5173/login`) di HP atau Laptop.
+2. Pada formulir login terpadu:
+   - Masukkan **NISN** pada kolom Username.
+   - Masukkan **Kata Sandi** (Default: sama dengan NISN).
+   - Klik **"Masuk ke Sistem"**. Sistem otomatis mendeteksi peran siswa dan mengarahkan langsung ke halaman Gatekeeper.
+3. Di layar **Gatekeeper**, masukkan **Password Masuk Ujian** yang dibagikan oleh guru pengawas (contoh: `MSK-US4T`).
 4. Klik **"CEK & MASUK RUANG UJIAN"**.
 
 ### Layar 2: Beranda Peserta & Orientasi Layar (Portrait/Landscape)

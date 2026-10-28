@@ -12,6 +12,8 @@ import LoginPage from './pages/auth/LoginPage';
 // Teacher Pages
 import DashboardTeacher from './pages/teacher/DashboardTeacher';
 import ClassroomManagement from './pages/teacher/ClassroomManagement';
+import TeacherManagement from './pages/teacher/TeacherManagement';
+import StudentManagement from './pages/teacher/StudentManagement';
 import UserManagement from './pages/teacher/UserManagement';
 import ExamPackageList from './pages/teacher/ExamPackageList';
 import ExamSessionSetup from './pages/teacher/ExamSessionSetup';
@@ -62,6 +64,8 @@ export default function App() {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<DashboardTeacher />} />
           <Route path="classrooms" element={<ClassroomManagement />} />
+          <Route path="teachers" element={<TeacherManagement />} />
+          <Route path="students" element={<StudentManagement />} />
           <Route path="users" element={<UserManagement />} />
           <Route path="packages" element={<ExamPackageList />} />
           <Route path="sessions" element={<ExamSessionSetup />} />

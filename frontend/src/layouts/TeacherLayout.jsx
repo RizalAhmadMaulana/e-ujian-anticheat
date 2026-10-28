@@ -15,6 +15,7 @@ import {
   X, 
   ShieldCheck, 
   UserCheck,
+  GraduationCap,
   ShieldAlert,
   Bell
 } from 'lucide-react';
@@ -48,6 +49,16 @@ export default function TeacherLayout() {
       to: '/teacher/classrooms', 
       label: 'Data Kelas / Rombel', 
       icon: School 
+    },
+    { 
+      to: '/teacher/teachers', 
+      label: 'Data Guru', 
+      icon: UserCheck 
+    },
+    { 
+      to: '/teacher/students', 
+      label: 'Data Siswa', 
+      icon: GraduationCap 
     },
     { 
       to: '/teacher/users', 

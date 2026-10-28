@@ -44,16 +44,18 @@ Platform ini mengintegrasikan perlindungan berlapis di sisi klien (*client-side 
 2. [Informasi Kredensial Akun & Akses Django Administrator](#1-informasi-kredensial-akun--akses-django-administrator)
 3. [Panduan Menjalankan Aplikasi (Local Server & Jaringan LAN)](#2-panduan-menjalankan-aplikasi-local-server--jaringan-lan)
 4. [Panduan Lengkap Role GURU (Pengawas Asesmen)](#3-panduan-lengkap-role-guru-pengawas-asesmen)
-   - 4.1. [Login ke Portal Guru](#31-login-ke-portal-guru)
+   - 4.1. [Login ke Sistem (Skema Terpadu NIP/NISN)](#31-login-ke-sistem-skema-terpadu-nipnisn)
    - 4.2. [Menu 1: Data Kelas & Rombel (CRUD Kelas)](#32-menu-1-data-kelas--rombel-crud-kelas)
-   - 4.3. [Menu 2: Manajemen Pengguna & Hak Akses (CRUD User)](#33-menu-2-manajemen-pengguna--hak-akses-crud-user)
-   - 4.4. [Menu 3: Bank Soal & Paket Ujian (Hybrid Mode: Mandiri / Google Form)](#34-menu-3-bank-soal--paket-ujian-hybrid-mode)
-   - 4.5. [Menu 4: Jadwal & Sesi Ujian (One-Click Copy Password)](#35-menu-4-jadwal--sesi-ujian)
-   - 4.6. [Menu 5: Ruang Pengawas Real-Time (Live Proctoring & Unlock Siswa)](#36-menu-5-ruang-pengawas-real-time-live-proctoring)
-   - 4.7. [Menu 6: E-Jurnal & Berita Acara Ujian (Rekap Nilai, Filter Paket & Kelas, Ekspor PDF/Excel)](#37-menu-6-e-jurnal--berita-acara-ujian)
-   - 4.8. [Menu 7: Pengaturan & Identitas Sekolah Dinamis (Kop Dokumen & Kepala Sekolah)](#38-menu-7-pengaturan--identitas-sekolah-dinamis)
+   - 4.3. [Menu 2: Data Guru (Pengawas Asesmen & Import Excel Guru)](#33-menu-2-data-guru)
+   - 4.4. [Menu 3: Data Siswa (Peserta Asesmen & Import Excel Siswa)](#34-menu-3-data-siswa)
+   - 4.5. [Menu 4: Management User & Hak Akses (Desain Modern E-Ujian)](#35-menu-4-management-user--hak-akses)
+   - 4.6. [Menu 5: Bank Soal & Paket Ujian (Hybrid Mode: Mandiri / Google Form)](#36-menu-5-bank-soal--paket-ujian-hybrid-mode)
+   - 4.7. [Menu 6: Jadwal & Sesi Ujian (One-Click Copy Password)](#37-menu-6-jadwal--sesi-ujian)
+   - 4.8. [Menu 7: Ruang Pengawas Real-Time (Live Proctoring & Unlock Siswa)](#38-menu-7-ruang-pengawas-real-time-live-proctoring)
+   - 4.9. [Menu 8: E-Jurnal & Berita Acara Ujian](#39-menu-8-e-jurnal--berita-acara-ujian)
+   - 4.10. [Menu 9: Pengaturan & Identitas Sekolah Dinamis](#310-menu-9-pengaturan--identitas-sekolah-dinamis)
 5. [Panduan Lengkap Role SISWA (Peserta Ujian)](#4-panduan-lengkap-role-siswa-peserta-ujian)
-   - 5.1. [Login Peserta Siswa](#41-login-peserta-siswa)
+   - 5.1. [Login Peserta Siswa (Menggunakan NISN)](#41-login-peserta-siswa)
    - 5.2. [Layar 1: Gatekeeper PIN Masuk Ujian](#42-layar-1-gatekeeper-pin-masuk-ujian)
    - 5.3. [Layar 2: Beranda Peserta & Pemilihan Orientasi Layar (Portrait/Landscape)](#43-layar-2-beranda-peserta--pemilihan-orientasi-layar)
    - 5.4. [Layar 3: Portal Mata Pelajaran & Masuk Mode Fullscreen Lockdown](#44-layar-3-portal-mata-pelajaran--fullscreen-lockdown)
@@ -123,11 +125,14 @@ npm run dev
 
 ## 3. Panduan Lengkap Role GURU (Pengawas Asesmen)
 
-### 3.1. Login ke Portal Guru
+### 3.1. Login ke Sistem (Skema Terpadu NIP/NISN)
+Sistem menggunakan satu halaman login terpadu (`/login`) tanpa tombol tab pemisah, mendeteksi peran akun secara otomatis:
 1. Buka peramban (Chrome/Edge) dan akses `http://localhost:5173/login`.
-2. Klik tab **"Guru Pengawas"**.
-3. Masukkan **Username / NIP** dan **Kata Sandi** yang telah didaftarkan oleh administrator.
-4. Klik tombol **"MASUK SEBAGAI GURU"**. Sistem akan mengarahkan ke halaman Dashboard Guru.
+2. Masukkan **NIP** (untuk Guru) atau **NISN** (untuk Siswa) pada kolom **Nomor Induk**.
+3. Masukkan **Kata Sandi** (Default: sama dengan NIP bagi Guru, atau sama dengan NISN bagi Siswa).
+4. Klik tombol **"Masuk ke Sistem"**.
+   - Jika akun adalah **Guru Pengawas**, sistem otomatis mengarahkan ke `/teacher/dashboard`.
+   - Jika akun adalah **Siswa Peserta**, sistem otomatis mengarahkan ke `/student/gatekeeper`.
 
 ---
 
@@ -137,58 +142,77 @@ Menu ini digunakan untuk mengatur seluruh rombongan belajar sekolah secara dinam
 - **Membuka Menu:** Klik menu **"Data Kelas / Rombel"** pada navigasi sebelah kiri (`/teacher/classrooms`).
 - **Menambah Kelas Baru:**
   1. Klik tombol **"+ Tambah Kelas Baru"** di sudut kanan atas.
-  2. Masukkan **Nama Kelas / Rombel** (contoh: `X RPL 1` atau `XII MIPA 3`).
+  2. Masukkan **Nama Kelas / Rombel** (contoh: `9A` atau `X RPL 1`).
   3. Masukkan **Tahun Ajaran** (contoh: `2026/2027`).
   4. Klik **"Tambah Kelas"**. Data kelas langsung tersimpan dan otomatis menjadi opsi dropdown di formulir siswa dan ujian.
 - **Mengubah (Edit) Kelas:**
-  - Klik ikon pensil kuning pada baris kelas yang diinginkan, perbarui nama kelas, lalu klik **"Simpan Perubahan"**.
+  - Klik tombol pensil kuning pada baris kelas yang diinginkan, perbarui nama kelas, lalu klik **"Simpan Perubahan"**.
 - **Menghapus Kelas:**
-  - Klik ikon tempat sampah merah pada baris kelas yang ingin dihapus, lalu konfirmasi penghapusan.
+  - Klik tombol tempat sampah merah pada baris kelas yang ingin dihapus, lalu konfirmasi penghapusan.
 
 ---
 
-### 3.3. Menu 2: Manajemen Pengguna & Hak Akses (CRUD User & Import Excel Siswa)
-Menu ini berfungsi untuk mendaftarkan dan mengelola seluruh akun Guru dan Siswa yang berhak mengikuti ujian, baik secara manual satuan maupun secara massal via file Excel (rekapan Google Form/SPSS).
+### 3.3. Menu 2: Data Guru (Pengawas Asesmen & Import Excel Guru)
+Menu ini khusus mengelola data dewan guru dan staf pengawas asesmen sekolah.
+
+- **Membuka Menu:** Klik menu **"Data Guru"** (`/teacher/teachers`).
+- **Tampilan Tabel (Desain Modern E-Ujian):**
+  - Kolom: `#`, `NAMA GURU`, `NIP`, `EMAIL`, dan `AKSI` (Edit & Hapus).
+  - Kontrol atas: `Show [10] entries`, tombol pencarian `Search: Cari Nama atau NIP...`.
+- **Menambah Guru Baru:**
+  1. Klik tombol **"+ Tambah Guru"**.
+  2. Isi **Nama Lengkap Guru**, **NIP (Nomor Induk Pegawai)**, dan **Email** (opsional).
+  3. *Perhatikan bahwa pada form ini tidak ada input kata sandi.* Sistem otomatis membuat akun login guru dengan Username = NIP dan Kata Sandi = NIP.
+  4. Klik **"Tambah Guru"**. Akun baru langsung terbentuk dan otomatis muncul di menu **Management User**.
+- **Sinkronisasi Otomatis dengan Management User:**
+  - Mengubah data guru (Nama, NIP, Email) di Data Guru otomatis memperbarui data di Management User.
+  - Menghapus guru di Data Guru otomatis menghapus akun login guru di Management User.
+- **Import Massal Guru via Excel:**
+  1. Klik tombol **"Template Excel"** untuk mengunduh `Template_Import_Guru_E-Ujian.xlsx` (Header: `NIP, Nama Guru, Email`).
+  2. Klik tombol **"Import Excel"**, pilih berkas `.xlsx`, lalu klik **"Import Sekarang"**.
+
+---
+
+### 3.4. Menu 3: Data Siswa (Peserta Asesmen & Import Excel Siswa)
+Menu ini khusus mengelola data seluruh peserta didik yang mengikuti ujian.
+
+- **Membuka Menu:** Klik menu **"Data Siswa"** (`/teacher/students`).
+- **Tampilan Tabel (Desain Modern E-Ujian):**
+  - Kolom: `#`, `NAMA SISWA`, `NISN`, `KELAS`, `EMAIL`, dan `AKSI` (Edit & Hapus).
+  - Kontrol atas: `Show [10] entries`, `Filter Kelas` (dropdown rombel dinamis), `Search: Cari Nama atau NISN...`.
+- **Menambah Siswa Baru:**
+  1. Klik tombol **"+ Tambah Siswa"**.
+  2. Isi **Nama Lengkap Siswa**, **NISN**, pilih **Kelas**, dan **Email** (opsional).
+  3. *Pada form ini tidak ada input kata sandi.* Sistem otomatis membuat akun login siswa dengan Username = NISN dan Kata Sandi = NISN.
+  4. Klik **"Tambah Siswa"**. Akun baru langsung terbentuk dan otomatis tersinkronisasi ke menu **Management User**.
+- **Sinkronisasi Otomatis dengan Management User:**
+  - Mengubah data siswa di Data Siswa otomatis memperbarui data akun di Management User.
+  - Menghapus siswa di Data Siswa otomatis menghapus akun login siswa di Management User.
+- **Import Massal Siswa via Excel (Rekap GForm / SPSS):**
+  1. Klik tombol **"Template Excel"** untuk mengunduh `Template_Import_Siswa_E-Ujian.xlsx` (Header: `NISN, Nama Siswa, Kelas, Email`).
+  2. Jika data murid dihimpun via Google Form atau olahan SPSS, sesuaikan ke urutan kolom template ini.
+  3. Klik tombol **"Import Excel"**, unggah berkas `.xlsx`, lalu klik **"Import Sekarang"**. Sistem otomatis membuat akun siswa sekaligus mendaftarkan kelas baru jika belum ada di database.
+
+---
+
+### 3.5. Menu 4: Management User & Hak Akses (Desain Modern E-Ujian)
+Menu induk pengendali seluruh akun pengguna sistem (Guru, Siswa, dan Administrator).
 
 - **Membuka Menu:** Klik menu **"Manajemen Pengguna"** (`/teacher/users`).
-- **Filter & Pencarian:**
-  - Gunakan kolom pencarian untuk mencari nama, NIP, atau NISN siswa.
-  - Gunakan filter **"Peran"** untuk menyaring akun Guru atau Siswa.
-  - Gunakan filter **"Kelas"** untuk menampilkan siswa pada kelas tertentu.
-
-- **Fitur Baru: Import Massal Akun Siswa via Excel (Rekap GForm / SPSS):**
-  Untuk mempermudah guru agar tidak perlu memasukkan data siswa satu per satu, sistem menyediakan fitur impor Excel:
-  1. **Unduh Template Resmi:** Klik tombol **"Unduh Template Excel"** di bagian atas kanan. Sistem akan mengunduh berkas `Template_Import_Siswa_E-Ujian.xlsx` yang sudah memiliki susunan kolom standar:
-     - `NISN` (Nomor Induk Siswa Nasional, contoh: `0067829101`) -> Dijadikan *Username* login siswa.
-     - `Nama Lengkap Siswa` (contoh: `Ahmad Fadilah`).
-     - `Kelas / Rombel` (contoh: `IX A` atau `X RPL 1`). *Jika kelas belum ada di sistem, sistem otomatis mendaftarkannya ke database.*
-     - `Password` (opsional, jika dikosongkan sistem otomatis memberi default password: `siswa123`).
-  2. **GForm & SPSS Flow:** Jika guru telah mengumpulkan biodata murid melalui Google Form atau rekapitulasi data SPSS, salin kolom NISN, Nama, dan Kelas ke dalam format template Excel tersebut.
-  3. **Unggah File Excel:**
-     - Klik tombol **"Import Excel"**.
-     - Pilih atau seret (*drag-and-drop*) file `.xlsx` Anda ke dalam jendela modal.
-     - Klik **"Mulai Impor Akun"**.
-     - Sistem memproses data secara instan, mengenkripsi seluruh password dengan aman, dan menampilkan laporan: berapa akun baru yang berhasil dibuat dan berapa akun yang diperbarui.
-     - Daftar pengguna dan rombel kelas di sistem akan langsung tersegarkan otomatis.
-
-- **Menambah Pengguna Baru (Manual Satuan):**
-  1. Klik tombol **"+ Tambah Pengguna Baru"**.
-  2. Isi **Username / NIP / NISN** (contoh NISN: `0067829105`).
-  3. Pilih **Peran Pengguna** (`Siswa Peserta` atau `Guru Pengawas`).
-  4. Masukkan **Nama Lengkap** siswa/guru.
-  5. Jika peran adalah `Siswa Peserta`, pilih **Kelas Siswa** dari dropdown kelas dinamis.
-  6. Masukkan **Kata Sandi** aman yang ditentukan untuk pengguna tersebut.
-  7. Klik **"Buat Pengguna"**.
-
-- **Mengedit & Reset Kata Sandi Siswa:**
-  - Klik ikon pensil pada siswa yang lupa sandi, ketik kata sandi baru pada kolom sandi, lalu klik **"Simpan Perubahan"**.
-
-- **Keamanan Form Bebas Rekomendasi Isian & Dialog Password:**
-  - Seluruh formulir sistem (Login, Password Masuk Gatekeeper, PIN Layar Kunci Pengawas, dan Password Keluar) telah dibersihkan dari *autocomplete dropdown* browser Chromium dan bebas dari pop-up *"Update password?"* Google Password Manager sehingga privasi akun dan token ujian 100% terlindungi.
+- **Tampilan Desain & Tata Letak:**
+  - Mengadopsi tata letak resmi `Tahfidz_MIS` dengan kontainer kartu bergaris atas hijau tebal (`border-t-[5px] border-[#2ECC71]`), kontrol `Show [10] entries`, `Search: Cari Username / Nama...`.
+  - Kolom Tabel: `#`, `USERNAME`, `NAMA LENGKAP`, `EMAIL`, `ROLE` (Badge GURU / SISWA), dan `AKSI` (Tombol Edit hijau & Hapus merah).
+- **Fitur Khusus Manajemen User:**
+  - Di menu ini pengawas dapat **me-reset kata sandi** pengguna (kolom Kata Sandi tersedia pada modal Tambah/Edit).
+  - Jika siswa atau guru lupa kata sandi di tengah masa ujian, pengawas dapat mengklik tombol **"Edit"** pada baris pengguna tersebut, mengetikkan kata sandi baru, lalu klik **"Simpan Perubahan"**.
+- **Tombol Toolbar Atas:**
+  - `+ Tambah User` (untuk mendaftarkan akun secara bebas dengan memilih role Guru/Siswa).
+  - `Import Excel` & `Template Excel` (untuk impor multi-peran).
+  - *(Bebas tombol Backup DB dan Restore DB sesuai standarisasi).*
 
 ---
 
-### 3.4. Menu 3: Bank Soal & Paket Ujian (Hybrid Mode)
+### 3.6. Menu 5: Bank Soal & Paket Ujian (Hybrid Mode)
 Guru dapat menyusun bank soal menggunakan dua pilihan metode:
 
 - **Membuka Menu:** Klik menu **"Bank Soal & Paket Ujian"** (`/teacher/packages`).

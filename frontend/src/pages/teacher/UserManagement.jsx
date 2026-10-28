@@ -1,25 +1,20 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
-  Users, 
-  UserPlus, 
+  Plus, 
+  FileSpreadsheet, 
+  Download, 
   Edit3, 
   Trash2, 
-  Search, 
-  Filter, 
-  GraduationCap, 
-  Briefcase, 
   KeyRound, 
   CheckCircle2, 
-  AlertCircle,
-  RefreshCw,
-  School,
-  FileSpreadsheet,
-  UploadCloud,
-  Download,
-  FileCheck,
-  CheckCircle,
-  XCircle,
-  FileUp
+  AlertCircle, 
+  RefreshCw, 
+  Search, 
+  Filter, 
+  X,
+  ShieldCheck,
+  GraduationCap,
+  Users
 } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import { 
@@ -27,28 +22,30 @@ import {
   createUserApi, 
   updateUserApi, 
   deleteUserApi, 
-  getClassroomsApi,
-  downloadUserTemplateExcelApi,
-  importUsersExcelApi
+  getClassroomsApi, 
+  downloadUserTemplateExcelApi, 
+  importUsersExcelApi 
 } from '../../api/authApi';
 
 export default function UserManagement() {
   const [users, setUsers] = useState([]);
   const [classrooms, setClassrooms] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Filter states
-  const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState(''); // '' | 'TEACHER' | 'STUDENT'
-  const [classFilter, setClassFilter] = useState('');
 
-  // Modal states (Tambah / Edit Pengguna Manual)
+  // Filter & Search states
+  const [roleFilter, setRoleFilter] = useState(''); // '' | 'TEACHER' | 'STUDENT'
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [entriesPerPage, setEntriesPerPage] = useState(10);
+
+  // Modal Tambah / Edit Pengguna
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [formData, setFormData] = useState({
     username: '',
     full_name: '',
+    email: '',
     role: 'STUDENT',
     classroom_id: '',
     password: ''
@@ -56,7 +53,12 @@ export default function UserManagement() {
   const [modalError, setModalError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Modal states (Import Massal Excel)
+  // Modal Hapus User
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Modal Import Excel
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importFile, setImportFile] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
@@ -65,48 +67,75 @@ export default function UserManagement() {
   const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Fetch Classrooms for dropdowns
+  // Toast Notifikasi
+  const [toastMessage, setToastMessage] = useState('');
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 3500);
+  };
+
   const fetchClassrooms = async () => {
     try {
       const data = await getClassroomsApi();
       setClassrooms(data || []);
     } catch (err) {
-      console.error('Gagal mengambil daftar kelas:', err);
+      console.error('Gagal mengambil kelas:', err);
     }
   };
 
-  // Fetch Users with active filters
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     try {
       const params = {};
       if (roleFilter) params.role = roleFilter;
-      if (classFilter) params.classroom_id = classFilter;
-      if (searchQuery.trim()) params.search = searchQuery.trim();
+      if (searchTerm.trim()) params.search = searchTerm.trim();
 
       const data = await getUsersApi(params);
       setUsers(data || []);
     } catch (err) {
-      console.error('Gagal mengambil data pengguna:', err);
+      console.error('Gagal mengambil data user:', err);
     } finally {
       setIsLoading(false);
     }
-  }, [roleFilter, classFilter, searchQuery]);
+  }, [roleFilter, searchTerm]);
 
   useEffect(() => {
     fetchClassrooms();
   }, []);
 
   useEffect(() => {
-    fetchUsers();
+    const timer = setTimeout(() => {
+      fetchUsers();
+    }, 250);
+    return () => clearTimeout(timer);
   }, [fetchUsers]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [roleFilter, searchTerm, entriesPerPage]);
+
+  // Helper Initials
+  const getInitials = (name) => {
+    if (!name) return 'US';
+    const parts = name.trim().split(' ');
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
+  // Pagination calculation
+  const indexOfLastItem = currentPage * entriesPerPage;
+  const indexOfFirstItem = indexOfLastItem - entriesPerPage;
+  const currentItems = users.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(users.length / entriesPerPage) || 1;
+
+  // Handler Buka Modal Tambah
   const handleOpenAdd = () => {
     setIsEditing(false);
     setSelectedUserId(null);
     setFormData({
       username: '',
       full_name: '',
+      email: '',
       role: 'STUDENT',
       classroom_id: classrooms[0]?.id || '',
       password: ''
@@ -115,122 +144,131 @@ export default function UserManagement() {
     setIsModalOpen(true);
   };
 
+  // Handler Buka Modal Edit
   const handleOpenEdit = (user) => {
     setIsEditing(true);
     setSelectedUserId(user.id);
     setFormData({
       username: user.username,
-      full_name: user.full_name,
+      full_name: user.full_name || '',
+      email: user.email || '',
       role: user.role,
-      classroom_id: user.classroom_id || '',
-      password: '' // Kosongkan password saat edit, isi hanya jika ingin reset
+      classroom_id: user.classroom?.id || '',
+      password: ''
     });
     setModalError('');
     setIsModalOpen(true);
   };
 
+  // Handler Simpan Data (Tambah / Edit)
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.username.trim() || !formData.full_name.trim()) {
-      setModalError('Username/NIP/NISN dan Nama Lengkap wajib diisi!');
+      setModalError('Username dan Nama Lengkap wajib diisi!');
+      return;
+    }
+    if (!isEditing && !formData.password.trim()) {
+      setModalError('Kata sandi wajib diisi untuk pengguna baru!');
       return;
     }
 
     setIsSubmitting(true);
     setModalError('');
+
     try {
       const payload = {
         username: formData.username.trim(),
         full_name: formData.full_name.trim(),
-        role: formData.role,
-        classroom_id: formData.role === 'STUDENT' && formData.classroom_id ? formData.classroom_id : null,
+        email: formData.email.trim(),
+        role: formData.role
       };
-      if (formData.password) {
-        payload.password = formData.password;
+
+      if (formData.role === 'STUDENT' && formData.classroom_id) {
+        payload.classroom_id = formData.classroom_id;
+      }
+
+      if (formData.password.trim()) {
+        payload.password = formData.password.trim();
       }
 
       if (isEditing) {
         await updateUserApi(selectedUserId, payload);
+        showToast('Data pengguna berhasil diperbarui!');
       } else {
         await createUserApi(payload);
+        showToast('Akun pengguna baru berhasil dibuat!');
       }
+
       setIsModalOpen(false);
-      await fetchUsers();
+      fetchUsers();
     } catch (err) {
-      const errDetail = 
-        err.response?.data?.username?.[0] || 
-        err.response?.data?.detail || 
-        'Gagal menyimpan pengguna. Pastikan username belum pernah terdaftar.';
-      setModalError(errDetail);
+      const errData = err.response?.data;
+      let msg = 'Gagal menyimpan data pengguna.';
+      if (errData) {
+        if (typeof errData === 'string') msg = errData;
+        else if (errData.username) msg = `Username: ${errData.username.join(', ')}`;
+        else if (errData.detail) msg = errData.detail;
+      }
+      setModalError(msg);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleDelete = async (user) => {
-    if (window.confirm(`Yakin ingin menghapus pengguna "${user.full_name}" (${user.username})?`)) {
-      try {
-        await deleteUserApi(user.id);
-        await fetchUsers();
-      } catch (err) {
-        alert('Gagal menghapus pengguna: ' + (err.response?.data?.detail || err.message));
-      }
+  // Handler Buka Modal Hapus
+  const handleOpenDelete = (user) => {
+    setUserToDelete(user);
+    setIsDeleteModalOpen(true);
+  };
+
+  // Eksekusi Hapus User
+  const handleConfirmDelete = async () => {
+    if (!userToDelete) return;
+    setIsDeleting(true);
+    try {
+      await deleteUserApi(userToDelete.id);
+      showToast(`Pengguna ${userToDelete.full_name || userToDelete.username} berhasil dihapus!`);
+      setIsDeleteModalOpen(false);
+      setUserToDelete(null);
+      fetchUsers();
+    } catch (err) {
+      alert('Gagal menghapus pengguna: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
-  // Download Template Excel
+  // Unduh Template Excel Pengguna
   const handleDownloadTemplate = async () => {
     setIsDownloadingTemplate(true);
     try {
-      await downloadUserTemplateExcelApi('Template_Import_Siswa_E-Ujian.xlsx');
+      await downloadUserTemplateExcelApi('Template_Import_User_E-Ujian.xlsx');
+      showToast('Template Excel Pengguna berhasil diunduh!');
     } catch (err) {
-      alert('Gagal mengunduh template Excel: ' + (err.response?.data?.error || err.message));
+      alert('Gagal mengunduh template Excel: ' + err.message);
     } finally {
       setIsDownloadingTemplate(false);
     }
   };
 
-  // Buka Modal Import Excel
-  const handleOpenImportModal = () => {
-    setImportFile(null);
-    setImportResult(null);
-    setImportError('');
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    setIsImportModalOpen(true);
-  };
-
-  // Pilih File
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (!file.name.match(/\.(xlsx|xls)$/i)) {
-        setImportError('Format berkas tidak didukung! Harap pilih berkas berekstensi .xlsx atau .xls.');
-        setImportFile(null);
-        return;
-      }
-      setImportFile(file);
-      setImportError('');
-      setImportResult(null);
-    }
-  };
-
-  // Submit Import Excel
-  const handleImportExcel = async (e) => {
-    e.preventDefault();
+  // Upload & Import Excel Pengguna
+  const handleImportSubmit = async () => {
     if (!importFile) {
-      setImportError('Silakan pilih berkas Excel terlebih dahulu.');
+      setImportError('Silakan pilih berkas Excel terlebih dahulu!');
       return;
     }
-
     setIsImporting(true);
     setImportError('');
+    setImportResult(null);
+
     try {
       const res = await importUsersExcelApi(importFile);
       setImportResult(res);
-      await fetchUsers();
-      await fetchClassrooms();
+      showToast(res.message || 'Proses impor pengguna berhasil!');
+      fetchUsers();
+      fetchClassrooms();
     } catch (err) {
-      setImportError(err.response?.data?.error || 'Gagal mengimpor data siswa dari berkas Excel.');
+      setImportError(err.response?.data?.error || 'Gagal mengimpor file Excel.');
     } finally {
       setIsImporting(false);
     }
@@ -238,510 +276,534 @@ export default function UserManagement() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
-      {/* Header Halaman */}
+      {/* Toast Notifikasi Floating */}
+      {toastMessage && (
+        <div className="fixed top-6 right-6 z-50 animate-bounce">
+          <div className="px-5 py-3 rounded-xl bg-slate-900 border-2 border-emerald-500 text-white font-bold text-xs flex items-center gap-2.5 shadow-2xl">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{toastMessage}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Header Halaman & 3 Tombol Aksi (Persis Gaya Data Kelas) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center">
-              <Users className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-purple-50 border border-purple-200 text-purple-600 flex items-center justify-center shadow-xs">
+              <ShieldCheck className="w-5 h-5" />
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
               Manajemen Pengguna & Hak Akses
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Kelola data akun Guru Pengawas dan Siswa Peserta Ujian yang memiliki hak akses sistem.
+            Kelola seluruh akun pengguna, hak akses peran, dan reset kata sandi asesmen.
           </p>
         </div>
 
-        {/* Tombol Aksi Header */}
-        <div className="flex flex-wrap items-center gap-2.5 self-start sm:self-auto">
-          {/* Tombol Unduh Template Excel */}
+        {/* 3 Tombol Aksi Lengkap & Berwarna */}
+        <div className="flex items-center gap-2.5 flex-wrap self-start sm:self-auto">
           <button
-            onClick={handleDownloadTemplate}
-            disabled={isDownloadingTemplate}
-            className="px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-2 border-emerald-300 hover:border-emerald-500 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shadow-sm disabled:opacity-50"
-            title="Unduh file template Excel (.xlsx) untuk format data siswa"
+            onClick={handleOpenAdd}
+            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shadow-md shadow-indigo-600/30 active:scale-95"
           >
-            {isDownloadingTemplate ? (
-              <RefreshCw className="w-4 h-4 animate-spin text-emerald-700" />
-            ) : (
-              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-            )}
-            <span>Unduh Template Excel</span>
+            <Plus className="w-4 h-4" />
+            <span>Tambah User</span>
           </button>
 
-          {/* Tombol Import Excel */}
           <button
-            onClick={handleOpenImportModal}
-            className="px-3.5 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border-2 border-indigo-300 hover:border-indigo-500 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shadow-sm"
-            title="Import data siswa massal dari file Excel / hasil Google Form"
+            onClick={() => {
+              setImportFile(null);
+              setImportError('');
+              setImportResult(null);
+              setIsImportModalOpen(true);
+            }}
+            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shadow-md shadow-emerald-600/30 active:scale-95"
           >
-            <UploadCloud className="w-4 h-4 text-indigo-600" />
+            <FileSpreadsheet className="w-4 h-4" />
             <span>Import Excel</span>
           </button>
 
-          {/* Tombol Tambah Manual */}
           <button
-            onClick={handleOpenAdd}
-            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shadow-md shadow-indigo-600/30"
+            onClick={handleDownloadTemplate}
+            disabled={isDownloadingTemplate}
+            className="px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 hover:border-slate-300 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shadow-sm disabled:opacity-50 active:scale-95"
           >
-            <UserPlus className="w-4 h-4" />
-            <span>Tambah Manual</span>
+            <Download className="w-4 h-4 text-slate-500" />
+            <span>{isDownloadingTemplate ? 'Mengunduh...' : 'Template Excel'}</span>
           </button>
         </div>
       </div>
 
-      {/* Bar Filter & Pencarian */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-          {/* Input Pencarian */}
-          <div className="sm:col-span-5 relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Cari Nama, NISN, atau NIP..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-            />
+      {/* Bar Pencarian, Show Entries, Filter Peran, & Refresh (Persis Gaya Data Kelas) */}
+      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        {/* Sisi Kiri: Show Entries & Filter Peran */}
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Show Entries */}
+          <div className="flex items-center gap-2 text-xs text-slate-600 font-bold">
+            <span>Show</span>
+            <select
+              value={entriesPerPage}
+              onChange={(e) => setEntriesPerPage(Number(e.target.value))}
+              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+            </select>
+            <span>entries</span>
           </div>
 
+          <span className="text-slate-300 hidden sm:inline">|</span>
+
           {/* Filter Peran */}
-          <div className="sm:col-span-3">
+          <div className="flex items-center gap-2 text-xs text-slate-600 font-bold">
+            <Filter className="w-3.5 h-3.5 text-slate-400" />
+            <span>Peran:</span>
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer"
             >
-              <option value="">Semua Peran (Guru & Siswa)</option>
+              <option value="">Semua Peran</option>
               <option value="TEACHER">Guru Pengawas</option>
-              <option value="STUDENT">Peserta Siswa</option>
+              <option value="STUDENT">Siswa Peserta</option>
             </select>
           </div>
+        </div>
 
-          {/* Filter Kelas */}
-          <div className="sm:col-span-3">
-            <select
-              value={classFilter}
-              onChange={(e) => setClassFilter(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-            >
-              <option value="">Semua Kelas</option>
-              {classrooms.map((cls) => (
-                <option key={cls.id} value={cls.id}>
-                  {cls.name}
-                </option>
-              ))}
-            </select>
+        {/* Sisi Kanan: Search Bar & Counter */}
+        <div className="flex items-center gap-3 w-full lg:w-auto">
+          <div className="relative flex-1 lg:w-64">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Cari Username / Nama..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none transition"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
-          {/* Refresh Button */}
-          <div className="sm:col-span-1 flex items-center justify-end">
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-xs text-slate-500 font-medium hidden md:inline">
+              Total: <strong className="text-slate-800">{users.length}</strong> Pengguna
+            </span>
             <button
               onClick={fetchUsers}
               disabled={isLoading}
-              className="p-2 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 transition w-full flex items-center justify-center"
+              className="p-2 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 transition"
               title="Muat Ulang"
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-indigo-600' : ''}`} />
             </button>
           </div>
         </div>
-
-        <div className="text-xs text-slate-500 font-medium pt-1">
-          Menampilkan <strong className="text-slate-800">{users.length}</strong> akun pengguna terdaftar.
-        </div>
       </div>
 
-      {/* Tabel Data Pengguna */}
+      {/* Tabel Manajemen Pengguna (Persis Gaya Data Kelas dengan Sentuhan Warna) */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-700">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
               <tr>
-                <th className="py-3.5 px-4 w-12 text-center">No</th>
-                <th className="py-3.5 px-4">Nama Lengkap</th>
+                <th className="py-3.5 px-4 w-14 text-center">NO</th>
+                <th className="py-3.5 px-4">Nama Lengkap Pengguna</th>
                 <th className="py-3.5 px-4">Username (NIP / NISN)</th>
-                <th className="py-3.5 px-4 text-center">Peran</th>
-                <th className="py-3.5 px-4">Kelas</th>
-                <th className="py-3.5 px-4 text-center">Status</th>
-                <th className="py-3.5 px-4 text-center">Aksi</th>
+                <th className="py-3.5 px-4">Email</th>
+                <th className="py-3.5 px-4 text-center">Role / Hak Akses</th>
+                <th className="py-3.5 px-4 text-center w-36">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="py-12 text-center text-slate-400 text-xs">
-                    {isLoading ? 'Memuat data pengguna...' : 'Tidak ditemukan data pengguna yang cocok.'}
+                  <td colSpan="6" className="py-12 text-center text-slate-400 text-xs">
+                    {isLoading ? 'Memuat data pengguna...' : 'Belum ada akun pengguna yang terdaftar.'}
                   </td>
                 </tr>
               ) : (
-                users.map((u, index) => {
-                  const isTeacher = u.role === 'TEACHER';
-                  return (
-                    <tr key={u.id} className="hover:bg-slate-50/80 transition">
-                      <td className="py-3 px-4 text-center font-bold text-slate-500">
-                        {index + 1}
-                      </td>
-                      <td className="py-3 px-4 font-bold text-slate-900 text-sm">
-                        {u.full_name}
-                      </td>
-                      <td className="py-3 px-4 font-mono font-semibold text-slate-700">
-                        {u.username}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
-                          isTeacher 
-                            ? 'bg-purple-50 text-purple-700 border-purple-200' 
-                            : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        }`}>
-                          {isTeacher ? (
-                            <>
-                              <Briefcase className="w-3.5 h-3.5" />
-                              <span>Guru Pengawas</span>
-                            </>
-                          ) : (
-                            <>
-                              <GraduationCap className="w-3.5 h-3.5" />
-                              <span>Siswa Peserta</span>
-                            </>
-                          )}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        {isTeacher ? (
-                          <span className="text-slate-400 italic text-[11px]">- Semua -</span>
-                        ) : (
-                          <span className="px-2.5 py-0.5 rounded bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold text-[11px]">
-                            {u.classroom_name || 'Belum Diatur'}
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          u.is_active 
-                            ? 'bg-emerald-100 text-emerald-800' 
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {u.is_active ? 'Aktif' : 'Nonaktif'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleOpenEdit(u)}
-                            className="p-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition"
-                            title="Edit Pengguna & Password"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(u)}
-                            className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition"
-                            title="Hapus Pengguna"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                currentItems.map((u, index) => (
+                  <tr key={u.id} className="hover:bg-slate-50/80 transition">
+                    <td className="py-3 px-4 text-center font-bold text-slate-500">
+                      {indexOfFirstItem + index + 1}
+                    </td>
+                    <td className="py-3 px-4 font-bold text-slate-900 text-sm">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-8 h-8 rounded-full text-white font-black text-xs flex items-center justify-center shrink-0 shadow-sm ${
+                            u.role === 'TEACHER'
+                              ? 'bg-gradient-to-tr from-indigo-500 to-purple-600'
+                              : 'bg-gradient-to-tr from-emerald-500 to-teal-600'
+                          }`}
+                        >
+                          {getInitials(u.full_name || u.username)}
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })
+                        <div>
+                          <div className="text-slate-900 font-bold">{u.full_name || '-'}</div>
+                          <div className="text-[11px] text-slate-400 font-normal">
+                            {u.role === 'TEACHER' ? 'Dewan Guru Pengawas' : (u.classroom ? `Kelas: ${u.classroom.name}` : 'Siswa Peserta')}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="font-mono px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-[11px]">
+                        {u.username}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-slate-600 font-medium">
+                      {u.email || '-'}
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      {u.role === 'TEACHER' ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 font-bold text-xs border border-indigo-200">
+                          <GraduationCap className="w-3.5 h-3.5" />
+                          <span>Guru Pengawas</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 font-bold text-xs border border-emerald-200">
+                          <Users className="w-3.5 h-3.5" />
+                          <span>Siswa Peserta</span>
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => handleOpenEdit(u)}
+                          className="p-1.5 px-2.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition font-bold text-xs flex items-center gap-1 shadow-2xs"
+                          title="Edit User & Reset Sandi"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() => handleOpenDelete(u)}
+                          className="p-1.5 px-2.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition font-bold text-xs flex items-center gap-1 shadow-2xs"
+                          title="Hapus User"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Hapus</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
         </div>
+
+        {/* Card Footer: Info Entri & Paginasi */}
+        <div className="p-4 bg-slate-50/50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500 font-medium">
+          <div>
+            Menampilkan <strong className="text-slate-800">{users.length > 0 ? indexOfFirstItem + 1 : 0}</strong> sampai{' '}
+            <strong className="text-slate-800">{Math.min(indexOfLastItem, users.length)}</strong> dari{' '}
+            <strong className="text-slate-800">{users.length}</strong> pengguna
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs disabled:opacity-40 transition"
+            >
+              Prev
+            </button>
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`w-7 h-7 rounded-lg font-bold text-xs transition flex items-center justify-center ${
+                  currentPage === page
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+              disabled={currentPage === totalPages || totalPages === 0}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs disabled:opacity-40 transition"
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Modal Tambah / Edit Pengguna */}
+      {/* ======================================================== */}
+      {/* MODAL TAMBAH / EDIT USER */}
+      {/* ======================================================== */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title={isEditing ? 'Edit Data Pengguna' : 'Tambah Pengguna Baru'}
-        maxWidth="max-w-lg"
+        title={isEditing ? 'Perbarui Akun Pengguna' : 'Tambah Pengguna Baru'}
+        maxWidth="max-w-md"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           {modalError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
               <span>{modalError}</span>
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Username / NIP / NISN */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Username / NIP / NISN <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                disabled={isEditing}
-                placeholder="Contoh: 0067829101 atau guru01"
-                value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none disabled:bg-slate-100"
-              />
-            </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              Username (NIP / NISN) <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              placeholder="Contoh: 19850101... atau 008123..."
+              value={formData.username}
+              onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-mono font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
+              required
+            />
+          </div>
 
-            {/* Peran Akun */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              Nama Lengkap <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              placeholder="Nama lengkap pengguna"
+              value={formData.full_name}
+              onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              Email (Opsional)
+            </label>
+            <input
+              type="email"
+              placeholder="user@sekolah.sch.id"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Peran Pengguna <span className="text-red-500">*</span>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                Peran Akun <span className="text-red-500">*</span>
               </label>
               <select
                 value={formData.role}
                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
               >
                 <option value="STUDENT">Siswa Peserta</option>
                 <option value="TEACHER">Guru Pengawas</option>
               </select>
             </div>
+
+            {formData.role === 'STUDENT' && (
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Kelas / Rombel
+                </label>
+                <select
+                  value={formData.classroom_id}
+                  onChange={(e) => setFormData({ ...formData, classroom_id: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                >
+                  <option value="">-- Tanpa Kelas --</option>
+                  {classrooms.map((cls) => (
+                    <option key={cls.id} value={cls.id}>
+                      {cls.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
-          {/* Nama Lengkap */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
-              Nama Lengkap <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="Contoh: Ahmad Fadhil Ramadhan"
-              value={formData.full_name}
-              onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-            />
-          </div>
-
-          {/* Kelas (Khusus Siswa) */}
-          {formData.role === 'STUDENT' && (
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                Kelas Siswa <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.classroom_id}
-                onChange={(e) => setFormData({ ...formData, classroom_id: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              >
-                <option value="">Pilih Kelas</option>
-                {classrooms.map((cls) => (
-                  <option key={cls.id} value={cls.id}>
-                    {cls.name} ({cls.academic_year})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {/* Kata Sandi */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
-              Kata Sandi (Password) {isEditing ? <span className="text-slate-400 font-normal">(Kosongkan jika tidak ingin mengubah)</span> : <span className="text-slate-400 font-normal">(Default: 123456)</span>}
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              {isEditing ? 'Ubah Kata Sandi (Kosongkan jika tidak diubah)' : 'Kata Sandi'} {!isEditing && <span className="text-red-500">*</span>}
             </label>
             <div className="relative">
               <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
-                type="password"
-                placeholder={isEditing ? 'Biarkan kosong untuk mempertahankan password lama' : 'Masukkan password (misal: 123456)'}
+                type="text"
+                placeholder={isEditing ? 'Masukkan kata sandi baru...' : 'Masukkan kata sandi akun'}
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                required={!isEditing}
               />
             </div>
+            {isEditing && (
+              <p className="text-[11px] text-slate-500 mt-1">
+                * Isi kolom ini untuk me-reset kata sandi pengguna jika pengguna lupa sandi.
+              </p>
+            )}
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="px-4 py-2 border border-slate-300 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-50 transition"
+              className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-bold transition"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-2 disabled:opacity-50"
+              className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold transition shadow-md shadow-indigo-600/30 flex items-center gap-2 disabled:opacity-50"
             >
-              {isSubmitting ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  <span>Menyimpan...</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>{isEditing ? 'Simpan Perubahan' : 'Buat Pengguna'}</span>
-                </>
-              )}
+              {isSubmitting && <RefreshCw className="w-4 h-4 animate-spin" />}
+              <span>{isEditing ? 'Simpan Perubahan' : 'Tambah User'}</span>
             </button>
           </div>
         </form>
       </Modal>
 
       {/* ======================================================== */}
-      {/* MODAL 2: IMPORT MASSAL DATA SISWA DARI FILE EXCEL        */}
+      {/* MODAL KONFIRMASI HAPUS USER */}
+      {/* ======================================================== */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Konfirmasi Hapus Pengguna"
+        maxWidth="max-w-sm"
+      >
+        <div className="space-y-4 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center mx-auto shadow-sm">
+            <Trash2 className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-slate-800">
+              Hapus akun pengguna ini?
+            </h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Akun <strong>{userToDelete?.full_name || userToDelete?.username}</strong> ({userToDelete?.username}) akan dihapus secara permanen dari sistem.
+            </p>
+          </div>
+          <div className="flex items-center justify-center gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setIsDeleteModalOpen(false)}
+              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition"
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition shadow-md shadow-rose-600/30 disabled:opacity-50"
+            >
+              {isDeleting ? 'Menghapus...' : 'Ya, Hapus'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ======================================================== */}
+      {/* MODAL IMPORT EXCEL PENGGUNA */}
       {/* ======================================================== */}
       <Modal
         isOpen={isImportModalOpen}
-        onClose={() => {
-          if (!isImporting) {
-            setIsImportModalOpen(false);
-          }
-        }}
-        title="Import Data Siswa dari File Excel"
+        onClose={() => setIsImportModalOpen(false)}
+        title="Import Pengguna via Excel"
+        maxWidth="max-w-md"
       >
         <div className="space-y-4">
-          {/* Petunjuk Pengisian */}
-          <div className="p-3.5 rounded-xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-900 space-y-2">
-            <div className="font-extrabold flex items-center gap-1.5 text-indigo-950">
-              <FileSpreadsheet className="w-4 h-4 text-indigo-600" />
-              <span>Panduan Import Otomatis Data Siswa:</span>
+          <div className="text-center">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 mx-auto mb-3 shadow-sm">
+              <FileSpreadsheet className="w-7 h-7" />
             </div>
-            <p className="text-[11px] leading-relaxed text-indigo-800">
-              Unggah file Excel (<strong>.xlsx</strong>) rekapan siswa (misal: hasil Google Form / SPSS atau template kami). 
-              Sistem akan <strong>otomatis membuatkan akun siswa</strong>, menghubungkan ke kelas, dan mengenkripsi kata sandi.
+            <p className="text-xs text-slate-600 font-medium">
+              Format Header Kolom Excel: <br />
+              <span className="font-mono font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 mt-1 inline-block">
+                username, full_name, email, role, password
+              </span>
             </p>
-            <div className="pt-1 flex items-center justify-between border-t border-indigo-200/60">
-              <span className="text-[11px] text-slate-500">Belum punya formatnya?</span>
-              <button
-                type="button"
-                onClick={handleDownloadTemplate}
-                disabled={isDownloadingTemplate}
-                className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 underline flex items-center gap-1"
-              >
-                <Download className="w-3 h-3" />
-                <span>Unduh Template Excel Resmi</span>
-              </button>
-            </div>
           </div>
 
-          {/* Area Upload File */}
-          <form onSubmit={handleImportExcel} className="space-y-4">
-            <div 
-              onClick={() => fileInputRef.current?.click()}
-              className={`p-6 border-2 border-dashed rounded-2xl cursor-pointer text-center transition flex flex-col items-center justify-center gap-2.5 ${
-                importFile 
-                  ? 'bg-emerald-50/60 border-emerald-400 hover:bg-emerald-50' 
-                  : 'bg-slate-50 border-slate-300 hover:border-indigo-400 hover:bg-indigo-50/30'
-              }`}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".xlsx, .xls"
-                onChange={handleFileChange}
-                className="hidden"
-              />
+          {importError && (
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+              <span>{importError}</span>
+            </div>
+          )}
 
-              {importFile ? (
+          {importResult && (
+            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 space-y-1">
+              <div className="font-bold flex items-center gap-1.5 text-emerald-700">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>{importResult.message}</span>
+              </div>
+              <div className="text-[11px] text-emerald-600 pl-5.5">
+                Pengguna Baru: <strong>{importResult.created_count}</strong> • Diperbarui: <strong>{importResult.updated_count}</strong>
+              </div>
+            </div>
+          )}
+
+          <div className="border-2 border-dashed border-slate-300 rounded-xl p-4 bg-slate-50 text-center hover:bg-slate-100/60 transition">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={(e) => setImportFile(e.target.files[0] || null)}
+              className="text-xs text-slate-700 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700 cursor-pointer w-full"
+            />
+            <p className="text-[11px] text-slate-400 mt-2">
+              Pilih file spreadsheet .xlsx atau .xls dari komputer Anda.
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between gap-2 pt-2">
+            <button
+              type="button"
+              onClick={handleDownloadTemplate}
+              className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1.5"
+            >
+              <Download className="w-3.5 h-3.5" /> Unduh Format Template
+            </button>
+
+            <button
+              type="button"
+              onClick={handleImportSubmit}
+              disabled={isImporting || !importFile}
+              className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold shadow-md shadow-emerald-600/30 transition flex items-center gap-2 disabled:opacity-50"
+            >
+              {isImporting ? (
                 <>
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                    <FileCheck className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-black text-emerald-900">{importFile.name}</div>
-                    <div className="text-[10px] text-emerald-700 font-semibold mt-0.5">
-                      Ukuran: {(importFile.size / 1024).toFixed(1)} KB • Klik untuk mengganti berkas
-                    </div>
-                  </div>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Memproses...</span>
                 </>
               ) : (
-                <>
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
-                    <UploadCloud className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold text-slate-800">
-                      Klik untuk memilih berkas Excel (.xlsx)
-                    </div>
-                    <div className="text-[10px] text-slate-500 mt-0.5">
-                      Maksimal ukuran 10 MB per berkas
-                    </div>
-                  </div>
-                </>
+                <span>Import Sekarang</span>
               )}
-            </div>
-
-            {/* Pesan Error */}
-            {importError && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2 text-red-700 text-xs">
-                <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-                <span className="leading-relaxed">{importError}</span>
-              </div>
-            )}
-
-            {/* Hasil Ringkasan Import */}
-            {importResult && (
-              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900 space-y-2">
-                <div className="font-extrabold flex items-center gap-1.5 text-emerald-950">
-                  <CheckCircle className="w-4 h-4 text-emerald-600" />
-                  <span>{importResult.message}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
-                  <div className="bg-white/80 p-2 rounded-lg border border-emerald-200">
-                    <div className="text-slate-500">Akun Baru Dibuat:</div>
-                    <div className="text-sm font-black text-emerald-700">{importResult.created_count} Siswa</div>
-                  </div>
-                  <div className="bg-white/80 p-2 rounded-lg border border-emerald-200">
-                    <div className="text-slate-500">Akun Diperbarui:</div>
-                    <div className="text-sm font-black text-indigo-700">{importResult.updated_count} Siswa</div>
-                  </div>
-                </div>
-
-                {importResult.errors && importResult.errors.length > 0 && (
-                  <div className="mt-2 pt-2 border-t border-emerald-200 text-[10px] text-amber-800 space-y-1">
-                    <div className="font-bold">Catatan Peringatan Baris:</div>
-                    <ul className="list-disc pl-4 space-y-0.5">
-                      {importResult.errors.slice(0, 5).map((err, i) => (
-                        <li key={i}>{err}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Tombol Aksi Modal */}
-            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-              <button
-                type="button"
-                disabled={isImporting}
-                onClick={() => setIsImportModalOpen(false)}
-                className="px-4 py-2 border border-slate-300 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-50 transition"
-              >
-                {importResult ? 'Selesai & Tutup' : 'Batal'}
-              </button>
-
-              {!importResult && (
-                <button
-                  type="submit"
-                  disabled={isImporting || !importFile}
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-2 disabled:opacity-50"
-                >
-                  {isImporting ? (
-                    <>
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Sedang Memproses Excel...</span>
-                    </>
-                  ) : (
-                    <>
-                      <FileUp className="w-3.5 h-3.5" />
-                      <span>Mulai Import Data Siswa</span>
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
-          </form>
+            </button>
+          </div>
         </div>
       </Modal>
     </div>
   );
 }
-

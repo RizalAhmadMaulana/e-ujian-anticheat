@@ -25,6 +25,9 @@ class UserSerializer(serializers.ModelSerializer):
             'username', 
             'full_name', 
             'role', 
+            'email',
+            'nip',
+            'nisn',
             'classroom_id',
             'classroom_name',
             'is_active',
@@ -50,6 +53,9 @@ class UserCreateUpdateSerializer(serializers.ModelSerializer):
             'username',
             'full_name',
             'role',
+            'email',
+            'nip',
+            'nisn',
             'classroom_id',
             'password',
             'is_active'
@@ -59,12 +65,19 @@ class UserCreateUpdateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         password = validated_data.pop('password', None)
         user = User(**validated_data)
-        if password:
-            user.set_password(password)
-        else:
-            user.set_password('123456') # default password jika tidak diisi
+        
+        # Default password adalah username (NIP bagi Guru, NISN bagi Siswa) jika dikosongkan
+        target_password = password.strip() if password and password.strip() else user.username
+        user.set_password(target_password)
+        
         if user.role == User.RoleChoices.TEACHER:
             user.is_staff = True
+            if not user.nip:
+                user.nip = user.username
+        elif user.role == User.RoleChoices.STUDENT:
+            if not user.nisn:
+                user.nisn = user.username
+
         user.save()
         return user
 
@@ -72,10 +85,129 @@ class UserCreateUpdateSerializer(serializers.ModelSerializer):
         password = validated_data.pop('password', None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-        if password:
-            instance.set_password(password)
+        
+        if password and password.strip():
+            instance.set_password(password.strip())
+            
         if instance.role == User.RoleChoices.TEACHER:
             instance.is_staff = True
+            if not instance.nip:
+                instance.nip = instance.username
+        elif instance.role == User.RoleChoices.STUDENT:
+            if not instance.nisn:
+                instance.nisn = instance.username
+
+        instance.save()
+        return instance
+
+
+# ==========================================
+# SERIALIZER KHUSUS DATA SISWA
+# ==========================================
+class StudentSerializer(serializers.ModelSerializer):
+    classroom_id = serializers.PrimaryKeyRelatedField(
+        queryset=ClassRoom.objects.all(), 
+        source='classroom', 
+        required=False, 
+        allow_null=True
+    )
+    classroom_name = serializers.CharField(source='classroom.name', read_only=True)
+
+    class Meta:
+        model = User
+        fields = [
+            'id',
+            'username',
+            'full_name',
+            'nisn',
+            'email',
+            'classroom_id',
+            'classroom_name',
+            'date_joined'
+        ]
+        read_only_fields = ['id', 'username', 'date_joined']
+
+    def create(self, validated_data):
+        nisn = str(validated_data.get('nisn', '')).strip()
+        if not nisn:
+            raise serializers.ValidationError({"nisn": "NISN wajib diisi!"})
+        
+        if User.objects.filter(username=nisn).exists():
+            raise serializers.ValidationError({"nisn": f"Siswa dengan NISN {nisn} sudah terdaftar!"})
+
+        validated_data['username'] = nisn
+        validated_data['role'] = User.RoleChoices.STUDENT
+        user = User(**validated_data)
+        user.set_password(nisn) # Default password adalah NISN
+        user.save()
+        return user
+
+    def update(self, instance, validated_data):
+        new_nisn = validated_data.get('nisn')
+        if new_nisn:
+            new_nisn = str(new_nisn).strip()
+            if new_nisn != instance.username:
+                if User.objects.filter(username=new_nisn).exclude(id=instance.id).exists():
+                    raise serializers.ValidationError({"nisn": f"NISN {new_nisn} sudah digunakan siswa lain!"})
+                instance.username = new_nisn
+                instance.nisn = new_nisn
+                instance.set_password(new_nisn)
+
+        instance.full_name = validated_data.get('full_name', instance.full_name)
+        instance.email = validated_data.get('email', instance.email)
+        if 'classroom' in validated_data:
+            instance.classroom = validated_data['classroom']
+        
+        instance.save()
+        return instance
+
+
+# ==========================================
+# SERIALIZER KHUSUS DATA GURU
+# ==========================================
+class TeacherSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            'id',
+            'username',
+            'full_name',
+            'nip',
+            'email',
+            'date_joined'
+        ]
+        read_only_fields = ['id', 'username', 'date_joined']
+
+    def create(self, validated_data):
+        nip = str(validated_data.get('nip', '')).strip()
+        if not nip:
+            raise serializers.ValidationError({"nip": "NIP wajib diisi!"})
+            
+        if User.objects.filter(username=nip).exists():
+            raise serializers.ValidationError({"nip": f"Guru dengan NIP {nip} sudah terdaftar!"})
+
+        validated_data['username'] = nip
+        validated_data['role'] = User.RoleChoices.TEACHER
+        validated_data['is_staff'] = True
+        user = User(**validated_data)
+        user.set_password(nip) # Default password adalah NIP
+        user.save()
+        return user
+
+    def update(self, instance, validated_data):
+        new_nip = validated_data.get('nip')
+        if new_nip:
+            new_nip = str(new_nip).strip()
+            if new_nip != instance.username:
+                if User.objects.filter(username=new_nip).exclude(id=instance.id).exists():
+                    raise serializers.ValidationError({"nip": f"NIP {new_nip} sudah digunakan guru lain!"})
+                instance.username = new_nip
+                instance.nip = new_nip
+                instance.set_password(new_nip)
+
+        instance.full_name = validated_data.get('full_name', instance.full_name)
+        instance.email = validated_data.get('email', instance.email)
+        instance.is_staff = True
         instance.save()
         return instance
 

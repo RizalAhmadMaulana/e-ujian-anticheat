@@ -39,6 +39,8 @@ class User(AbstractUser):
         related_name='students',
         verbose_name="Kelas Siswa"
     )
+    nip = models.CharField(max_length=50, blank=True, null=True, verbose_name="NIP Guru")
+    nisn = models.CharField(max_length=50, blank=True, null=True, verbose_name="NISN Siswa")
 
     class Meta:
         db_table = 'users'
@@ -51,6 +53,17 @@ class User(AbstractUser):
     def save(self, *args, **kwargs):
         if not self.full_name and (self.first_name or self.last_name):
             self.full_name = f"{self.first_name} {self.last_name}".strip()
+        if self.role == self.RoleChoices.TEACHER:
+            if not self.nip and self.username:
+                self.nip = self.username
+            elif self.nip and not self.username:
+                self.username = self.nip
+            self.is_staff = True
+        elif self.role == self.RoleChoices.STUDENT:
+            if not self.nisn and self.username:
+                self.nisn = self.username
+            elif self.nisn and not self.username:
+                self.username = self.nisn
         super().save(*args, **kwargs)
 
 

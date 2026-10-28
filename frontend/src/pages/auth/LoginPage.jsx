@@ -6,9 +6,6 @@ import {
   ShieldCheck, 
   Lock, 
   User, 
-  GraduationCap, 
-  BookOpen, 
-  Sparkles,
   ArrowRight,
   Eye,
   EyeOff,
@@ -18,9 +15,8 @@ import {
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { setCurrentUser, loginAsTeacher, loginAsStudent, schoolSettings, fetchSchoolSettings } = useExamStore();
+  const { setCurrentUser, schoolSettings, fetchSchoolSettings } = useExamStore();
 
-  const [activeRole, setActiveRole] = useState('TEACHER'); // 'TEACHER' | 'STUDENT'
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -31,20 +27,18 @@ export default function LoginPage() {
     fetchSchoolSettings?.();
   }, [fetchSchoolSettings]);
 
-  const handleRoleChange = (role) => {
-    setActiveRole(role);
-    setErrorMessage('');
-    setUsername('');
-    setPassword('');
-  };
-
   const handleManualLogin = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
+    if (!username.trim() || !password.trim()) {
+      setErrorMessage('Silakan masukkan NIP/NISN dan kata sandi Anda.');
+      return;
+    }
+
     setIsLoading(true);
     setErrorMessage('');
 
     try {
-      // 1. Coba login ke REST API Django
+      // 1. Login ke REST API Django
       const res = await loginApi(username.trim(), password.trim());
       if (res && res.user) {
         setCurrentUser({
@@ -56,6 +50,7 @@ export default function LoginPage() {
           schoolName: schoolSettings?.name || 'MIS RISALAH',
         });
 
+        // Redirect otomatis berdasarkan role akun yang login
         if (res.user.role === 'TEACHER') {
           navigate('/teacher/dashboard');
         } else {
@@ -64,21 +59,13 @@ export default function LoginPage() {
         return;
       }
     } catch (err) {
-      console.warn('Backend login fallback ke mode offline/mock:', err?.response?.data || err.message);
-      // Jika kredensial salah secara eksplisit dari backend, tampilkan error
-      if (err.response && err.response.status === 401) {
-        setErrorMessage('Username atau kata sandi tidak cocok dengan akun database.');
-        setIsLoading(false);
-        return;
-      }
-      
-      // Jika backend tidak aktif / offline, gunakan fallback mock
-      if (activeRole === 'TEACHER') {
-        loginAsTeacher();
-        navigate('/teacher/dashboard');
+      console.warn('Login error:', err?.response?.data || err.message);
+      if (err.response && (err.response.status === 401 || err.response.status === 400)) {
+        setErrorMessage('NIP/NISN atau kata sandi tidak cocok. Silakan periksa kembali.');
+      } else if (err.message === 'Network Error') {
+        setErrorMessage('Koneksi ke server gagal. Pastikan server backend aktif.');
       } else {
-        loginAsStudent();
-        navigate('/student/gatekeeper');
+        setErrorMessage('Terjadi kesalahan saat masuk. Silakan coba kembali.');
       }
     } finally {
       setIsLoading(false);
@@ -103,34 +90,13 @@ export default function LoginPage() {
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-xl z-10 px-4">
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md z-10 px-4">
         <div className="bg-slate-800/80 backdrop-blur-xl border border-slate-700/60 py-8 px-6 sm:px-10 shadow-2xl rounded-2xl">
-          {/* Form Role Toggle */}
-          <div className="flex rounded-xl bg-slate-900/70 p-1 mb-6 border border-slate-700/60">
-            <button
-              type="button"
-              onClick={() => handleRoleChange('TEACHER')}
-              className={`flex-1 py-2 text-xs sm:text-sm font-semibold rounded-lg flex items-center justify-center gap-2 transition ${
-                activeRole === 'TEACHER'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <BookOpen className="w-4 h-4" />
-              Masuk sebagai Guru
-            </button>
-            <button
-              type="button"
-              onClick={() => handleRoleChange('STUDENT')}
-              className={`flex-1 py-2 text-xs sm:text-sm font-semibold rounded-lg flex items-center justify-center gap-2 transition ${
-                activeRole === 'STUDENT'
-                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <GraduationCap className="w-4 h-4" />
-              Masuk sebagai Siswa
-            </button>
+          <div className="mb-6 text-center">
+            <h2 className="text-xl font-black text-white">Masuk ke Sistem</h2>
+            <p className="text-xs text-slate-400 mt-1">
+              Gunakan NIP untuk Guru atau NISN untuk Siswa
+            </p>
           </div>
 
           {/* Login Form (Bebas Dialog Simpan Password Browser & Rekomendasi Isian) */}
@@ -143,7 +109,7 @@ export default function LoginPage() {
             )}
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                {activeRole === 'TEACHER' ? 'Nomor Induk Pegawai (NIP) / Email' : 'Nomor Induk Siswa Nasional (NISN)'}
+                Nomor Induk (NIP / NISN)
               </label>
               <div className="relative rounded-lg shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -164,7 +130,7 @@ export default function LoginPage() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleManualLogin(e)}
-                  placeholder={activeRole === 'TEACHER' ? 'Masukkan NIP Anda' : 'Masukkan NISN Anda'}
+                  placeholder="Masukkan NIP Guru atau NISN Siswa"
                   className="block w-full pl-10 pr-3 py-2.5 bg-slate-900/80 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
                 />
               </div>
@@ -197,7 +163,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleManualLogin(e)}
-                  placeholder="Masukkan kata sandi"
+                  placeholder="Masukkan kata sandi (Default: NIP / NISN)"
                   className="block w-full pl-10 pr-10 py-2.5 bg-slate-900/80 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition font-mono"
                 />
                 <button

@@ -105,6 +105,110 @@ export const importUsersExcelApi = async (file) => {
 };
 
 /**
+ * CRUD DATA SISWA (STUDENTS)
+ */
+export const getStudentsApi = async (params = {}) => {
+  const response = await axiosInstance.get('/accounts/students/', { params });
+  return response.data;
+};
+
+export const createStudentApi = async (data) => {
+  const response = await axiosInstance.post('/accounts/students/', data);
+  return response.data;
+};
+
+export const updateStudentApi = async (id, data) => {
+  const response = await axiosInstance.patch(`/accounts/students/${id}/`, data);
+  return response.data;
+};
+
+export const deleteStudentApi = async (id) => {
+  const response = await axiosInstance.delete(`/accounts/students/${id}/`);
+  return response.data;
+};
+
+export const downloadStudentTemplateExcelApi = async (filename = 'Template_Import_Siswa_E-Ujian.xlsx') => {
+  const response = await axiosInstance.get('/accounts/students/template-excel/', {
+    responseType: 'blob'
+  });
+  const url = window.URL.createObjectURL(
+    new Blob([response.data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    })
+  );
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  link.parentNode.removeChild(link);
+  window.URL.revokeObjectURL(url);
+};
+
+export const importStudentsExcelApi = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await axiosInstance.post('/accounts/students/import-excel/', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+  return response.data;
+};
+
+/**
+ * CRUD DATA GURU (TEACHERS)
+ */
+export const getTeachersApi = async (params = {}) => {
+  const response = await axiosInstance.get('/accounts/teachers/', { params });
+  return response.data;
+};
+
+export const createTeacherApi = async (data) => {
+  const response = await axiosInstance.post('/accounts/teachers/', data);
+  return response.data;
+};
+
+export const updateTeacherApi = async (id, data) => {
+  const response = await axiosInstance.patch(`/accounts/teachers/${id}/`, data);
+  return response.data;
+};
+
+export const deleteTeacherApi = async (id) => {
+  const response = await axiosInstance.delete(`/accounts/teachers/${id}/`);
+  return response.data;
+};
+
+export const downloadTeacherTemplateExcelApi = async (filename = 'Template_Import_Guru_E-Ujian.xlsx') => {
+  const response = await axiosInstance.get('/accounts/teachers/template-excel/', {
+    responseType: 'blob'
+  });
+  const url = window.URL.createObjectURL(
+    new Blob([response.data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    })
+  );
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  link.parentNode.removeChild(link);
+  window.URL.revokeObjectURL(url);
+};
+
+export const importTeachersExcelApi = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await axiosInstance.post('/accounts/teachers/import-excel/', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+  return response.data;
+};
+
+/**
  * PENGATURAN SEKOLAH (DYNAMIC SCHOOL SETTINGS)
  */
 export const getSchoolSettingsApi = async () => {
@@ -141,6 +245,18 @@ export const authApi = {
   deleteUserApi,
   downloadUserTemplateExcelApi,
   importUsersExcelApi,
+  getStudentsApi,
+  createStudentApi,
+  updateStudentApi,
+  deleteStudentApi,
+  downloadStudentTemplateExcelApi,
+  importStudentsExcelApi,
+  getTeachersApi,
+  createTeacherApi,
+  updateTeacherApi,
+  deleteTeacherApi,
+  downloadTeacherTemplateExcelApi,
+  importTeachersExcelApi,
   logoutApi,
   login: loginApi,
   getMe: fetchCurrentUserApi,
