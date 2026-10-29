@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
+load_dotenv()
 
 # Build paths inside the project
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -11,9 +12,9 @@ load_dotenv(BASE_DIR / '.env')
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-e-ujian-anti-cheat-secret-key-2026-super-safe')
 
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1').split(',')
 
 # Application definition
 INSTALLED_APPS = [
@@ -145,7 +146,7 @@ SIMPLE_JWT = {
 # ==============================================================================
 # CORS HEADERS (Untuk Koneksi Frontend ReactJS / Vite)
 # ==============================================================================
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = [os.getenv('CORS_ORIGIN')]
 CORS_ALLOW_CREDENTIALS = True
 
 # Izinkan Iframe Google Form / Teams tertanam tanpa header framing terblokir

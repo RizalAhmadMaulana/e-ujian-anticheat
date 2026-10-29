@@ -5,8 +5,8 @@ import axios from 'axios';
  * Mendukung akses lokal (localhost:8001) maupun via IP LAN/WiFi sekolah (e.g. 192.168.x.x:8001)
  */
 export const getBaseApiUrl = () => {
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
   }
   const host = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
   return `http://${host}:8001/api`;
@@ -21,12 +21,8 @@ export const getBaseWsUrl = () => {
 };
 
 const axiosInstance = axios.create({
-  baseURL: getBaseApiUrl(),
-  timeout: 15000,
-  headers: {
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
-  },
+    baseURL: import.meta.env.VITE_API_BASE_URL,
+    withCredentials: true,
 });
 
 // Request Interceptor: Sisipkan JWT Token jika ada
