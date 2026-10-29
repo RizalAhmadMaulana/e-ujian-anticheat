@@ -291,18 +291,27 @@ Setelah masuk melalui portal login terpadu (`/login`) menggunakan **NIP** dan ka
 
 ---
 
-### Menu 7: Jadwal & Sesi Ujian (One-Click Copy Password & PIN Pengawas)
+### Menu 7: Jadwal & Sesi Ujian (Sinkronisasi Tanggal/Waktu & One-Click Copy)
 - **Rute:** `/teacher/sessions`
-- **Fungsi:** Membuka ruangan asesmen untuk kelas tertentu.
+- **Fungsi:** Membuka ruangan asesmen untuk kelas tertentu dengan pembatasan rentang waktu pengerjaan otomatis.
 - **Langkah-langkah:**
-  1. Klik **"+ Buka Sesi Ujian Baru"**, pilih Paket Soal, Kelas Peserta, Durasi (menit), dan Jadwal Waktu.
-  2. Sistem otomatis menghasilkan **Trio Token Keamanan**:
-     - 🔑 **Password Masuk** (contoh: `MSK-US4T`): Token gerbang gatekeeper pengerjaan soal.
-     - 🔒 **Password Keluar** (contoh: `KLR-BLCN`): Token penutup ujian resmi bersirene.
-     - 🛡️ **PIN Pengawas** (contoh: `PIN-1234`): PIN darurat untuk membuka layar merah siswa yang terkunci secara mandiri.
-  3. **Fitur Salin Cepat (One-Click Copy):**
+  1. Klik **"+ Buka Sesi Ujian Baru"**, pilih Paket Soal dan Kelas Peserta.
+  2. Tentukan Durasi Ujian (menit) dan Judul Sesi.
+  3. Konfigurasikan rentang waktu asesmen secara presisi:
+     - **Jadwal Mulai Ujian:** Tanggal Mulai dan Waktu Mulai (jam:menit).
+     - **Jadwal Berakhir Ujian:** Tanggal Berakhir dan Waktu Berakhir (jam:menit).
+     - *Validasi Otomatis:* Waktu berakhir wajib lebih lambat dari waktu mulai.
+  4. Sistem otomatis menghasilkan **Trio Token Keamanan**:
+     - 🔑 **Password Masuk** (contoh: `MSK-2JM4`): Token gerbang gatekeeper pengerjaan soal.
+     - 🔒 **Password Keluar** (contoh: `KLR-BUR8`): Token penutup ujian resmi bersirene.
+     - 🛡️ **PIN Pengawas** (contoh: `PIN-9378`): PIN darurat untuk membuka layar merah siswa yang terkunci secara mandiri.
+  5. **Status Sinkronisasi Jadwal Real-Time pada Kartu Sesi:**
+     - 🟢 **Sedang Berjalan:** Sesi aktif dalam rentang tanggal dan jam saat ini.
+     - 🟡 **Belum Dimulai:** Jadwal mulai ujian belum tercapai.
+     - ⚪ **Telah Berakhir:** Batas waktu pengerjaan telah lewat (sesi otomatis terkunci).
+  6. **Fitur Salin Cepat (One-Click Copy):**
      - Klik langsung salah satu kotak token di kartu sesi: token seketika tersalin ke clipboard/keyboard (muncul label *"Tersalin!"* dan pop-up konfirmasi).
-  4. Tersedia tombol **Edit** untuk mengubah durasi/PIN dan tombol **Hapus** untuk menghapus sesi.
+  7. Tersedia tombol **Edit** untuk mengubah durasi/jadwal/PIN dan tombol **Hapus** untuk menghapus sesi.
 
 ---
 
@@ -335,26 +344,35 @@ Setelah masuk melalui portal login terpadu (`/login`) menggunakan **NIP** dan ka
 
 ## 👨‍🎓 Panduan Operasional Lengkap: Role SISWA (Peserta Asesmen)
 
-### Layar 1: Login Terpadu (NISN) & Gatekeeper PIN Masuk
+### Layar 1: Login Terpadu (NISN) Langsung ke Beranda Peserta
 1. Siswa mengakses alamat web ujian (contoh: `http://192.168.1.74:5173/login`) di HP atau Laptop.
 2. Pada formulir login terpadu:
-   - Masukkan **NISN** pada kolom Username.
+   - Masukkan **NISN** pada kolom Nomor Induk (NIP / NISN).
    - Masukkan **Kata Sandi** (Default: sama dengan NISN).
-   - Klik **"Masuk ke Sistem"**. Sistem otomatis mendeteksi peran siswa dan mengarahkan langsung ke halaman Gatekeeper.
-3. Di layar **Gatekeeper**, masukkan **Password Masuk Ujian** yang dibagikan oleh guru pengawas (contoh: `MSK-US4T`).
-4. Klik **"CEK & MASUK RUANG UJIAN"**.
+   - Klik **"Masuk ke Sistem"**. Sistem otomatis mendeteksi peran siswa dan langsung mengarahkan ke **Beranda Asesmen Siswa (Lobby)**.
 
-### Layar 2: Beranda Peserta & Orientasi Layar (Portrait/Landscape)
-1. Siswa melihat jadwal ujian dan tata tertib asesmen.
-2. Klik tombol **"MULAI E-UJIAN"**.
-3. Pilih orientasi layar yang diinginkan:
-   - **Mode Portrait (Tegak):** Cocok untuk ponsel genggam dalam posisi vertikal.
-   - **Mode Landscape (Mendatar):** Memberikan bidang pandang soal yang lebih luas pada layar ponsel atau laptop.
+### Layar 2: Beranda Peserta & Pemilihan Orientasi Layar (Portrait/Landscape)
+1. Siswa melihat kartu identitas, jam digital real-time, status jadwal asesmen kelas, dan tata tertib ujian.
+2. Klik tombol **"E-UJIAN"** (Menu Utama).
+3. Pilih orientasi layar yang diinginkan pada pop-up modal:
+   - **Mode Portrait (Tegak):** Rekomendasi pengerjaan via layar smartphone vertikal.
+   - **Mode Landscape (Mendatar):** Rekomendasi pengerjaan via PC, laptop, atau smartphone mendatar.
+4. Klik pilihan orientasi untuk langsung menuju **Portal Mata Pelajaran**.
 
-### Layar 3: Portal Mata Pelajaran & Masuk Mode Fullscreen
-1. Siswa memilih kartu mata pelajaran yang diujikan hari ini.
-2. Klik tombol **"MULAI UJIAN SEKARANG"**.
-3. Peramban akan **secara otomatis mengunci layar ke mode Layar Penuh (Fullscreen API)**.
+### Layar 3: Portal Mata Pelajaran (Pemilihan Mapel Sesuai Jadwal)
+1. Siswa melihat seluruh mata pelajaran yang terjadwal untuk kelasnya.
+2. **Sinkronisasi Rentang Jadwal Otomatis (Tutup / Buka):**
+   - 🟢 **Ujian Sedang Aktif / Berjalan:** Tombol aksi aktif **"MULAI UJIAN"** (dengan ikon panah `ArrowRight` dan badge hijau `Sedang Berjalan`). Klik tombol untuk memilih mata pelajaran tersebut.
+   - 🔴 **Ujian Telah Ditutup / Berakhir (Expired):** Jika batas jadwal telah lewat (contoh: ujian IPA tertanggal 27 Okt saat hari ini 29 Okt), tombol aksi berubah otomatis menjadi **"SOAL DITUTUP"** (warna redup dengan ikon gembok `Lock`, badge merah `Telah Ditutup`, dan keterangan jam berakhir). Siswa diblokir secara mutlak dari membuka soal yang sudah lewat.
+   - 🟡 **Ujian Belum Dibuka (Upcoming):** Jika waktu mulai belum tiba, tombol bertuliskan **"BELUM DIBUKA"** (ikon gembok `Lock`, badge kuning `Belum Dibuka`, dan keterangan jadwal dibuka).
+3. Klik tombol **"MULAI UJIAN"** pada mata pelajaran yang aktif (misal: PKN). Sistem mengarahkan siswa ke **Layar Kredensial Password Masuk Khusus Mapel Tersebut**.
+
+### Layar 4: Kredensial Password Masuk Mapel & Kunci Layar Penuh (Fullscreen)
+1. Siswa melihat kartu identitas peserta dan kartu ringkasan mata pelajaran yang dipilih (nama mapel, judul paket, durasi waktu, dan tipe soal).
+2. Masukkan **Password Masuk Ujian** yang dibagikan guru pengawas khusus untuk mapel tersebut (contoh: `MSK-2JM4`). Token mapel lain tidak dapat digunakan untuk membuka mapel ini.
+3. Klik tombol **"MULAI UJIAN"**.
+4. Sistem memverifikasi token ke server backend, mengunci peramban ke mode **Layar Penuh (Fullscreen API)** secara otomatis (*Zero-Tolerance Lockdown*), memunculkan notifikasi *"Aplikasi Dipasangi Pin"*, dan langsung membuka lembar soal di **Arena Ujian Terkunci**.
+*(Jika siswa ingin membatalkan atau mengganti mapel, tersedia tombol "Kembali ke Pilihan Mata Pelajaran").*
 
 ### Layar 4: Arena Ujian Terkunci (Pengerjaan Soal Mandiri / Google Form)
 - **Security Bar Atas:** Menampilkan indikator `REC • Terproteksi`, sisa waktu pengerjaan, dan tombol gembok *Password untuk Keluar*.

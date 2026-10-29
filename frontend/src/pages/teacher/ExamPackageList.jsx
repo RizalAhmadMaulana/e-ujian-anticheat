@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useExamStore } from '../../store/useExamStore';
 import { formatExternalExamUrl, isValidExamUrl } from '../../utils/urlEmbedFormatter';
-import { getPackagesApi, createPackageApi, updatePackageApi, deletePackageApi } from '../../api/examApi';
+import { getPackagesApi, createPackageApi, updatePackageApi, deletePackageApi, uploadExamImageApi } from '../../api/examApi';
+import { resolveImageUrl } from '../../utils/imageUrlFormatter';
 import { getClassroomsApi } from '../../api/authApi';
 import Modal from '../../components/common/Modal';
 import { 
@@ -13,11 +14,14 @@ import {
   Edit3,
   CheckCircle, 
   Eye, 
-  Sparkles,
-  Layers,
-  FileQuestion,
-  HelpCircle,
-  X
+  Sparkles, 
+  Layers, 
+  FileQuestion, 
+  HelpCircle, 
+  X,
+  Image as ImageIcon,
+  Copy,
+  Check
 } from 'lucide-react';
 
 export default function ExamPackageList() {
@@ -54,23 +58,26 @@ export default function ExamPackageList() {
     loadClassrooms();
   }, [fetchPackages]);
 
-  // Native Question Builder State
+  // Native Question Builder State (Microsoft Forms Style)
   const [questions, setQuestions] = useState([
     {
       id: `q-${Date.now()}-1`,
       questionType: 'MULTIPLE_CHOICE',
       questionText: '',
+      imageUrl: '',
       points: 20,
       options: [
-        { label: 'A', text: '' },
-        { label: 'B', text: '' },
-        { label: 'C', text: '' },
-        { label: 'D', text: '' },
-        { label: 'E', text: '' },
+        { id: `opt-1`, label: 'A', text: '', imageUrl: '' },
+        { id: `opt-2`, label: 'B', text: '', imageUrl: '' },
+        { id: `opt-3`, label: 'C', text: '', imageUrl: '' },
+        { id: `opt-4`, label: 'D', text: '', imageUrl: '' },
       ],
       correctOption: 'A',
     },
   ]);
+
+  // Total Nilai Seluruh Butir Soal (Dihitung Realtime)
+  const totalPoints = questions.reduce((sum, q) => sum + (Number(q.points) || 0), 0);
 
   // Formatted Embed URL
   const formattedEmbedUrl = formatExternalExamUrl(rawExternalUrl);
@@ -82,17 +89,32 @@ export default function ExamPackageList() {
         id: `q-${Date.now()}-${questions.length + 1}`,
         questionType: type,
         questionText: '',
+        imageUrl: '',
         points: 20,
         options: type === 'MULTIPLE_CHOICE' ? [
-          { label: 'A', text: '' },
-          { label: 'B', text: '' },
-          { label: 'C', text: '' },
-          { label: 'D', text: '' },
-          { label: 'E', text: '' },
+          { id: `opt-${Date.now()}-1`, label: 'A', text: '', imageUrl: '' },
+          { id: `opt-${Date.now()}-2`, label: 'B', text: '', imageUrl: '' },
+          { id: `opt-${Date.now()}-3`, label: 'C', text: '', imageUrl: '' },
+          { id: `opt-${Date.now()}-4`, label: 'D', text: '', imageUrl: '' },
         ] : [],
         correctOption: type === 'MULTIPLE_CHOICE' ? 'A' : null,
       },
     ]);
+  };
+
+  const handleDuplicateQuestion = (qIndex) => {
+    const qToCopy = questions[qIndex];
+    const duplicated = {
+      ...qToCopy,
+      id: `q-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      options: (qToCopy.options || []).map((o, idx) => ({
+        ...o,
+        id: `opt-${Date.now()}-${idx}`,
+      })),
+    };
+    const updated = [...questions];
+    updated.splice(qIndex + 1, 0, duplicated);
+    setQuestions(updated);
   };
 
   const handleRemoveQuestion = (index) => {
@@ -113,15 +135,95 @@ export default function ExamPackageList() {
 
   const handlePointsChange = (index, points) => {
     const updated = [...questions];
-    updated[index].points = Number(points);
+    updated[index].points = Number(points) || 0;
     setQuestions(updated);
   };
 
-  const handleOptionTextChange = (qIndex, optLabel, text) => {
+  // Upload Gambar Soal
+  const handleQuestionImageUpload = async (qIndex, file) => {
+    if (!file) return;
+    try {
+      const res = await uploadExamImageApi(file);
+      const updated = [...questions];
+      updated[qIndex].imageUrl = res.url;
+      setQuestions(updated);
+    } catch (err) {
+      alert('Gagal mengunggah gambar soal: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleRemoveQuestionImage = (qIndex) => {
     const updated = [...questions];
-    updated[qIndex].options = updated[qIndex].options.map((opt) =>
-      opt.label === optLabel ? { ...opt, text } : opt
-    );
+    updated[qIndex].imageUrl = '';
+    setQuestions(updated);
+  };
+
+  // Manajemen Opsi Jawaban Dinamis (Tambah, Hapus, Upload Gambar)
+  const handleAddOption = (qIndex) => {
+    const updated = [...questions];
+    const currentOptions = updated[qIndex].options || [];
+    if (currentOptions.length >= 8) {
+      alert('Maksimal 8 opsi pilihan jawaban (A sampai H).');
+      return;
+    }
+    const nextLabel = String.fromCharCode(65 + currentOptions.length);
+    updated[qIndex].options = [
+      ...currentOptions,
+      {
+        id: `opt-${Date.now()}-${currentOptions.length + 1}`,
+        label: nextLabel,
+        text: '',
+        imageUrl: '',
+      },
+    ];
+    setQuestions(updated);
+  };
+
+  const handleRemoveOption = (qIndex, optIndex) => {
+    const updated = [...questions];
+    const currentOptions = [...(updated[qIndex].options || [])];
+    if (currentOptions.length <= 2) {
+      alert('Pilihan ganda minimal harus memiliki 2 opsi jawaban.');
+      return;
+    }
+    const removedLabel = currentOptions[optIndex].label;
+    currentOptions.splice(optIndex, 1);
+
+    // Re-index label A, B, C, D...
+    const reindexed = currentOptions.map((opt, i) => ({
+      ...opt,
+      label: String.fromCharCode(65 + i),
+    }));
+    updated[qIndex].options = reindexed;
+
+    // Sesuaikan kunci jawaban bila opsi yang dihapus merupakan kunci jawaban
+    if (updated[qIndex].correctOption === removedLabel || !reindexed.some((o) => o.label === updated[qIndex].correctOption)) {
+      updated[qIndex].correctOption = reindexed[0]?.label || 'A';
+    }
+    setQuestions(updated);
+  };
+
+  const handleOptionTextChange = (qIndex, optIndex, text) => {
+    const updated = [...questions];
+    updated[qIndex].options[optIndex].text = text;
+    setQuestions(updated);
+  };
+
+  const handleOptionImageUpload = async (qIndex, optIndex, file) => {
+    if (!file) return;
+    try {
+      const res = await uploadExamImageApi(file);
+      const updated = [...questions];
+      updated[qIndex].options[optIndex].imageUrl = res.url;
+      setQuestions(updated);
+    } catch (err) {
+      alert('Gagal mengunggah gambar opsi: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  const handleRemoveOptionImage = (qIndex, optIndex) => {
+    const updated = [...questions];
+    updated[qIndex].options[optIndex].imageUrl = '';
     setQuestions(updated);
   };
 
@@ -155,6 +257,22 @@ export default function ExamPackageList() {
     setRawExternalUrl('');
     setExamType('NATIVE_QUESTIONS');
     setTargetClassroom(classroomsList[0]?.name || 'Semua Kelas');
+    setQuestions([
+      {
+        id: `q-${Date.now()}-1`,
+        questionType: 'MULTIPLE_CHOICE',
+        questionText: '',
+        imageUrl: '',
+        points: 20,
+        options: [
+          { id: `opt-1`, label: 'A', text: '', imageUrl: '' },
+          { id: `opt-2`, label: 'B', text: '', imageUrl: '' },
+          { id: `opt-3`, label: 'C', text: '', imageUrl: '' },
+          { id: `opt-4`, label: 'D', text: '', imageUrl: '' },
+        ],
+        correctOption: 'A',
+      },
+    ]);
     setIsAddModalOpen(true);
   };
 
@@ -173,13 +291,17 @@ export default function ExamPackageList() {
           id: q.id || `q-${idx}`,
           questionType: q.question_type || q.questionType || 'MULTIPLE_CHOICE',
           questionText: q.question_text || q.questionText || '',
+          imageUrl: q.image_url || q.imageUrl || '',
           points: q.points || 20,
-          options: (q.options || []).map((opt) => ({
-            label: opt.option_label || opt.label || 'A',
+          options: (q.options || []).map((opt, oIdx) => ({
+            id: opt.id || `opt-${idx}-${oIdx}`,
+            label: opt.option_label || opt.label || String.fromCharCode(65 + oIdx),
             text: opt.option_text || opt.text || '',
+            imageUrl: opt.image_url || opt.imageUrl || '',
           })),
           correctOption:
-            (q.options || []).find((o) => o.is_correct || o.isCorrect)?.option_label || 'A',
+            (q.options || []).find((o) => o.is_correct || o.isCorrect)?.option_label ||
+            (q.options?.[0]?.option_label || 'A'),
         }))
       );
     }
@@ -251,11 +373,13 @@ export default function ExamPackageList() {
       const questionsPayload = questions.map((q, idx) => ({
         question_type: q.questionType,
         question_text: q.questionText,
-        points: q.points,
+        image_url: q.imageUrl || null,
+        points: Number(q.points) || 0,
         order_number: idx + 1,
         options: q.questionType === 'MULTIPLE_CHOICE' ? q.options.map((opt) => ({
           option_label: opt.label,
           option_text: opt.text,
+          image_url: opt.imageUrl || null,
           is_correct: opt.label === q.correctOption,
         })) : [],
       }));
@@ -457,7 +581,7 @@ export default function ExamPackageList() {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         title={isEditing ? 'Edit Data Paket Ujian' : 'Buat Paket Ujian Baru (Hybrid Mode)'}
-        maxWidth="max-w-3xl"
+        maxWidth="max-w-4xl"
       >
         <form onSubmit={handleSavePackage} className="space-y-5">
           {/* Pemilihan Mode: Soal Mandiri vs Link Eksternal */}
@@ -610,110 +734,298 @@ export default function ExamPackageList() {
           )}
 
           {/* ======================================================== */}
-          {/* KONDISIONAL 2: MODE SOAL MANDIRI (NATIVE QUESTIONS) */}
+          {/* KONDISIONAL 2: MODE SOAL MANDIRI (MICROSOFT FORMS STYLE) */}
           {/* ======================================================== */}
           {examType === 'NATIVE_QUESTIONS' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Daftar Pertanyaan ({questions.length} Butir)
-                </span>
+              {/* Header Pertanyaan & Total Akumulasi Poin */}
+              <div className="flex flex-wrap items-center justify-between gap-2.5 border-b border-slate-200 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                    Daftar Pertanyaan ({questions.length} Butir)
+                  </span>
+                  <div className={`px-3 py-1 rounded-full text-xs font-black border flex items-center gap-1.5 shadow-2xs ${
+                    totalPoints === 100
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                      : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                  }`}>
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Total Nilai: {totalPoints} Poin</span>
+                    {totalPoints === 100 && (
+                      <span className="text-[10px] text-emerald-600 font-bold ml-0.5">✓ 100 Standar</span>
+                    )}
+                  </div>
+                </div>
+
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => handleAddQuestion('MULTIPLE_CHOICE')}
-                    className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition"
+                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition"
                   >
                     <Plus className="w-3.5 h-3.5" /> + Pilihan Ganda
                   </button>
                   <button
                     type="button"
                     onClick={() => handleAddQuestion('ESSAY')}
-                    className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold flex items-center gap-1 transition"
+                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition"
                   >
                     <Plus className="w-3.5 h-3.5" /> + Esai
                   </button>
                 </div>
               </div>
 
-              <div className="space-y-4 max-h-96 overflow-y-auto pr-1">
+              {/* Loop Kartu Soal (Gaya Microsoft Forms) */}
+              <div className="space-y-4 max-h-[520px] overflow-y-auto pr-1">
                 {questions.map((q, idx) => (
                   <div
                     key={q.id}
-                    className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 space-y-3 relative"
+                    className="p-4 sm:p-5 rounded-2xl border-2 border-slate-200 bg-white hover:border-indigo-300 shadow-xs transition space-y-3.5 relative group"
                   >
-                    <div className="flex items-center justify-between">
+                    {/* Header Bar Kartu Soal */}
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                       <div className="flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center">
+                        <span className="w-7 h-7 rounded-xl bg-indigo-600 text-white font-black text-xs flex items-center justify-center shadow-xs">
                           {idx + 1}
                         </span>
-                        <span className="text-xs font-bold text-slate-700">
+                        <span className="text-xs font-black text-slate-800">
                           {q.questionType === 'MULTIPLE_CHOICE' ? 'Pilihan Ganda' : 'Esai'}
                         </span>
+                        {q.questionType === 'MULTIPLE_CHOICE' && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 border border-slate-200">
+                            {q.options.length} Opsi
+                          </span>
+                        )}
                       </div>
+
                       <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1 text-xs">
-                          <span className="text-slate-500">Poin:</span>
+                        {/* Input Poin Tiap Nomor */}
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                          <span className="text-slate-500 font-bold">Poin:</span>
                           <input
                             type="number"
-                            min="1"
+                            min="0"
+                            max="100"
                             value={q.points}
                             onChange={(e) => handlePointsChange(idx, e.target.value)}
-                            className="w-14 px-2 py-0.5 border border-slate-300 rounded text-center font-bold"
+                            className="w-12 px-1 py-0.5 border border-slate-300 rounded-md text-center font-black text-indigo-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
                           />
                         </div>
+
+                        {/* Duplikat Soal */}
+                        <button
+                          type="button"
+                          onClick={() => handleDuplicateQuestion(idx)}
+                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                          title="Duplikat Butir Soal ini"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+
+                        {/* Hapus Soal */}
                         <button
                           type="button"
                           onClick={() => handleRemoveQuestion(idx)}
-                          className="p-1 text-slate-400 hover:text-red-600 transition"
-                          title="Hapus Butir Soal"
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                          title="Hapus Butir Soal ini"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
 
-                    <div>
-                      <textarea
-                        rows={2}
-                        required
-                        value={q.questionText}
-                        onChange={(e) => handleQuestionTextChange(idx, e.target.value)}
-                        placeholder="Tuliskan teks pertanyaan soal di sini..."
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                      />
+                    {/* Area Teks Pertanyaan & Tombol Sisipkan Gambar (Ala Microsoft Forms) */}
+                    <div className="space-y-2">
+                      <div className="relative">
+                        <textarea
+                          rows={2}
+                          required
+                          value={q.questionText}
+                          onChange={(e) => handleQuestionTextChange(idx, e.target.value)}
+                          placeholder="Tuliskan teks pertanyaan soal di sini..."
+                          className="w-full px-3.5 py-2.5 pr-11 border border-slate-300 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white leading-relaxed placeholder:text-slate-400"
+                        />
+
+                        {/* Tombol Sisipkan Gambar Soal (Microsoft Forms Icon) */}
+                        <label
+                          className="absolute right-2.5 top-2.5 p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg cursor-pointer transition"
+                          title="Sisipkan Gambar pada Soal ini"
+                        >
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              if (e.target.files?.[0]) {
+                                handleQuestionImageUpload(idx, e.target.files[0]);
+                              }
+                            }}
+                          />
+                          <ImageIcon className="w-4 h-4" />
+                        </label>
+                      </div>
+
+                      {/* Pratinjau Gambar Soal (Jika Ada) */}
+                      {q.imageUrl && (
+                        <div className="relative inline-block border-2 border-indigo-100 rounded-2xl p-2 bg-indigo-50/30 group">
+                          <img
+                            src={resolveImageUrl(q.imageUrl)}
+                            alt="Pratinjau Gambar Soal"
+                            className="max-h-48 rounded-xl object-contain border border-slate-200 bg-white shadow-2xs"
+                          />
+                          <div className="flex items-center justify-between gap-2 pt-1.5 px-1">
+                            <span className="text-[10px] text-slate-500 font-mono">Gambar Soal Terlampir</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveQuestionImage(idx)}
+                              className="text-[11px] font-bold text-red-600 hover:text-red-700 hover:underline flex items-center gap-1"
+                            >
+                              <X className="w-3.5 h-3.5" /> Hapus Gambar
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
+                    {/* Area Pilihan Jawaban (Dinamis: Tambah/Hapus Opsi & Gambar per Opsi) */}
                     {q.questionType === 'MULTIPLE_CHOICE' && (
                       <div className="space-y-2 pt-1">
-                        <div className="text-[11px] font-semibold text-slate-500">
-                          Pilihan Jawaban (Pilih radio untuk menentukan kunci jawaban yang benar):
+                        <div className="text-[11px] font-bold text-slate-500 flex items-center justify-between">
+                          <span>Pilihan Jawaban (Klik lingkaran untuk memilih kunci jawaban):</span>
+                          <span className="text-slate-400 font-normal">Kunci: Opsi {q.correctOption}</span>
                         </div>
-                        {q.options.map((opt) => (
-                          <div key={opt.label} className="flex items-center gap-2">
-                            <input
-                              type="radio"
-                              name={`correct-${q.id}`}
-                              checked={q.correctOption === opt.label}
-                              onChange={() => handleCorrectOptionChange(idx, opt.label)}
-                              className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                              title="Pilih sebagai kunci jawaban"
-                            />
-                            <span className="w-5 font-bold text-xs text-slate-700">{opt.label}.</span>
-                            <input
-                              type="text"
-                              required
-                              value={opt.text}
-                              onChange={(e) => handleOptionTextChange(idx, opt.label, e.target.value)}
-                              placeholder={`Pilihan jawaban ${opt.label}`}
-                              className="flex-1 px-2.5 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                            />
-                          </div>
-                        ))}
+
+                        <div className="space-y-2">
+                          {q.options.map((opt, optIdx) => {
+                            const isCorrect = q.correctOption === opt.label;
+                            return (
+                              <div key={opt.id || opt.label} className="space-y-1.5">
+                                <div className="flex items-center gap-2 group">
+                                  {/* Radio Kunci Jawaban (Checkmark Hijau ala MS Forms) */}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCorrectOptionChange(idx, opt.label)}
+                                    className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition shrink-0 ${
+                                      isCorrect
+                                        ? 'border-emerald-500 bg-emerald-500 text-white shadow-xs'
+                                        : 'border-slate-300 hover:border-indigo-400 bg-white'
+                                    }`}
+                                    title={isCorrect ? 'Kunci Jawaban Benar' : 'Klik untuk jadikan Kunci Jawaban'}
+                                  >
+                                    {isCorrect && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                                  </button>
+
+                                  {/* Label Opsi */}
+                                  <span className="w-5 font-black text-xs text-slate-700">{opt.label}.</span>
+
+                                  {/* Input Teks Opsi */}
+                                  <div className="flex-1 relative flex items-center">
+                                    <input
+                                      type="text"
+                                      required
+                                      value={opt.text}
+                                      onChange={(e) => handleOptionTextChange(idx, optIdx, e.target.value)}
+                                      placeholder={`Pilihan jawaban ${opt.label}`}
+                                      className="w-full px-3 py-2 pr-9 border border-slate-300 rounded-xl text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                    />
+
+                                    {/* Tombol Sisipkan Gambar Opsi (MS Forms Style) */}
+                                    <label
+                                      className="absolute right-2 p-1 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 rounded-lg cursor-pointer transition"
+                                      title="Sisipkan Gambar pada Opsi ini"
+                                    >
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={(e) => {
+                                          if (e.target.files?.[0]) {
+                                            handleOptionImageUpload(idx, optIdx, e.target.files[0]);
+                                          }
+                                        }}
+                                      />
+                                      <ImageIcon className="w-4 h-4" />
+                                    </label>
+                                  </div>
+
+                                  {/* Tombol Hapus Opsi (MS Forms Trash) */}
+                                  <button
+                                    type="button"
+                                    disabled={q.options.length <= 2}
+                                    onClick={() => handleRemoveOption(idx, optIdx)}
+                                    className={`p-1.5 rounded-lg transition shrink-0 ${
+                                      q.options.length <= 2
+                                        ? 'text-slate-300 cursor-not-allowed'
+                                        : 'text-slate-400 hover:text-red-600 hover:bg-red-50'
+                                    }`}
+                                    title={q.options.length <= 2 ? 'Minimal 2 opsi' : 'Hapus Opsi ini'}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+
+                                {/* Pratinjau Gambar Opsi jika ada */}
+                                {opt.imageUrl && (
+                                  <div className="ml-8 inline-flex items-center gap-2 p-1.5 rounded-xl border border-slate-200 bg-slate-50 shadow-2xs">
+                                    <img
+                                      src={resolveImageUrl(opt.imageUrl)}
+                                      alt={`Gambar Opsi ${opt.label}`}
+                                      className="h-16 w-16 object-contain rounded-lg border border-slate-200 bg-white"
+                                    />
+                                    <div className="pr-2">
+                                      <div className="text-[10px] text-slate-500 font-mono">Gambar Opsi {opt.label}</div>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveOptionImage(idx, optIdx)}
+                                        className="text-[11px] font-bold text-red-600 hover:text-red-700 hover:underline flex items-center gap-1 mt-0.5"
+                                      >
+                                        <X className="w-3 h-3" /> Hapus Gambar
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Tombol Tambahkan Opsi (MS Forms Style) */}
+                        <div className="pt-1.5 ml-8">
+                          <button
+                            type="button"
+                            onClick={() => handleAddOption(idx)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50/50 hover:bg-indigo-50 text-indigo-700 text-xs font-bold transition hover:border-indigo-400 shadow-2xs"
+                          >
+                            <Plus className="w-3.5 h-3.5" /> Tambahkan Opsi
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
                 ))}
+              </div>
+
+              {/* Bar Bawah Ringkasan Total Poin & Sisipkan Pertanyaan Baru */}
+              <div className="p-3.5 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/70 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="text-xs text-slate-600 font-medium">
+                  Total keseluruhan: <span className="font-black text-slate-900">{questions.length} Butir Soal</span> • Akumulasi: <span className="font-black text-indigo-600">{totalPoints} Poin</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleAddQuestion('MULTIPLE_CHOICE')}
+                    className="px-3 py-1.5 bg-white hover:bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-2xs"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Sisipkan Pilihan Ganda
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAddQuestion('ESSAY')}
+                    className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-2xs"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Sisipkan Esai
+                  </button>
+                </div>
               </div>
             </div>
           )}

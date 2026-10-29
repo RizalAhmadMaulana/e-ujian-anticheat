@@ -6,6 +6,7 @@ import { useProctorSocket } from '../../hooks/useProctorSocket';
 import { playExitSuccessAlarm } from '../../utils/soundEffects';
 import { submitExamAnswersApi, verifyExitPasswordApi } from '../../api/examApi';
 import { proctoringApi } from '../../api/proctoringApi';
+import { resolveImageUrl } from '../../utils/imageUrlFormatter';
 import Modal from '../../components/common/Modal';
 import { 
   ShieldAlert, 
@@ -587,31 +588,58 @@ export default function ExamWorkspace() {
 
                   {/* Teks Pertanyaan Soal */}
                   <div className="text-sm sm:text-base text-slate-100 font-semibold leading-relaxed">
-                    {currentQuestion.questionText}
+                    {currentQuestion.questionText || currentQuestion.question_text}
                   </div>
 
-                  {/* Pilihan Jawaban Pilihan Ganda (A-E) */}
+                  {/* Gambar Pertanyaan Soal (Jika Ada) */}
+                  {(currentQuestion.imageUrl || currentQuestion.image_url) && (
+                    <div className="my-3 rounded-2xl overflow-hidden border border-slate-700/80 max-w-xl bg-slate-950/80 p-2 shadow-inner">
+                      <img
+                        src={resolveImageUrl(currentQuestion.imageUrl || currentQuestion.image_url)}
+                        alt="Gambar Pertanyaan Soal"
+                        className="w-full max-h-80 object-contain rounded-xl"
+                      />
+                    </div>
+                  )}
+
+                  {/* Pilihan Jawaban Pilihan Ganda (A-E / Dinamis) */}
                   {currentQuestion.questionType === 'MULTIPLE_CHOICE' ? (
                     <div className="space-y-3 pt-2">
                       {currentQuestion.options.map((opt) => {
-                        const isSelected = activeAttempt.studentAnswers[currentQuestion.id] === opt.label;
+                        const optLabel = opt.label || opt.option_label;
+                        const optText = opt.text || opt.option_text;
+                        const optImg = opt.imageUrl || opt.image_url;
+                        const isSelected = activeAttempt.studentAnswers[currentQuestion.id] === optLabel;
                         return (
                           <button
-                            key={opt.label}
+                            key={optLabel}
                             type="button"
-                            onClick={() => setStudentAnswer(currentQuestion.id, opt.label)}
-                            className={`w-full p-4 rounded-2xl border text-left text-xs sm:text-sm font-semibold transition flex items-center gap-4 ${
+                            onClick={() => setStudentAnswer(currentQuestion.id, optLabel)}
+                            className={`w-full p-4 rounded-2xl border text-left text-xs sm:text-sm font-semibold transition flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 ${
                               isSelected
                                 ? 'bg-indigo-600/30 border-indigo-500 text-white shadow-lg shadow-indigo-600/20 ring-2 ring-indigo-500/50'
                                 : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:bg-slate-800 hover:text-white'
                             }`}
                           >
-                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 transition ${
-                              isSelected ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-800 text-slate-400'
-                            }`}>
-                              {opt.label}
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 transition ${
+                                isSelected ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-800 text-slate-400'
+                              }`}>
+                                {optLabel}
+                              </div>
+                              <span className="leading-relaxed truncate-none">{optText}</span>
                             </div>
-                            <span className="leading-relaxed">{opt.text}</span>
+
+                            {/* Gambar Pilihan Jawaban (Jika Ada) */}
+                            {optImg && (
+                              <div className="sm:ml-auto rounded-xl overflow-hidden border border-slate-700 max-h-32 bg-slate-900 p-1 shrink-0">
+                                <img
+                                  src={resolveImageUrl(optImg)}
+                                  alt={`Gambar Opsi ${optLabel}`}
+                                  className="h-24 sm:h-28 object-contain rounded-lg"
+                                />
+                              </div>
+                            )}
                           </button>
                         );
                       })}

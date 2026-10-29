@@ -421,10 +421,10 @@ export default function ClassroomManagement() {
               </div>
               <div>
                 <div className="font-extrabold text-base text-white">
-                  Daftar Siswa Kelas {selectedClassForStudents?.name}
+                  Alokasi Rombongan Belajar
                 </div>
                 <div className="text-xs text-indigo-200">
-                  Tahun Ajaran {selectedClassForStudents?.academic_year || '2026/2027'}
+                  Kelas {selectedClassForStudents?.name} • Tahun Ajaran {selectedClassForStudents?.academic_year || '2026/2027'}
                 </div>
               </div>
             </div>

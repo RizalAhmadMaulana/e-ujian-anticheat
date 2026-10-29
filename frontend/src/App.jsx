@@ -44,7 +44,7 @@ export default function App() {
               currentUser.role === 'TEACHER' ? (
                 <Navigate to="/teacher/dashboard" replace />
               ) : (
-                <Navigate to="/student/gatekeeper" replace />
+                <Navigate to="/student/lobby" replace />
               )
             ) : (
               <Navigate to="/login" replace />
@@ -79,7 +79,7 @@ export default function App() {
           path="/student"
           element={
             <RoleRouteGuard allowedRoles={['STUDENT']}>
-              <div className="min-h-screen bg-slate-900" />
+              <Navigate to="/student/lobby" replace />
             </RoleRouteGuard>
           }
         />

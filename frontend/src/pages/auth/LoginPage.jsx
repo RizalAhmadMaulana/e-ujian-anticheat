@@ -54,7 +54,7 @@ export default function LoginPage() {
         if (res.user.role === 'TEACHER') {
           navigate('/teacher/dashboard');
         } else {
-          navigate('/student/gatekeeper');
+          navigate('/student/lobby');
         }
         return;
       }

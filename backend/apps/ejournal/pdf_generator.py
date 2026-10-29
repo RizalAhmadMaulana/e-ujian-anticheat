@@ -117,7 +117,8 @@ def generate_ejournal_pdf(session, journal, attempts, absent_students, violation
     story.append(Spacer(1, 8))
 
     # 3. INFORMASI SESI
-    teacher_name = session.package.teacher.full_name if session.package and session.package.teacher else "Drs. Budi Santoso, M.Kom"
+    teacher_obj = session.package.teacher if (session.package and session.package.teacher) else None
+    teacher_name = teacher_obj.full_name if teacher_obj else "Guru Pengawas"
     exam_type_str = "Soal Mandiri (Native)" if session.package.exam_type == 'NATIVE_QUESTIONS' else "Tautan Formulir Eksternal (Google Form)"
     
     info_data = [
@@ -265,13 +266,15 @@ def generate_ejournal_pdf(session, journal, attempts, absent_students, violation
     sig_date = session.start_time.strftime("%d %B %Y")
     principal_title = f"Kepala {school_setting.name}"
     principal_nip_text = f"NIP. {school_setting.principal_nip}" if school_setting.principal_nip else ""
+    teacher_nip_val = (teacher_obj.nip or teacher_obj.username) if teacher_obj else ""
+    teacher_nip_text = f"NIP. {teacher_nip_val}" if teacher_nip_val else "-"
     
     sig_data = [
         [Paragraph(f"Mengetahui,<br/><b>{principal_title}</b>", cell_center),
          Paragraph(f"{sig_city}, {sig_date}<br/><b>Guru Pengawas Ujian</b>", cell_center)],
         [Spacer(1, 35), Spacer(1, 35)],
         [Paragraph(f"<u><b>{school_setting.principal_name}</b></u><br/>{principal_nip_text}", cell_center),
-         Paragraph(f"<u><b>{teacher_name}</b></u><br/>NIP. {session.package.teacher.username if session.package and session.package.teacher else '198507122010011002'}", cell_center)],
+         Paragraph(f"<u><b>{teacher_name}</b></u><br/>{teacher_nip_text}", cell_center)],
     ]
     t_sig = Table(sig_data, colWidths=[8.8 * cm, 8.8 * cm])
     t_sig.setStyle(TableStyle([

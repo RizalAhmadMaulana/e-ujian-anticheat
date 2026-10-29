@@ -35,8 +35,9 @@ export default function ExamSessionSetup() {
   const [selectedPackageId, setSelectedPackageId] = useState('');
   const [classroom, setClassroom] = useState('');
   const [sessionTitle, setSessionTitle] = useState('');
-  const [examDate, setExamDate] = useState(new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [startTime, setStartTime] = useState('08:00');
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [endTime, setEndTime] = useState('09:30');
   const [durationMinutes, setDurationMinutes] = useState(60);
   const [entryPassword, setEntryPassword] = useState('MASUK' + Math.floor(100 + Math.random() * 900));
@@ -155,7 +156,9 @@ export default function ExamSessionSetup() {
     } else {
       setSessionTitle('');
     }
-    setExamDate(new Date().toISOString().split('T')[0]);
+    const today = new Date().toISOString().split('T')[0];
+    setStartDate(today);
+    setEndDate(today);
     setStartTime('08:00');
     setEndTime('09:30');
     setDurationMinutes(60);
@@ -172,21 +175,25 @@ export default function ExamSessionSetup() {
     setClassroom(session.classroom || session.classroom_name || (classroomsList[0]?.name || ''));
     setSessionTitle(session.title || '');
     setDurationMinutes(session.durationMinutes || session.duration_minutes || 60);
-    
-    const d = session.date || (session.start_time ? session.start_time.split('T')[0] : new Date().toISOString().split('T')[0]);
-    setExamDate(d);
-    
-    let st = session.startTime || '08:00';
-    if (session.start_time && session.start_time.includes('T')) {
-      st = session.start_time.split('T')[1].substring(0, 5);
-    }
-    setStartTime(st);
 
-    let et = session.endTime || '09:30';
-    if (session.end_time && session.end_time.includes('T')) {
-      et = session.end_time.split('T')[1].substring(0, 5);
+    const today = new Date().toISOString().split('T')[0];
+    if (session.start_time) {
+      const stParts = session.start_time.split('T');
+      setStartDate(stParts[0] || today);
+      if (stParts[1]) setStartTime(stParts[1].substring(0, 5));
+    } else {
+      setStartDate(session.date || today);
+      setStartTime(session.startTime || '08:00');
     }
-    setEndTime(et);
+
+    if (session.end_time) {
+      const etParts = session.end_time.split('T');
+      setEndDate(etParts[0] || today);
+      if (etParts[1]) setEndTime(etParts[1].substring(0, 5));
+    } else {
+      setEndDate(session.date || today);
+      setEndTime(session.endTime || '09:30');
+    }
 
     setEntryPassword(session.entryPassword || session.entry_password || '');
     setExitPassword(session.exitPassword || session.exit_password || '');
@@ -220,6 +227,19 @@ export default function ExamSessionSetup() {
       return;
     }
 
+    if (!startDate || !startTime || !endDate || !endTime) {
+      alert('Tanggal dan Waktu Mulai serta Berakhir wajib diisi lengkap!');
+      return;
+    }
+
+    const startDateTime = `${startDate}T${startTime}:00`;
+    const endDateTime = `${endDate}T${endTime}:00`;
+
+    if (new Date(endDateTime) <= new Date(startDateTime)) {
+      alert('Jadwal Waktu Berakhir harus lebih lambat dari Jadwal Waktu Mulai!');
+      return;
+    }
+
     if (!entryPassword.trim() || !exitPassword.trim()) {
       alert('Password Masuk dan Password Keluar wajib diisi!');
       return;
@@ -232,8 +252,8 @@ export default function ExamSessionSetup() {
         classroom: targetCls?.id,
         title: sessionTitle,
         duration_minutes: Number(durationMinutes),
-        start_time: `${examDate}T${startTime}:00Z`,
-        end_time: `${examDate}T${endTime}:00Z`,
+        start_time: startDateTime,
+        end_time: endDateTime,
         entry_password: entryPassword.toUpperCase(),
         exit_password: exitPassword.toUpperCase(),
         supervisor_pin: (supervisorPin || 'PIN-1234').toUpperCase(),
@@ -244,7 +264,7 @@ export default function ExamSessionSetup() {
         alert('Sesi Ujian Berhasil Diperbarui!');
       } else {
         await createSessionApi(payload);
-        alert('Sesi Ujian Berhasil Dibuka! Siswa sekarang dapat menggunakan Token Masuk.');
+        alert('Sesi Ujian Berhasil Dibuka! Siswa sekarang dapat menggunakan Token Masuk sesuai rentang jadwal.');
       }
     } catch (err) {
       console.warn('Backend create/update session fallback:', err);
@@ -321,9 +341,32 @@ export default function ExamSessionSetup() {
         )}
 
         {examSessions.map((session) => {
-          const displayDate = session.date || (session.start_time ? session.start_time.split('T')[0] : '-');
-          const displayStart = session.startTime || (session.start_time?.includes('T') ? session.start_time.split('T')[1].substring(0, 5) : '08:00');
-          const displayEnd = session.endTime || (session.end_time?.includes('T') ? session.end_time.split('T')[1].substring(0, 5) : '09:30');
+          const now = new Date();
+          const sTime = session.start_time ? new Date(session.start_time) : (session.date ? new Date(`${session.date}T${session.startTime || '08:00'}`) : null);
+          const eTime = session.end_time ? new Date(session.end_time) : (session.date ? new Date(`${session.date}T${session.endTime || '09:30'}`) : null);
+
+          let scheduleStatus = 'ACTIVE';
+          if (sTime && !isNaN(sTime.getTime()) && now < sTime) scheduleStatus = 'UPCOMING';
+          if (eTime && !isNaN(eTime.getTime()) && now > eTime) scheduleStatus = 'EXPIRED';
+
+          const formatShortDate = (d) => {
+            if (!d || isNaN(d.getTime())) return '-';
+            return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+          };
+          const formatShortTime = (d) => {
+            if (!d || isNaN(d.getTime())) return '';
+            return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+          };
+
+          const sDateStr = sTime ? formatShortDate(sTime) : '-';
+          const eDateStr = eTime ? formatShortDate(eTime) : '-';
+          const sTimeStr = sTime ? formatShortTime(sTime) : (session.startTime || '08:00');
+          const eTimeStr = eTime ? formatShortTime(eTime) : (session.endTime || '09:30');
+
+          const scheduleDisplay = sDateStr === eDateStr
+            ? `${sDateStr} (${sTimeStr} - ${eTimeStr} WIB)`
+            : `${sDateStr} ${sTimeStr} s/d ${eDateStr} ${eTimeStr} WIB`;
+
           const isGForm = session.examType === 'EXTERNAL_LINK' || session.exam_type === 'EXTERNAL_LINK';
           const entryVal = session.entryPassword || session.entry_password || '-';
           const exitVal = session.exitPassword || session.exit_password || '-';
@@ -334,7 +377,7 @@ export default function ExamSessionSetup() {
               key={session.id}
               className="bg-white rounded-2xl p-5 sm:p-6 border-2 border-slate-300 hover:border-indigo-500 shadow-md hover:shadow-xl transition-all duration-200 space-y-4"
             >
-              {/* Baris 1: Header Kartu (Kelas, Tipe Soal, & Tombol Aksi Edit/Hapus Tebal) */}
+              {/* Baris 1: Header Kartu (Kelas, Tipe Soal, Status Jadwal, & Tombol Aksi) */}
               <div className="flex items-center justify-between gap-2 border-b-2 border-slate-100 pb-3.5">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs font-black px-3 py-1 rounded-lg bg-indigo-600 text-white shadow-sm uppercase tracking-wider border-2 border-indigo-500">
@@ -353,6 +396,26 @@ export default function ExamSessionSetup() {
                     <Clock className="w-3.5 h-3.5 text-amber-600" />
                     {session.durationMinutes || session.duration_minutes || 60} Menit
                   </span>
+
+                  {/* Status Sinkronisasi Jadwal */}
+                  {scheduleStatus === 'ACTIVE' && (
+                    <span className="text-[10px] font-black px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1.5 shadow-2xs">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      Sedang Berjalan
+                    </span>
+                  )}
+                  {scheduleStatus === 'UPCOMING' && (
+                    <span className="text-[10px] font-black px-2.5 py-1 rounded-lg bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1.5 shadow-2xs">
+                      <Clock className="w-3 h-3 text-amber-600" />
+                      Belum Dimulai
+                    </span>
+                  )}
+                  {scheduleStatus === 'EXPIRED' && (
+                    <span className="text-[10px] font-black px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 border border-slate-300 flex items-center gap-1.5 shadow-2xs">
+                      <Lock className="w-3 h-3 text-slate-500" />
+                      Telah Berakhir
+                    </span>
+                  )}
                 </div>
 
                 {/* Tombol Aksi Cepat Edit & Hapus (Tebal & Berdimensi) */}
@@ -385,9 +448,9 @@ export default function ExamSessionSetup() {
                   <div>
                     Mata Pelajaran: <strong className="text-indigo-700 font-black">{session.subjectName || session.subject_name || '-'}</strong>
                   </div>
-                  <div className="flex items-center gap-1 text-slate-700 font-bold">
-                    <CalendarClock className="w-4 h-4 text-indigo-500" />
-                    <span>{displayDate} ({displayStart} - {displayEnd})</span>
+                  <div className="flex items-center gap-1.5 text-slate-700 font-bold">
+                    <CalendarClock className="w-4 h-4 text-indigo-500 shrink-0" />
+                    <span>{scheduleDisplay}</span>
                   </div>
                 </div>
               </div>
@@ -583,42 +646,74 @@ export default function ExamSessionSetup() {
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Tanggal:
-              </label>
-              <input
-                type="date"
-                required
-                value={examDate}
-                onChange={(e) => setExamDate(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+          {/* Rentang Tanggal & Waktu Mulai serta Berakhir */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200">
+            {/* 1. Jadwal Mulai Ujian */}
+            <div className="space-y-2">
+              <div className="text-[11px] font-black uppercase text-indigo-700 tracking-wider flex items-center gap-1.5">
+                <CalendarClock className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Jadwal Mulai Ujian</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Tanggal Mulai:
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full px-2.5 py-2 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Waktu Mulai:
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className="w-full px-2.5 py-2 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                  />
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Jam Mulai:
-              </label>
-              <input
-                type="time"
-                required
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Jam Selesai:
-              </label>
-              <input
-                type="time"
-                required
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+
+            {/* 2. Jadwal Berakhir Ujian */}
+            <div className="space-y-2">
+              <div className="text-[11px] font-black uppercase text-rose-700 tracking-wider flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-rose-600" />
+                <span>Jadwal Berakhir Ujian</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Tanggal Berakhir:
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="w-full px-2.5 py-2 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                    Waktu Berakhir:
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className="w-full px-2.5 py-2 border border-slate-300 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 

@@ -8,9 +8,13 @@ from .views import (
     StartExamSessionView,
     SubmitExamAnswersView,
     VerifyExitPasswordView,
+    ExamImageUploadView,
 )
 
 urlpatterns = [
+    # Upload Gambar Soal & Opsi Jawaban
+    path('upload-image/', ExamImageUploadView.as_view(), name='exam_upload_image'),
+
     # CRUD Paket Ujian
     path('packages/', ExamPackageListCreateView.as_view(), name='exam_package_list_create'),
     path('packages/<uuid:pk>/', ExamPackageDetailView.as_view(), name='exam_package_detail'),

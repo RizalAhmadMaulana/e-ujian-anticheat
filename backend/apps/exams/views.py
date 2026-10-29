@@ -1,8 +1,12 @@
+import os
+import uuid
+from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser, FormParser
 
 from .models import ExamPackage, ExamSession
 from .serializers import ExamPackageSerializer, ExamSessionSerializer
@@ -86,6 +90,23 @@ class VerifyEntryPasswordView(APIView):
 
     def post(self, request, session_id):
         session = get_object_or_404(ExamSession, id=session_id)
+        now = timezone.now()
+
+        # Validasi Rentang Waktu Ujian (Sinkronisasi Jadwal Mulai & Selesai)
+        if session.start_time and now < session.start_time:
+            start_str = timezone.localtime(session.start_time).strftime("%d %B %Y pukul %H:%M WIB")
+            return Response(
+                {"success": False, "status_code": "EXAM_NOT_STARTED", "message": f"Sesi ujian belum dibuka! Jadwal ujian baru dimulai pada {start_str}."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if session.end_time and now > session.end_time:
+            end_str = timezone.localtime(session.end_time).strftime("%d %B %Y pukul %H:%M WIB")
+            return Response(
+                {"success": False, "status_code": "EXAM_CLOSED", "message": f"Sesi ujian telah ditutup! Batas pengerjaan telah berakhir pada {end_str}."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         input_password = request.data.get('entry_password', '').strip().upper()
 
         if not input_password:
@@ -119,6 +140,23 @@ class StartExamSessionView(APIView):
 
     def post(self, request, session_id):
         session = get_object_or_404(ExamSession, id=session_id)
+        now = timezone.now()
+
+        # Validasi Rentang Waktu Ujian (Sinkronisasi Jadwal Mulai & Selesai)
+        if session.start_time and now < session.start_time:
+            start_str = timezone.localtime(session.start_time).strftime("%d %B %Y pukul %H:%M WIB")
+            return Response(
+                {"success": False, "error": f"Sesi ujian belum dibuka! Jadwal pengerjaan baru dimulai pada {start_str}."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if session.end_time and now > session.end_time:
+            end_str = timezone.localtime(session.end_time).strftime("%d %B %Y pukul %H:%M WIB")
+            return Response(
+                {"success": False, "error": f"Sesi ujian telah ditutup! Batas waktu ujian telah berakhir pada {end_str}."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         student = request.user
         orientation = request.data.get('screen_orientation', 'PORTRAIT').upper()
 
@@ -215,4 +253,45 @@ class VerifyExitPasswordView(APIView):
             {"success": False, "message": "Password Keluar salah! Minta password keluar kepada pengawas ujian."}, 
             status=status.HTTP_400_BAD_REQUEST
         )
+
+
+class ExamImageUploadView(APIView):
+    """
+    POST /api/exams/upload-image/
+    Unggah berkas gambar butir soal dan opsi jawaban (Microsoft Forms style)
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, *args, **kwargs):
+        file_obj = request.FILES.get('image')
+        if not file_obj:
+            return Response({'error': 'Tidak ada berkas gambar yang diunggah.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validasi ekstensi
+        ext = os.path.splitext(file_obj.name)[1].lower()
+        if ext not in ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg']:
+            return Response(
+                {'error': 'Format berkas tidak didukung. Harap unggah gambar (JPG, PNG, GIF, WEBP, SVG).'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Simpan ke MEDIA_ROOT / exam_images
+        media_dir = os.path.join(settings.MEDIA_ROOT, 'exam_images')
+        os.makedirs(media_dir, exist_ok=True)
+
+        unique_name = f"{uuid.uuid4().hex[:12]}_{file_obj.name.replace(' ', '_')}"
+        file_path = os.path.join(media_dir, unique_name)
+
+        with open(file_path, 'wb+') as destination:
+            for chunk in file_obj.chunks():
+                destination.write(chunk)
+
+        relative_url = f"/media/exam_images/{unique_name}"
+        return Response({
+            'url': relative_url,
+            'filename': unique_name,
+            'message': 'Gambar berhasil diunggah'
+        }, status=status.HTTP_201_CREATED)
+
 

@@ -19,7 +19,7 @@ export default function RoleRouteGuard({ allowedRoles, children }) {
     if (currentUser.role === 'TEACHER') {
       return <Navigate to="/teacher/dashboard" replace />;
     } else if (currentUser.role === 'STUDENT') {
-      return <Navigate to="/student/gatekeeper" replace />;
+      return <Navigate to="/student/lobby" replace />;
     }
 
     return (

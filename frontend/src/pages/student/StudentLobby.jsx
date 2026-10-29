@@ -18,7 +18,8 @@ import {
   Ban,
   ShieldCheck,
   CalendarCheck,
-  Layers
+  Layers,
+  Lock
 } from 'lucide-react';
 
 export default function StudentLobby() {
@@ -28,6 +29,7 @@ export default function StudentLobby() {
     setScreenOrientation, 
     logout, 
     examSessions, 
+    fetchSessions,
     schoolSettings, 
     fetchSchoolSettings 
   } = useExamStore();
@@ -42,11 +44,100 @@ export default function StudentLobby() {
 
   useEffect(() => {
     fetchSchoolSettings?.();
+    fetchSessions?.();
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
     return () => clearInterval(timer);
-  }, [fetchSchoolSettings]);
+  }, [fetchSchoolSettings, fetchSessions]);
+
+  // Helper Format Rentang Jadwal (Tanggal & Jam Mulai hingga Berakhir)
+  const formatScheduleRange = (session) => {
+    const startTimeStr = session.start_time || session.startTime;
+    const endTimeStr = session.end_time || session.endTime;
+
+    if (!startTimeStr && !endTimeStr) {
+      return 'Jadwal Belum Ditentukan';
+    }
+
+    const sTime = startTimeStr ? new Date(startTimeStr) : null;
+    const eTime = endTimeStr ? new Date(endTimeStr) : null;
+
+    const isValid = (d) => d && !isNaN(d.getTime());
+
+    if (!isValid(sTime) && !isValid(eTime)) {
+      return `${startTimeStr || ''} - ${endTimeStr || ''} WIB`;
+    }
+
+    const formatDate = (d) => d.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+
+    const formatTime = (d) => d.toLocaleTimeString('id-ID', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    if (isValid(sTime) && isValid(eTime)) {
+      const sDate = formatDate(sTime);
+      const eDate = formatDate(eTime);
+      const sHour = formatTime(sTime);
+      const eHour = formatTime(eTime);
+
+      if (sDate === eDate) {
+        return `${sDate} (${sHour} - ${eHour} WIB)`;
+      } else {
+        return `${sDate} ${sHour} s/d ${eDate} ${eHour} WIB`;
+      }
+    }
+
+    if (isValid(sTime)) {
+      return `Mulai: ${formatDate(sTime)}, ${formatTime(sTime)} WIB`;
+    }
+
+    return `Berakhir: ${formatDate(eTime)}, ${formatTime(eTime)} WIB`;
+  };
+
+  // Helper Status Sesi Real-Time (Sesi Dibuka / Belum Dibuka / Sudah Ditutup)
+  const getScheduleStatus = (session) => {
+    const startTimeStr = session.start_time || session.startTime;
+    const endTimeStr = session.end_time || session.endTime;
+    const now = new Date();
+
+    if (!startTimeStr && !endTimeStr) {
+      return {
+        status: 'UNKNOWN',
+        label: 'Belum Terjadwal',
+      };
+    }
+
+    const sTime = startTimeStr ? new Date(startTimeStr) : null;
+    const eTime = endTimeStr ? new Date(endTimeStr) : null;
+
+    // 1. Jika sudah melewati tanggal/jam berakhir -> Sudah Ditutup
+    if (eTime && !isNaN(eTime.getTime()) && now > eTime) {
+      return {
+        status: 'CLOSED',
+        label: 'Sudah Ditutup',
+      };
+    }
+
+    // 2. Jika waktu/tanggal belum sampai -> Belum Dibuka
+    if (sTime && !isNaN(sTime.getTime()) && now < sTime) {
+      return {
+        status: 'UPCOMING',
+        label: 'Belum Dibuka',
+      };
+    }
+
+    // 3. Waktu dan tanggal sudah sesuai (sedang aktif) -> Sesi Dibuka
+    return {
+      status: 'ACTIVE',
+      label: 'Sesi Dibuka',
+    };
+  };
 
   // Format Jam Digital Real-Time
   const hours = currentTime.getHours();
@@ -301,27 +392,76 @@ export default function StudentLobby() {
             Daftar sesi ujian yang dijadwalkan untuk kelas <strong>{currentUser?.classroom}</strong>:
           </p>
 
-          <div className="space-y-2.5 max-h-80 overflow-y-auto">
-            {examSessions.map((session) => (
-              <div
-                key={session.id}
-                className="p-3.5 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between"
-              >
-                <div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-800">
-                    {session.classroom}
-                  </span>
-                  <h4 className="font-bold text-slate-900 text-sm mt-1">{session.subjectName}</h4>
-                  <div className="text-xs text-slate-500 mt-0.5">
-                    {session.title} • {session.durationMinutes} Menit
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs font-bold text-indigo-600">{session.startTime} - {session.endTime} WIB</div>
-                  <div className="text-[11px] text-emerald-600 font-semibold mt-0.5">Sesi Siap Dibuka</div>
-                </div>
+          <div className="space-y-2.5 max-h-84 overflow-y-auto pr-0.5">
+            {examSessions.length === 0 ? (
+              <div className="text-center py-8 text-slate-400 text-xs">
+                Belum ada jadwal sesi asesmen yang aktif untuk kelas Anda saat ini.
               </div>
-            ))}
+            ) : (
+              examSessions.map((session) => {
+                const scheduleRange = formatScheduleRange(session);
+                const scheduleStatus = getScheduleStatus(session);
+
+                return (
+                  <div
+                    key={session.id}
+                    className="p-3.5 sm:p-4 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-slate-50 hover:border-indigo-300 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 uppercase tracking-wide">
+                          {session.classroom || session.classroom_name || 'Semua Kelas'}
+                        </span>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-200/80 text-slate-700">
+                          {session.durationMinutes || session.duration_minutes || 60} Menit
+                        </span>
+                      </div>
+                      <h4 className="font-bold text-slate-900 text-sm tracking-tight">
+                        {session.subjectName || session.subject_name || 'Mata Pelajaran'}
+                      </h4>
+                      <div className="text-xs text-slate-500 line-clamp-1">
+                        {session.title || 'Sesi Ujian'}
+                      </div>
+                    </div>
+
+                    <div className="sm:text-right shrink-0 flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-200/60">
+                      {/* Tanggal dan Jam Mulai hingga Berakhir */}
+                      <div className="text-xs font-bold text-indigo-600 font-mono flex items-center sm:justify-end gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                        <span>{scheduleRange}</span>
+                      </div>
+
+                      {/* Status Sesi Dinamis */}
+                      <div className="mt-1">
+                        {scheduleStatus.status === 'ACTIVE' && (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <span>Sesi Dibuka</span>
+                          </span>
+                        )}
+                        {scheduleStatus.status === 'UPCOMING' && (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-100 text-amber-800 border border-amber-300 shadow-2xs">
+                            <Clock className="w-3.5 h-3.5 text-amber-600" />
+                            <span>Belum Dibuka</span>
+                          </span>
+                        )}
+                        {scheduleStatus.status === 'CLOSED' && (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs">
+                            <Lock className="w-3.5 h-3.5 text-rose-600" />
+                            <span>Sudah Ditutup</span>
+                          </span>
+                        )}
+                        {scheduleStatus.status === 'UNKNOWN' && (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                            <span>Belum Terjadwal</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
 
           <div className="flex justify-end pt-2">

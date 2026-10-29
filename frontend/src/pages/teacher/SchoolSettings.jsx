@@ -18,7 +18,7 @@ import { useExamStore } from '../../store/useExamStore';
 import { getSchoolSettingsApi, updateSchoolSettingsApi } from '../../api/authApi';
 
 export default function SchoolSettings() {
-  const { schoolSettings, fetchSchoolSettings, updateSchoolSettings } = useExamStore();
+  const { currentUser, schoolSettings, fetchSchoolSettings, updateSchoolSettings } = useExamStore();
 
   const [formData, setFormData] = useState({
     name: 'MIS RISALAH',
@@ -409,10 +409,10 @@ export default function SchoolSettings() {
                   (Tanda Tangan)
                 </div>
                 <div className="font-bold text-slate-900 underline">
-                  Drs. Budi Santoso, M.Kom
+                  {currentUser?.fullName || currentUser?.full_name || currentUser?.username || 'Guru Pengawas Ujian'}
                 </div>
                 <div className="text-slate-500 font-mono text-[9px]">
-                  NIP. 198507122010011002
+                  {currentUser?.nip ? `NIP. ${currentUser.nip}` : (currentUser?.username ? `NIP. ${currentUser.username}` : '-')}
                 </div>
               </div>
             </div>

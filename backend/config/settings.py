@@ -147,6 +147,8 @@ SIMPLE_JWT = {
 # CORS HEADERS (Untuk Koneksi Frontend ReactJS / Vite)
 # ==============================================================================
 CORS_ALLOWED_ORIGINS = [os.getenv('CORS_ORIGIN')]
+CSRF_TRUSTED_ORIGINS = [os.getenv('CSRF_ORIGIN')]
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 CORS_ALLOW_CREDENTIALS = True
 
 # Izinkan Iframe Google Form / Teams tertanam tanpa header framing terblokir

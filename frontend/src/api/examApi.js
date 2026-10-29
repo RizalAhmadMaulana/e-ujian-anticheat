@@ -28,6 +28,17 @@ export const deletePackageApi = async (packageId) => {
   return response.data;
 };
 
+export const uploadExamImageApi = async (file) => {
+  const formData = new FormData();
+  formData.append('image', file);
+  const response = await axiosInstance.post('/exams/upload-image/', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
 // -------------------------------------------------------------
 // JADWAL & SESI UJIAN (ROLE GURU)
 // -------------------------------------------------------------
@@ -93,6 +104,7 @@ export const examApi = {
   createPackageApi,
   updatePackageApi,
   deletePackageApi,
+  uploadExamImageApi,
   getSessionsApi,
   getSessionDetailApi,
   createSessionApi,
