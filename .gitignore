@@ -50,6 +50,7 @@ pnpm-debug.log*
 
 # Database temporary files
 *.sqlite3-journal
+db.sqlite3
 
 # OS & Editor
 .DS_Store
