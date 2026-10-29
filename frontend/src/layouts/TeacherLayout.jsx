@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useExamStore } from '../store/useExamStore';
+import { fetchCurrentUserApi } from '../api/authApi';
 import { 
   LayoutDashboard, 
   School,
@@ -27,6 +28,18 @@ export default function TeacherLayout() {
 
   useEffect(() => {
     fetchSchoolSettings?.();
+    fetchCurrentUserApi?.().then((user) => {
+      if (user) {
+        const name = user.full_name || user.fullName || user.username || 'Guru Pengawas';
+        const normalized = {
+          ...user,
+          fullName: name,
+          full_name: name,
+        };
+        localStorage.setItem('user', JSON.stringify(normalized));
+        useExamStore.getState().setCurrentUser(normalized);
+      }
+    }).catch(() => {});
   }, [fetchSchoolSettings]);
 
   // Hitung jumlah siswa yang sedang terkunci akibat pelanggaran
@@ -203,10 +216,10 @@ export default function TeacherLayout() {
               </div>
               <div className="overflow-hidden">
                 <div className="text-xs font-bold text-white truncate">
-                  {currentUser?.fullName || 'Drs. Budi Santoso'}
+                  {currentUser?.fullName || currentUser?.full_name || currentUser?.username || 'Guru Pengawas'}
                 </div>
                 <div className="text-[11px] text-slate-400 truncate">
-                  NIP: {currentUser?.username || '198507122010011002'}
+                  NIP: {currentUser?.nip || currentUser?.username || '-'}
                 </div>
               </div>
             </div>
@@ -266,7 +279,7 @@ export default function TeacherLayout() {
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <div className="text-xs font-bold text-slate-800">
-                  {currentUser?.fullName || 'Drs. Budi Santoso, M.Kom'}
+                  {currentUser?.fullName || currentUser?.full_name || currentUser?.username || 'Guru Pengawas'}
                 </div>
                 <div className="text-[11px] text-slate-500">Guru Pengawas Ujian</div>
               </div>

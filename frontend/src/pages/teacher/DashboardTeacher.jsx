@@ -61,7 +61,7 @@ export default function DashboardTeacher() {
               Sistem Pengawasan Asesmen Berjalan Aktif
             </div>
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight">
-              Selamat Datang, {currentUser?.fullName || currentUser?.full_name || 'Drs. Budi Santoso'}
+              Selamat Datang, {currentUser?.fullName || currentUser?.full_name || currentUser?.username || 'Guru Pengawas'}
             </h1>
             <p className="text-slate-300 text-xs sm:text-sm max-w-2xl leading-relaxed">
               Monitoring pelaksanaan asesmen sekolah secara langsung dengan proteksi penguncian layar 

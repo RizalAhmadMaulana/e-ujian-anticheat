@@ -345,11 +345,14 @@ class StudentListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         queryset = User.objects.filter(role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name')
-        classroom_id = self.request.query_params.get('classroom_id')
+        classroom_id = self.request.query_params.get('classroom_id') or self.request.query_params.get('classroom')
         search = self.request.query_params.get('search')
 
         if classroom_id:
-            queryset = queryset.filter(classroom_id=classroom_id)
+            if str(classroom_id).isdigit():
+                queryset = queryset.filter(Q(classroom_id=int(classroom_id)) | Q(classroom__name__iexact=str(classroom_id)))
+            else:
+                queryset = queryset.filter(classroom__name__iexact=str(classroom_id))
         if search:
             queryset = queryset.filter(
                 Q(full_name__icontains=search) | 

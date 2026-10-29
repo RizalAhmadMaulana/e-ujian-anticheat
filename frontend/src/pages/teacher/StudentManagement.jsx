@@ -145,7 +145,7 @@ export default function StudentManagement() {
     setFormData({
       full_name: student.full_name || '',
       nisn: student.nisn || student.username || '',
-      classroom_id: student.classroom?.id || '',
+      classroom_id: student.classroom?.id || student.classroom_id || student.classroom || '',
       email: student.email || ''
     });
     setModalError('');
@@ -168,11 +168,16 @@ export default function StudentManagement() {
     setModalError('');
 
     try {
+      const payload = {
+        ...formData,
+        classroom_id: formData.classroom_id ? Number(formData.classroom_id) : null,
+      };
+
       if (isEditing) {
-        await updateStudentApi(selectedStudentId, formData);
+        await updateStudentApi(selectedStudentId, payload);
         showToast('Data siswa berhasil diperbarui!');
       } else {
-        await createStudentApi(formData);
+        await createStudentApi(payload);
         showToast('Siswa baru berhasil didaftarkan! (Username & Password = NISN)');
       }
       setIsModalOpen(false);
@@ -436,7 +441,7 @@ export default function StudentManagement() {
                     <td className="py-3 px-4 text-center">
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 font-bold text-xs border border-indigo-200">
                         <School className="w-3.5 h-3.5" />
-                        <span>{student.classroom?.name || '-'}</span>
+                        <span>{student.classroom?.name || student.classroom_name || '-'}</span>
                       </span>
                     </td>
                     <td className="py-3 px-4 text-slate-600 font-medium">

@@ -10,7 +10,12 @@ export const loginApi = async (username, password) => {
   if (response.data && response.data.access) {
     localStorage.setItem('access_token', response.data.access);
     localStorage.setItem('refresh_token', response.data.refresh);
-    localStorage.setItem('user', JSON.stringify(response.data.user));
+    const user = response.data.user;
+    if (user) {
+      user.fullName = user.full_name || user.fullName || user.username;
+      user.full_name = user.full_name || user.fullName || user.username;
+    }
+    localStorage.setItem('user', JSON.stringify(user));
   }
   return response.data;
 };

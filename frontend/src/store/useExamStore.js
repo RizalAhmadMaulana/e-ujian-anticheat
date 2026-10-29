@@ -9,11 +9,11 @@ import { ejournalApi } from '../api/ejournalApi';
  */
 const MOCK_TEACHER = {
   id: 't-001',
-  username: '198507122010011002',
-  fullName: 'Drs. Budi Santoso, M.Kom',
+  username: 'guru',
+  fullName: 'Guru Pengawas',
+  full_name: 'Guru Pengawas',
   role: 'TEACHER',
-  schoolName: 'SMK Negeri 1 Informatika',
-  avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+  schoolName: 'MIS RISALAH',
 };
 
 const MOCK_STUDENT = {
@@ -37,7 +37,16 @@ export const useExamStore = create((set, get) => ({
   currentUser: (() => {
     try {
       const savedUser = localStorage.getItem('user');
-      return savedUser ? JSON.parse(savedUser) : null;
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        const name = parsed.full_name || parsed.fullName || parsed.username || 'Pengguna';
+        return {
+          ...parsed,
+          fullName: name,
+          full_name: name,
+        };
+      }
+      return null;
     } catch {
       return null;
     }
@@ -45,10 +54,21 @@ export const useExamStore = create((set, get) => ({
   isAuthenticated: !!localStorage.getItem('access_token'),
 
   setCurrentUser: (user) => {
-    set({
-      currentUser: user,
-      isAuthenticated: true,
-    });
+    if (user) {
+      const name = user.full_name || user.fullName || user.username || 'Pengguna';
+      const normalized = {
+        ...user,
+        fullName: name,
+        full_name: name,
+      };
+      localStorage.setItem('user', JSON.stringify(normalized));
+      set({
+        currentUser: normalized,
+        isAuthenticated: true,
+      });
+    } else {
+      set({ currentUser: null, isAuthenticated: false });
+    }
   },
 
   loginAsTeacher: () => {
@@ -189,7 +209,7 @@ export const useExamStore = create((set, get) => ({
     }));
   },
 
-  startSimulationExam: ({ packageId, sessionId, orientation = 'PORTRAIT', studentName = 'Drs. Budi Santoso (Mode Siswa)' } = {}) => {
+  startSimulationExam: ({ packageId, sessionId, orientation = 'PORTRAIT', studentName = 'Mode Simulasi Siswa' } = {}) => {
     const { examPackages, examSessions } = get();
     const pkg = examPackages.find((p) => p.id === packageId) || examPackages[0];
     const session = examSessions.find((s) => s.id === sessionId) || examSessions[0];

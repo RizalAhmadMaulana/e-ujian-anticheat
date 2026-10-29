@@ -153,7 +153,7 @@ export default function UserManagement() {
       full_name: user.full_name || '',
       email: user.email || '',
       role: user.role,
-      classroom_id: user.classroom?.id || '',
+      classroom_id: user.classroom?.id || user.classroom_id || '',
       password: ''
     });
     setModalError('');
@@ -451,7 +451,7 @@ export default function UserManagement() {
                         <div>
                           <div className="text-slate-900 font-bold">{u.full_name || '-'}</div>
                           <div className="text-[11px] text-slate-400 font-normal">
-                            {u.role === 'TEACHER' ? 'Dewan Guru Pengawas' : (u.classroom ? `Kelas: ${u.classroom.name}` : 'Siswa Peserta')}
+                            {u.role === 'TEACHER' ? 'Dewan Guru Pengawas' : (u.classroom?.name || u.classroom_name ? `Kelas: ${u.classroom?.name || u.classroom_name}` : 'Siswa Peserta')}
                           </div>
                         </div>
                       </div>

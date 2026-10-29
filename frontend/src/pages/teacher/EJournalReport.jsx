@@ -268,7 +268,7 @@ export default function EJournalReport() {
   };
 
   const teacherName = journalData?.teacher_name || currentUser?.fullName || currentUser?.full_name || 'Guru Pengawas';
-  const teacherNip = currentUser?.username || '198507122010011002';
+  const teacherNip = currentUser?.nip || currentUser?.username || '-';
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">

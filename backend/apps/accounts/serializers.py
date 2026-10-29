@@ -15,6 +15,7 @@ class ClassRoomSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    classroom = ClassRoomSerializer(read_only=True)
     classroom_name = serializers.CharField(source='classroom.name', read_only=True)
     classroom_id = serializers.IntegerField(source='classroom.id', read_only=True)
 
@@ -28,6 +29,7 @@ class UserSerializer(serializers.ModelSerializer):
             'email',
             'nip',
             'nisn',
+            'classroom',
             'classroom_id',
             'classroom_name',
             'is_active',
@@ -105,6 +107,7 @@ class UserCreateUpdateSerializer(serializers.ModelSerializer):
 # SERIALIZER KHUSUS DATA SISWA
 # ==========================================
 class StudentSerializer(serializers.ModelSerializer):
+    classroom = ClassRoomSerializer(read_only=True)
     classroom_id = serializers.PrimaryKeyRelatedField(
         queryset=ClassRoom.objects.all(), 
         source='classroom', 
@@ -121,6 +124,7 @@ class StudentSerializer(serializers.ModelSerializer):
             'full_name',
             'nisn',
             'email',
+            'classroom',
             'classroom_id',
             'classroom_name',
             'date_joined'
