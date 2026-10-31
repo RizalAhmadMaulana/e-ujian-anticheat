@@ -211,12 +211,13 @@ def generate_ejournal_excel(session, journal, attempts, absent_students, violati
         for idx, v in enumerate(violations, start=1):
             unlocked_str = v.unlocked_by_teacher_at.strftime("%H:%M:%S") if v.unlocked_by_teacher_at else "Masih Terkunci"
             detected_str = v.detected_at.strftime("%H:%M:%S") if v.detected_at else "-"
+            v_type_str = v.get_violation_type_display() if hasattr(v, 'get_violation_type_display') else v.violation_type
 
             row_data = [
                 idx,
                 v.attempt.student.username,
                 v.attempt.student.full_name,
-                v.violation_type,
+                v_type_str,
                 v.description,
                 detected_str,
                 unlocked_str

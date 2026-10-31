@@ -7,6 +7,7 @@ from apps.accounts.models import User
 class ViolationLogItemSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='attempt.student.full_name', read_only=True)
     nisn = serializers.CharField(source='attempt.student.username', read_only=True)
+    violation_type_label = serializers.CharField(source='get_violation_type_display', read_only=True)
 
     class Meta:
         model = ViolationLog
@@ -15,6 +16,7 @@ class ViolationLogItemSerializer(serializers.ModelSerializer):
             'student_name',
             'nisn',
             'violation_type',
+            'violation_type_label',
             'description',
             'detected_at',
             'unlocked_by_teacher_at'

@@ -46,10 +46,21 @@ Asesmen daring konvensional kerap menghadapi tantangan integritas: siswa mudah m
 
 ### Fitur Kunci:
 
-1. **🛡️ Zero-Tolerance Lockdown Engine (Anti-Cheat Otomatis):**
+1. **🛡️ Zero-Tolerance Lockdown Engine (Anti-Cheat Otomatis Multi-Device):**
    - **Mandatory Fullscreen (Auto-Lock):** Memaksa peramban berada dalam mode layar penuh HTML5 secara mutlak. Menekan `Esc` atau membatalkan fullscreen langsung membekukan layar ke mode merah dan memicu sirene.
    - **Anti-Tab Switching (Auto-Lock):** Mendeteksi pembukaan tab baru atau perpindahan tab peramban via `Page Visibility API`. Layar seketika terkunci.
    - **Anti-Split Screen & Window Blur (Auto-Lock):** Mendeteksi pembagian layar atau membuka aplikasi lain (`window.onblur` & `document.hasFocus()`).
+   - **Proteksi Khusus Smartphone (HP):**
+     - **Anti-Screenshot Gesture 3 Jari (`SCREENSHOT_3FINGER_GESTURE`):** Menangkap sentuhan multi-touch (`e.touches.length >= 3`) pada fase capture (`capture: true, passive: false`). Upaya mengusap layar dengan 3 jari seketika dibatalkan (`preventDefault`) dan mengunci layar merah.
+     - **Anti-Screenshot Tombol Fisik (`SCREENSHOT_HARDWARE_BUTTON`):** Menangkap keycode tombol volume (`AudioVolumeDown`, `AudioVolumeUp`) dan kombinasi tombol power hardware di HP.
+     - **Anti-Floating Window & Bilah Notifikasi:** Mendeteksi pembukaan aplikasi mengambang atau penarikan bilah status notifikasi Android.
+   - **Proteksi Khusus Laptop & Desktop PC:**
+     - **Pembersihan Otomatis Clipboard (Background Purge Daemon 300ms):** Interval aktif yang secara terus-menerus mengosongkan clipboard sistem (`navigator.clipboard.writeText('')`). Teks yang disalin dari manapun (termasuk iframe soal eksternal) seketika musnah dalam 300 milidetik.
+     - **Anti-Klik Kanan & AuxClick (Auto-Lock):** Memblokir `contextmenu` dan klik mouse tengah/kanan (`auxclick`) di seluruh viewport maupun lembar soal ujian.
+     - **Anti-Copy Paste & Keyboard Shortcuts:** Memblokir secara spesifik `Ctrl + C` (Copy), `Ctrl + V` (Paste), `Ctrl + X` (Cut), `Ctrl + A` (Select All), `Ctrl + P` (Print Soal), `Ctrl + U` (View Source), `Ctrl + S` (Save Page), `F12`, dan `Ctrl + Shift + I/J/C` (DevTools Inspect Element).
+     - **Anti-Screenshot Keyboard Lock:** Mencegah tombol `PrintScreen`, Windows Snipping Tool (`Win + Shift + S`, `Meta + Shift + S`), dan shortcut Mac (`Cmd + Shift + 3/4`).
+     - **Anti-Drag & Drop serta Seleksi Teks:** Menangkap dan memblokir event `dragstart`, `dragover`, `drop`, `selectstart`, serta menonaktifkan dragging pada seluruh elemen gambar.
+   - **Log Pelanggaran Rinci & Spesifik di E-Jurnal (Bukan Kalimat Gabungan):** Seluruh catatan pelanggaran di Live Proctoring dan E-Jurnal merekam rincian tindakan otentik yang dilakukan siswa (misalnya: *"Siswa mencoba menyalin teks/soal menggunakan shortcut keyboard (Ctrl+C)"* atau *"Siswa terdeteksi mencoba tangkapan layar menggunakan gesture usap 3 jari di HP"*), bukan kalimat template gabungan yang ambigu.
    - **Heartbeat Sensor Anti-Screenshot & Focus Loss (150ms):** Sistem memonitor status `!document.hasFocus()` secara aktif setiap 150 milidetik. Menangkap aktivasi Windows Snipping Tool (`Win + Shift + S`), menu konteks eksternal, atau pembukaan aplikasi latar belakang, lalu seketika mengunci layar merah.
    - **Anti-Screenshot Keyboard Lock:** Mencegah penangkapan layar via tombol `PrintScreen`, shortcut Windows Snipping Tool (`Win + Shift + S`, `Meta + Shift + S`, `Ctrl + Shift + S`), dan shortcut Mac (`Cmd + Shift + 3/4`). Sistem seketika mengosongkan buffer clipboard secara instan, mengunci layar, dan membunyikan sirene peringatan.
    - **Anti-Klik Kanan (Auto-Lock):** Memblokir pembukaan menu konteks (`contextmenu`) di seluruh arena ujian maupun lembar Google Form. Upaya klik kanan langsung memicu pembekuan layar merah.

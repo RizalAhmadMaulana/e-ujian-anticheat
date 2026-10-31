@@ -52,6 +52,29 @@ export default function ExamWorkspace() {
   const [supervisorUnlockPin, setSupervisorUnlockPin] = useState('');
   const [unlockError, setUnlockError] = useState('');
 
+  // Formatter Jenis Pelanggaran Human-Readable
+  const formatViolationType = (type) => {
+    const map = {
+      'SCREENSHOT_3FINGER_GESTURE': 'Tangkapan Layar Gesture 3 Jari HP',
+      'SCREENSHOT_HARDWARE_BUTTON': 'Tombol Fisik Screenshot HP (Volume/Power)',
+      'SCREENSHOT_KEY_ATTEMPT': 'Tangkapan Layar (PrintScreen / Snipping Tool)',
+      'COPY_ATTEMPT': 'Menyalin Teks / Soal (Ctrl+C)',
+      'PASTE_ATTEMPT': 'Menempelkan Teks (Ctrl+V)',
+      'CUT_ATTEMPT': 'Memotong Teks (Ctrl+X)',
+      'SELECT_ALL_ATTEMPT': 'Pilih Semua Teks (Ctrl+A)',
+      'CONTEXT_MENU_ATTEMPT': 'Klik Kanan (Context Menu)',
+      'DEVTOOLS_ATTEMPT': 'Inspect Element / Developer Tools',
+      'PRINT_ATTEMPT': 'Mencetak Lembar Soal (Ctrl+P)',
+      'VIEW_SOURCE_ATTEMPT': 'Melihat Kode Sumber (Ctrl+U)',
+      'SAVE_PAGE_ATTEMPT': 'Menyimpan Halaman (Ctrl+S)',
+      'TEXT_SELECTION_ATTEMPT': 'Menyeret / Seleksi Teks',
+      'TAB_SWITCH': 'Pindah Tab / Minimize Browser',
+      'APP_SWITCH': 'Beralih ke Aplikasi Lain (Alt+Tab / Taskbar)',
+      'EXIT_FULLSCREEN': 'Keluar Mode Layar Penuh (ESC)',
+    };
+    return map[type] || type || 'Pelanggaran Keamanan';
+  };
+
   const selectedPackage = activeAttempt.selectedPackage;
 
   // Masuk Kembali ke Mode Fullscreen
@@ -457,15 +480,15 @@ export default function ExamWorkspace() {
           </p>
 
           {/* Rincian Pelanggaran Terdeteksi */}
-          <div className="bg-red-900/60 border border-red-500/50 rounded-2xl p-4 max-w-md w-full text-xs text-left text-red-100 mb-6 space-y-1.5 shadow-xl">
+          <div className="bg-red-900/60 border border-red-500/50 rounded-2xl p-4 max-w-md w-full text-xs text-left text-red-100 mb-6 space-y-2 shadow-xl">
             <div className="font-extrabold text-red-300 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
               <AlertTriangle className="w-4 h-4 text-red-400" />
               <span>Log Pelanggaran Sistem Terkini:</span>
             </div>
-            <div>• Tipe Pelanggaran: <strong className="font-mono text-white">{activeAttempt.violationLogs[0]?.violationType || 'TAB_SWITCH'}</strong></div>
-            <div>• Waktu Kejadian: <strong className="font-mono text-white">{activeAttempt.violationLogs[0]?.detectedAt || 'Detik Ini'}</strong></div>
-            <div>• Keterangan: <em>{activeAttempt.violationLogs[0]?.description || 'Perpindahan aplikasi/layar terdeteksi.'}</em></div>
-            <div>• Total Akumulasi: <strong className="text-yellow-300">{activeAttempt.violationCount} kali pelanggaran</strong></div>
+            <div>• Jenis Pelanggaran: <strong className="font-bold text-white bg-red-950/80 px-2 py-0.5 rounded border border-red-500/40">{formatViolationType(activeAttempt.violationLogs[0]?.violationType)}</strong></div>
+            <div>• Keterangan Sensor: <em className="text-red-100 font-medium">{activeAttempt.violationLogs[0]?.description || 'Pelanggaran keamanan terdeteksi sistem.'}</em></div>
+            <div>• Waktu Terdeteksi: <strong className="font-mono text-white">{activeAttempt.violationLogs[0]?.detectedAt || 'Detik Ini'}</strong></div>
+            <div>• Total Akumulasi: <strong className="text-yellow-300 font-black">{activeAttempt.violationCount} kali pelanggaran</strong></div>
           </div>
 
           {/* Form Pembukaan Kunci Pengawas (Bebas dari Google Password Manager Popup) */}
@@ -533,8 +556,8 @@ export default function ExamWorkspace() {
             className="flex-1 w-full h-full relative bg-white select-none"
             onContextMenu={(e) => {
               e.preventDefault();
-              handleSecurityViolation('CONTEXT_MENU_ATTEMPT', 'Upaya klik kanan terdeteksi dan diblokir sistem');
-              triggerViolationLock('CONTEXT_MENU_ATTEMPT', 'Upaya klik kanan terdeteksi dan diblokir sistem');
+              handleSecurityViolation('CONTEXT_MENU_ATTEMPT', 'Siswa mencoba membuka menu klik kanan (Context Menu) pada lembar ujian');
+              triggerViolationLock('CONTEXT_MENU_ATTEMPT', 'Siswa mencoba membuka menu klik kanan (Context Menu) pada lembar ujian');
             }}
           >
             <iframe

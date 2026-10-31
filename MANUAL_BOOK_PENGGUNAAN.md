@@ -9,10 +9,19 @@
 
 Platform ini mengintegrasikan perlindungan berlapis di sisi klien (*client-side lockdown*) dengan pemantauan langsung (*real-time live proctoring*) di sisi server, tanpa mewajibkan siswa mengunduh aplikasi browser pihak ketiga yang berat:
 
-1. **🛡️ Sensor Keamanan Anti-Cheat (Zero-Tolerance Lockdown):**
+1. **🛡️ Sensor Keamanan Anti-Cheat (Zero-Tolerance Lockdown Multi-Device):**
    - **Mandatory HTML5 Fullscreen:** Mengunci tampilan ke layar penuh secara otomatis. Jika siswa keluar dari layar penuh (`fullscreenchange`), layar ujian langsung terkunci.
    - **Anti-Tab Switching (`visibilitychange`):** Mendeteksi seketika saat peramban kehilangan fokus visibilitas karena siswa berpindah tab.
-   - **Anti-App Switching / Split Screen (`window.onblur`):** Mendeteksi saat siswa mencoba membuka aplikasi lain di komputer/HP atau menggunakan fitur split-screen.
+   - **Anti-App Switching / Split Screen (`window.onblur` & `document.hasFocus()`):** Mendeteksi saat siswa mencoba membuka aplikasi lain di komputer/HP atau menggunakan fitur split-screen.
+   - **Proteksi Smartphone (HP):**
+     - **Anti-Screenshot Gesture 3 Jari (`SCREENSHOT_3FINGER_GESTURE`):** Menangkap sentuhan multi-touch 3 jari (`e.touches.length >= 3`) dan membatalkan gesture screenshot secara seketika.
+     - **Anti-Screenshot Tombol Fisik (`SCREENSHOT_HARDWARE_BUTTON`):** Menangkap tombol volume hardware (`AudioVolumeDown`, `AudioVolumeUp`) saat ditekan bersama tombol power.
+     - **Anti-Floating Window & Bilah Notifikasi:** Mendeteksi pembukaan jendela mengambang atau penarikan bilah status/notifikasi.
+   - **Proteksi Laptop / Desktop PC:**
+     - **Pembersihan Otomatis Clipboard (Daemon 300ms):** Mengosongkan clipboard sistem secara berkala (`navigator.clipboard.writeText('')`) agar teks yang disalin dari manapun seketika musnah.
+     - **Input & Shortcut Blocking:** Memblokir klik kanan (`contextmenu`), klik tengah (`auxclick`), copy (`Ctrl+C`), paste (`Ctrl+V`), cut (`Ctrl+X`), select all (`Ctrl+A`), Print (`Ctrl+P`), View Source (`Ctrl+U`), Save Page (`Ctrl+S`), F12, serta Inspect Element (`Ctrl+Shift+I/J/C`).
+     - **Anti-Drag & Drop serta Seleksi Teks:** Menangkap event `dragstart`, `dragover`, `drop`, dan `selectstart`.
+   - **Catatan Pelanggaran Otentik & Spesifik di E-Jurnal:** Keterangan sensor di rekapitulasi dan E-Jurnal tidak lagi menggunakan kalimat gabungan, melainkan mencatat tindakan spesifik siswa secara akurat.
    - **Iframe Focus Guard:** Algoritma cerdas yang menjamin pengerjaan Google Form di dalam Secure Iframe tetap aman dan tidak memicu deteksi kecurangan saat siswa mengklik butir soal.
    - **Input Blocking:** Memblokir klik kanan, copy, cut, paste, PrintScreen, F12 (Inspect Element / DevTools), serta tombol Back peramban.
    - **Penalty Freeze Overlay & Sirine Alarm:** Lembar ujian seketika membeku menjadi layar merah darurat dan membunyikan sirine peringatan keras berulang dari *Web Audio API Synthesizer*.

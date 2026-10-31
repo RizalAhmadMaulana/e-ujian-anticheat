@@ -69,11 +69,27 @@ class StudentAttempt(models.Model):
 class ViolationLog(models.Model):
     class ViolationTypeChoices(models.TextChoices):
         TAB_SWITCH = 'TAB_SWITCH', 'Pindah Tab / Minimize Browser'
-        EXIT_FULLSCREEN = 'EXIT_FULLSCREEN', 'Keluar Mode Layar Penuh'
+        EXIT_FULLSCREEN = 'EXIT_FULLSCREEN', 'Keluar Mode Layar Penuh (ESC)'
         WINDOW_BLUR_APP_SWITCH = 'WINDOW_BLUR_APP_SWITCH', 'Membuka Aplikasi Lain (Window Blur)'
-        SHORTCUT_ATTEMPT = 'SHORTCUT_ATTEMPT', 'Mencoba Pintasan Terlarang (Screenshot/DevTools)'
+        APP_SWITCH = 'APP_SWITCH', 'Beralih ke Aplikasi Lain (Alt+Tab / Taskbar)'
+        SHORTCUT_ATTEMPT = 'SHORTCUT_ATTEMPT', 'Mencoba Pintasan Terlarang'
+        SCREENSHOT_KEY_ATTEMPT = 'SCREENSHOT_KEY_ATTEMPT', 'Tangkapan Layar Keyboard (PrintScreen / Snipping Tool)'
+        SCREENSHOT_3FINGER_GESTURE = 'SCREENSHOT_3FINGER_GESTURE', 'Tangkapan Layar Gesture 3 Jari HP'
+        SCREENSHOT_HARDWARE_BUTTON = 'SCREENSHOT_HARDWARE_BUTTON', 'Tombol Fisik Screenshot HP (Volume/Power)'
+        NOTIFICATION_BAR_PULLDOWN = 'NOTIFICATION_BAR_PULLDOWN', 'Menarik Bilah Notifikasi HP'
+        SPLIT_SCREEN_ATTEMPT = 'SPLIT_SCREEN_ATTEMPT', 'Mode Layar Belah HP (Split Screen)'
+        FLOATING_WINDOW_ATTEMPT = 'FLOATING_WINDOW_ATTEMPT', 'Aplikasi Jendela Mengambang (Floating Window)'
         CONTEXT_MENU_ATTEMPT = 'CONTEXT_MENU_ATTEMPT', 'Mencoba Klik Kanan (Menu Konteks)'
-        CLIPBOARD_ATTEMPT = 'CLIPBOARD_ATTEMPT', 'Mencoba Copy-Paste / Salin Teks'
+        CLIPBOARD_ATTEMPT = 'CLIPBOARD_ATTEMPT', 'Mencoba Operasi Clipboard'
+        COPY_ATTEMPT = 'COPY_ATTEMPT', 'Mencoba Menyalin Teks / Soal (Ctrl+C)'
+        PASTE_ATTEMPT = 'PASTE_ATTEMPT', 'Mencoba Menempelkan Teks (Ctrl+V)'
+        CUT_ATTEMPT = 'CUT_ATTEMPT', 'Mencoba Memotong Teks (Ctrl+X)'
+        SELECT_ALL_ATTEMPT = 'SELECT_ALL_ATTEMPT', 'Mencoba Pilih Semua Teks (Ctrl+A)'
+        DEVTOOLS_ATTEMPT = 'DEVTOOLS_ATTEMPT', 'Mencoba Membuka DevTools / Inspect Element'
+        PRINT_ATTEMPT = 'PRINT_ATTEMPT', 'Mencoba Mencetak Soal (Ctrl+P)'
+        VIEW_SOURCE_ATTEMPT = 'VIEW_SOURCE_ATTEMPT', 'Mencoba Melihat Kode Sumber (Ctrl+U)'
+        SAVE_PAGE_ATTEMPT = 'SAVE_PAGE_ATTEMPT', 'Mencoba Menyimpan Halaman (Ctrl+S)'
+        TEXT_SELECTION_ATTEMPT = 'TEXT_SELECTION_ATTEMPT', 'Mencoba Menyeleksi / Drag Teks Soal'
 
     id = models.BigAutoField(primary_key=True)
     attempt = models.ForeignKey(

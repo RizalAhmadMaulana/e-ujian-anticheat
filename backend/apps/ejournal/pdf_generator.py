@@ -227,10 +227,11 @@ def generate_ejournal_pdf(session, journal, attempts, absent_students, violation
         v_rows = [v_header]
         for v_idx, v in enumerate(violations):
             unlocked_str = v.unlocked_by_teacher_at.strftime("%H:%M:%S") if v.unlocked_by_teacher_at else "Masih Terkunci"
+            v_type_str = v.get_violation_type_display() if hasattr(v, 'get_violation_type_display') else v.violation_type
             v_rows.append([
                 Paragraph(str(v_idx + 1), cell_center),
                 Paragraph(f"{v.attempt.student.full_name} ({v.attempt.student.username})", cell_bold),
-                Paragraph(v.violation_type, cell_center),
+                Paragraph(v_type_str, cell_center),
                 Paragraph(v.description, cell_style),
                 Paragraph(v.detected_at.strftime("%H:%M:%S"), cell_center),
                 Paragraph(unlocked_str, cell_center),
