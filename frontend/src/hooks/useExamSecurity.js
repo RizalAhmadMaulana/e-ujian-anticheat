@@ -26,8 +26,17 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
 
     // Saat status berubah dari LOCKED (true) menjadi UNLOCKED (false):
     // Berikan grace period 5 detik agar browser & siswa dapat memulihkan fullscreen & fokus tanpa false positive
+    // Serta pulihkan efek pengaburan blackout jika sebelumnya aktif
     if (prevIsLockedRef.current === true && activeAttempt.isLocked === false) {
       gracePeriodUntilRef.current = Date.now() + 5000;
+      try {
+        document.documentElement.style.filter = '';
+        document.body.style.backgroundColor = '';
+        const shield = document.getElementById('instant-anti-screenshot-shield');
+        if (shield) {
+          shield.style.display = 'none';
+        }
+      } catch (_) {}
     }
     prevIsLockedRef.current = activeAttempt.isLocked;
   }, [activeAttempt.examSubmittedAt, activeAttempt.isLocked]);
@@ -55,6 +64,19 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       );
     };
 
+    // Helper: Eksekusi Efek Pengaburan Total Layar Instan (0 Millisecond)
+    // Menjamin tangkapan layar OS di Android (3 jari / tombol volume-power) hanya menangkap layar hitam total
+    const triggerInstantBlackout = () => {
+      try {
+        document.documentElement.style.filter = 'blur(60px) brightness(0.01)';
+        document.body.style.backgroundColor = '#000000';
+        const shield = document.getElementById('instant-anti-screenshot-shield');
+        if (shield) {
+          shield.style.display = 'flex';
+        }
+      } catch (_) {}
+    };
+
     // ========================================================
     // SENSOR 1: FULLSCREEN ENFORCEMENT (fullscreenchange)
     // ========================================================
@@ -79,12 +101,20 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     // SENSOR 2: ANTI-TAB SWITCH & MINIMIZE (visibilitychange)
     // ========================================================
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden' && !isSubmittedRef.current && !isLockedRef.current) {
-        if (Date.now() < gracePeriodUntilRef.current) return;
-        handleViolation(
-          'TAB_SWITCH',
-          'Siswa terdeteksi berpindah tab peramban atau meminimalkan browser ujian'
-        );
+      if (document.visibilityState === 'hidden' || document.hidden) {
+        const mobile = isMobileDevice();
+        if (mobile) {
+          triggerInstantBlackout();
+        }
+        if (!isSubmittedRef.current && !isLockedRef.current) {
+          if (Date.now() < gracePeriodUntilRef.current) return;
+          handleViolation(
+            mobile ? 'SCREENSHOT_HARDWARE_BUTTON' : 'TAB_SWITCH',
+            mobile
+              ? 'Siswa terdeteksi keluar dari layar ujian atau menekan tombol Power/Screenshot di HP'
+              : 'Siswa terdeteksi berpindah tab peramban atau meminimalkan browser ujian'
+          );
+        }
       }
     };
 
@@ -99,6 +129,9 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         // Jika dokumen benar-benar kehilangan fokus dari sistem operasi
         if (!document.hasFocus()) {
           const mobile = isMobileDevice();
+          if (mobile) {
+            triggerInstantBlackout();
+          }
           handleViolation(
             'APP_SWITCH',
             mobile
@@ -108,13 +141,13 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
           return;
         }
 
-        // Periksa jika fokus berada di dalam iframe
+        // Periksa jika fokus berada di dalam iframe internal saja (bukan window/tab lain)
         const activeEl = document.activeElement;
         const isFocusInsideIframe = activeEl && (activeEl.tagName === 'IFRAME' || activeEl.closest('iframe'));
-        if (isFocusInsideIframe) {
+        if (isFocusInsideIframe && document.hasFocus()) {
           return;
         }
-      }, 150);
+      }, 100);
     };
 
     // ========================================================
@@ -127,6 +160,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       if (e.touches && e.touches.length >= 3) {
         e.preventDefault();
         e.stopPropagation();
+        triggerInstantBlackout();
         if (onScreenshotBlocked) {
           onScreenshotBlocked('Tangkapan layar 3 jari diblokir! Layar ujian Anda dibekukan.');
         }
@@ -145,6 +179,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       if (e.touches && e.touches.length >= 3) {
         e.preventDefault();
         e.stopPropagation();
+        triggerInstantBlackout();
         if (onScreenshotBlocked) {
           onScreenshotBlocked('Tangkapan layar 3 jari diblokir! Layar ujian Anda dibekukan.');
         }
@@ -162,6 +197,12 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     const handleContextMenu = (e) => {
       e.preventDefault();
       e.stopPropagation();
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText('');
+        }
+      } catch (_) {}
+
       if (isSubmittedRef.current || isLockedRef.current) return false;
       if (Date.now() < gracePeriodUntilRef.current) return false;
 
@@ -282,11 +323,13 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       // 1. Tombol Fisik Smartphone (Volume Down / Volume Up saat kombinasi Power)
       const isVolumeKey =
         ['audiovolumedown', 'audiovolumeup', 'volumedown', 'volumeup'].includes(key) ||
+        ['audiovolumedown', 'audiovolumeup', 'volumedown', 'volumeup'].includes(e.code?.toLowerCase()) ||
         keyCode === 24 || keyCode === 25 || keyCode === 174 || keyCode === 175;
 
       if (isVolumeKey) {
         e.preventDefault();
         e.stopPropagation();
+        triggerInstantBlackout();
         if (onScreenshotBlocked) {
           onScreenshotBlocked('Tombol fisik screenshot diblokir! Layar ujian Anda dibekukan.');
         }
@@ -516,19 +559,17 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
 
     // ========================================================
     // SENSOR 11: PEMBERSIHAN OTOMATIS CLIPBOARD (PURGE DAEMON)
-    // Setiap 300ms mengosongkan buffer clipboard saat siswa di arena ujian
-    // Menjamin teks yang disalin dari manapun (termasuk iframe) langsung musnah
+    // Setiap 100ms mengosongkan buffer clipboard saat siswa di arena ujian
+    // Menjamin teks yang disalin dari manapun (termasuk iframe Google Form) langsung musnah
     // ========================================================
     const clipboardPurgeInterval = setInterval(() => {
       if (isSubmittedRef.current || isLockedRef.current) return;
-      if (document.hasFocus()) {
-        try {
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText('');
-          }
-        } catch (_) {}
-      }
-    }, 300);
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText('');
+        }
+      } catch (_) {}
+    }, 100);
 
     // ========================================================
     // REGISTRASI LISTENER DENGAN CAPTURE MODE (PRIORITAS TERTINGGI)

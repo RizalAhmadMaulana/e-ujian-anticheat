@@ -130,9 +130,10 @@ export default function GatekeeperPin() {
       }
 
       // 2. Berhasil diverifikasi: Daftarkan attempt siswa di backend
+      const targetOrientation = activeAttempt.screenOrientation || localStorage.getItem('exam_screen_orientation') || 'PORTRAIT';
       if (sessId && sessId.length > 10) {
         try {
-          const attemptRes = await startExamAttemptApi(sessId, activeAttempt.screenOrientation || 'PORTRAIT');
+          const attemptRes = await startExamAttemptApi(sessId, targetOrientation);
           if (attemptRes && attemptRes.attempt_id) {
             setAttemptId(attemptRes.attempt_id);
           }
@@ -162,7 +163,20 @@ export default function GatekeeperPin() {
         console.warn('Fullscreen request blocked or not user-gesture triggered:', fullErr);
       }
 
-      // 4. Masuk ke Arena Ujian Sesungguhnya
+      // 4. Kunci Orientasi Layar Sesuai Pilihan Siswa (PORTRAIT / LANDSCAPE)
+      if (window.screen && window.screen.orientation && window.screen.orientation.lock) {
+        try {
+          if (targetOrientation === 'PORTRAIT') {
+            await window.screen.orientation.lock('portrait-primary').catch(() => window.screen.orientation.lock('portrait').catch(() => {}));
+          } else if (targetOrientation === 'LANDSCAPE') {
+            await window.screen.orientation.lock('landscape-primary').catch(() => window.screen.orientation.lock('landscape').catch(() => {}));
+          }
+        } catch (orientErr) {
+          console.warn('Orientation lock error:', orientErr);
+        }
+      }
+
+      // 5. Masuk ke Arena Ujian Sesungguhnya
       setTimeout(() => {
         navigate('/student/exam-workspace');
       }, 700);

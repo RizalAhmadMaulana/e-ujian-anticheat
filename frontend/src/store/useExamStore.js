@@ -162,7 +162,13 @@ export const useExamStore = create((set, get) => ({
     sessionId: null,
     selectedPackage: null,
     hasVerifiedEntryPassword: false,
-    screenOrientation: 'PORTRAIT', // 'PORTRAIT' | 'LANDSCAPE'
+    screenOrientation: (() => {
+      try {
+        return localStorage.getItem('exam_screen_orientation') || 'PORTRAIT';
+      } catch {
+        return 'PORTRAIT';
+      }
+    })(), // 'PORTRAIT' | 'LANDSCAPE'
     isLocked: false,
     violationCount: 0,
     violationLogs: [],
@@ -201,6 +207,9 @@ export const useExamStore = create((set, get) => ({
   },
 
   setScreenOrientation: (orientation) => {
+    try {
+      localStorage.setItem('exam_screen_orientation', orientation);
+    } catch (_) {}
     set((state) => ({
       activeAttempt: {
         ...state.activeAttempt,

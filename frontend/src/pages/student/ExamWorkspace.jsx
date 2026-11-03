@@ -77,7 +77,28 @@ export default function ExamWorkspace() {
 
   const selectedPackage = activeAttempt.selectedPackage;
 
-  // Masuk Kembali ke Mode Fullscreen
+  // 0. Enforce Orientasi Layar (PORTRAIT / LANDSCAPE) saat komponen dimuat
+  useEffect(() => {
+    const enforceOrientation = () => {
+      const savedOrientation = activeAttempt.screenOrientation || localStorage.getItem('exam_screen_orientation') || 'PORTRAIT';
+      if (window.screen && window.screen.orientation && window.screen.orientation.lock) {
+        try {
+          if (savedOrientation === 'PORTRAIT') {
+            window.screen.orientation.lock('portrait-primary').catch(() => window.screen.orientation.lock('portrait').catch(() => {}));
+          } else if (savedOrientation === 'LANDSCAPE') {
+            window.screen.orientation.lock('landscape-primary').catch(() => window.screen.orientation.lock('landscape').catch(() => {}));
+          }
+        } catch (err) {
+          console.warn('Gagal kunci orientasi workspace:', err);
+        }
+      }
+    };
+    enforceOrientation();
+    window.addEventListener('resize', enforceOrientation);
+    return () => window.removeEventListener('resize', enforceOrientation);
+  }, [activeAttempt.screenOrientation]);
+
+  // Masuk Kembali ke Mode Fullscreen & Kunci Orientasi
   const handleReEnterFullscreen = async () => {
     try {
       const docEl = document.documentElement;
@@ -85,6 +106,14 @@ export default function ExamWorkspace() {
         await docEl.requestFullscreen();
       } else if (docEl.webkitRequestFullscreen) {
         await docEl.webkitRequestFullscreen();
+      }
+      const savedOrientation = activeAttempt.screenOrientation || localStorage.getItem('exam_screen_orientation') || 'PORTRAIT';
+      if (window.screen && window.screen.orientation && window.screen.orientation.lock) {
+        if (savedOrientation === 'PORTRAIT') {
+          window.screen.orientation.lock('portrait-primary').catch(() => window.screen.orientation.lock('portrait').catch(() => {}));
+        } else if (savedOrientation === 'LANDSCAPE') {
+          window.screen.orientation.lock('landscape-primary').catch(() => window.screen.orientation.lock('landscape').catch(() => {}));
+        }
       }
     } catch (err) {
       console.warn('Gagal request fullscreen:', err);
@@ -300,9 +329,40 @@ export default function ExamWorkspace() {
   const isLandscape = activeAttempt.screenOrientation === 'LANDSCAPE';
 
   return (
-    <div className={`min-h-screen bg-slate-950 text-slate-100 flex flex-col relative select-none overflow-hidden ${
-      isLandscape ? 'orientation-landscape' : 'orientation-portrait'
-    }`}>
+    <div 
+      className={`min-h-screen bg-slate-950 text-slate-100 flex flex-col relative select-none overflow-hidden ${
+        isLandscape ? 'orientation-landscape' : 'orientation-portrait'
+      }`}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleSecurityViolation('CONTEXT_MENU_ATTEMPT', 'Siswa mencoba membuka menu klik kanan (Context Menu) pada lembar ujian');
+        triggerViolationLock('CONTEXT_MENU_ATTEMPT', 'Siswa mencoba membuka menu klik kanan (Context Menu) pada lembar ujian');
+      }}
+    >
+      {/* ======================================================== */}
+      {/* 0. INSTANT ANTI-SCREENSHOT BLACKOUT SHIELD (Z-INDEX 9999) */}
+      {/* Mengaburkan layar seketika dalam 0ms saat gesture 3 jari / tombol fisik terdeteksi */}
+      {/* ======================================================== */}
+      <div
+        id="instant-anti-screenshot-shield"
+        style={{ display: 'none' }}
+        className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-3xl flex flex-col items-center justify-center text-center p-6 select-none"
+      >
+        <div className="w-20 h-20 rounded-full bg-red-600/30 border-2 border-red-500 flex items-center justify-center text-red-500 mb-4 animate-ping">
+          <ShieldAlert className="w-10 h-10" />
+        </div>
+        <h1 className="text-2xl sm:text-3xl font-black text-red-500 uppercase tracking-widest mb-2">
+          TANGKAPAN LAYAR TERDETEKSI & DIBLOKIR!
+        </h1>
+        <p className="text-slate-300 text-xs sm:text-sm max-w-md mb-6 leading-relaxed">
+          Sistem mendeteksi upaya pengambilan tangkapan layar (gesture usap 3 jari atau tombol volume & power di HP). Layar ujian otomatis dikaburkan dan akses Anda dibekukan!
+        </p>
+        <div className="text-xs text-red-400 font-bold bg-red-950/80 border border-red-500/50 px-4 py-2 rounded-xl">
+          Pelanggaran telah dicatat secara otomatis di E-Jurnal Guru
+        </div>
+      </div>
+
       {/* ======================================================== */}
       {/* TOAST ANTI-SCREENSHOT NOTIFICATION */}
       {/* ======================================================== */}

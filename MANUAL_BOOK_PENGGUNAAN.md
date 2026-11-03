@@ -14,14 +14,15 @@ Platform ini mengintegrasikan perlindungan berlapis di sisi klien (*client-side 
    - **Anti-Tab Switching (`visibilitychange`):** Mendeteksi seketika saat peramban kehilangan fokus visibilitas karena siswa berpindah tab.
    - **Anti-App Switching / Split Screen (`window.onblur` & `document.hasFocus()`):** Mendeteksi saat siswa mencoba membuka aplikasi lain di komputer/HP atau menggunakan fitur split-screen.
    - **Proteksi Smartphone (HP):**
-     - **Anti-Screenshot Gesture 3 Jari (`SCREENSHOT_3FINGER_GESTURE`):** Menangkap sentuhan multi-touch 3 jari (`e.touches.length >= 3`) dan membatalkan gesture screenshot secara seketika.
-     - **Anti-Screenshot Tombol Fisik (`SCREENSHOT_HARDWARE_BUTTON`):** Menangkap tombol volume hardware (`AudioVolumeDown`, `AudioVolumeUp`) saat ditekan bersama tombol power.
-     - **Anti-Floating Window & Bilah Notifikasi:** Mendeteksi pembukaan jendela mengambang atau penarikan bilah status/notifikasi.
+     - **Kunci Orientasi Layar (Screen Orientation Lock):** Siswa yang memilih mode Portrait di beranda akan tetap terkunci tegak penuh (Portrait Fullscreen) menggunakan Screen Orientation API, tanpa terbalik menjadi landscape saat masuk fullscreen.
+     - **Instant Anti-Screenshot Blackout Shield (`#instant-anti-screenshot-shield`):** Pelindung DOM instan yang mengaburkan layar (`blur(60px) brightness(0.01)`) dalam 0 milidetik seketika saat terdeteksi gesture usap 3 jari (`e.touches.length >= 3`) atau tombol fisik smartphone (`AudioVolumeDown`, `AudioVolumeUp`, `VolumeDown`, `VolumeUp`), sehingga hasil screenshot di galeri HP siswa 100% hitam pekat tanpa teks soal.
+     - **Anti-Screenshot Tombol Fisik Volume & Power (`SCREENSHOT_HARDWARE_BUTTON`):** Menangkap penekanan tombol volume hardware dan mendeteksi perubahan visibilitas (`visibilitychange`) saat tombol Power/On-Off ditekan bersamaan.
+     - **Anti-Floating Window & Bilah Notifikasi:** Mendeteksi pembukaan jendela mengambang atau penarikan bilah status/notifikasi di HP.
    - **Proteksi Laptop / Desktop PC:**
-     - **Pembersihan Otomatis Clipboard (Daemon 300ms):** Mengosongkan clipboard sistem secara berkala (`navigator.clipboard.writeText('')`) agar teks yang disalin dari manapun seketika musnah.
-     - **Input & Shortcut Blocking:** Memblokir klik kanan (`contextmenu`), klik tengah (`auxclick`), copy (`Ctrl+C`), paste (`Ctrl+V`), cut (`Ctrl+X`), select all (`Ctrl+A`), Print (`Ctrl+P`), View Source (`Ctrl+U`), Save Page (`Ctrl+S`), F12, serta Inspect Element (`Ctrl+Shift+I/J/C`).
-     - **Anti-Drag & Drop serta Seleksi Teks:** Menangkap event `dragstart`, `dragover`, `drop`, dan `selectstart`.
-   - **Catatan Pelanggaran Otentik & Spesifik di E-Jurnal:** Keterangan sensor di rekapitulasi dan E-Jurnal tidak lagi menggunakan kalimat gabungan, melainkan mencatat tindakan spesifik siswa secara akurat.
+     - **Pembersihan Otomatis Clipboard (Purge Daemon 100ms):** Interval aktif 100ms yang secara terus-menerus mengosongkan clipboard sistem (`navigator.clipboard.writeText('')`) tanpa jeda, memastikan teks yang disalin dari manapun seketika musnah.
+     - **Blokir Total Klik Kanan & Menu Konteks (`CONTEXT_MENU_ATTEMPT`):** Listener capture phase pada `window`, `document`, dan kontainer lembar ujian yang membatalkan event `contextmenu` dan `auxclick` secara mutlak.
+     - **Input & Shortcut Blocking:** Memblokir copy (`Ctrl+C`), paste (`Ctrl+V`), cut (`Ctrl+X`), select all (`Ctrl+A`), Print (`Ctrl+P`), View Source (`Ctrl+U`), Save Page (`Ctrl+S`), F12, serta Inspect Element (`Ctrl+Shift+I/J/C`).
+     - **Anti-Drag & Drop serta Seleksi Teks:** Menangkap dan membatalkan event `dragstart`, `dragover`, `drop`, dan `selectstart`.
    - **Iframe Focus Guard:** Algoritma cerdas yang menjamin pengerjaan Google Form di dalam Secure Iframe tetap aman dan tidak memicu deteksi kecurangan saat siswa mengklik butir soal.
    - **Input Blocking:** Memblokir klik kanan, copy, cut, paste, PrintScreen, F12 (Inspect Element / DevTools), serta tombol Back peramban.
    - **Penalty Freeze Overlay & Sirine Alarm:** Lembar ujian seketika membeku menjadi layar merah darurat dan membunyikan sirine peringatan keras berulang dari *Web Audio API Synthesizer*.
