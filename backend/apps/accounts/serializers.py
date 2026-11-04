@@ -18,6 +18,9 @@ class UserSerializer(serializers.ModelSerializer):
     classroom = ClassRoomSerializer(read_only=True)
     classroom_name = serializers.CharField(source='classroom.name', read_only=True)
     classroom_id = serializers.IntegerField(source='classroom.id', read_only=True)
+    is_profile_complete = serializers.SerializerMethodField()
+    is_password_default = serializers.SerializerMethodField()
+    needs_profile_completion = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -34,9 +37,102 @@ class UserSerializer(serializers.ModelSerializer):
             'classroom_name',
             'is_active',
             'is_staff',
-            'date_joined'
+            'date_joined',
+            'is_profile_complete',
+            'is_password_default',
+            'needs_profile_completion'
         ]
         read_only_fields = ['id', 'date_joined']
+
+    def get_is_profile_complete(self, obj):
+        has_name = bool(obj.full_name and obj.full_name.strip() and obj.full_name.strip().lower() != 'pengguna')
+        has_email = bool(obj.email and '@' in obj.email and not obj.email.endswith('@example.com') and not obj.email.endswith('@sekolah.id') and obj.email.strip() != '')
+        return bool(has_name and has_email)
+
+    def get_is_password_default(self, obj):
+        default_candidates = [
+            obj.username,
+            getattr(obj, 'nip', None),
+            getattr(obj, 'nisn', None),
+            'guru123',
+            'siswa123',
+            'admin123',
+            '123456',
+            '12345678',
+            'password'
+        ]
+        for pwd in default_candidates:
+            if pwd and obj.check_password(str(pwd).strip()):
+                return True
+        return False
+
+    def get_needs_profile_completion(self, obj):
+        return (not self.get_is_profile_complete(obj)) or self.get_is_password_default(obj)
+
+
+class UserProfileUpdateSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    current_password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
+    class Meta:
+        model = User
+        fields = [
+            'id',
+            'username',
+            'full_name',
+            'email',
+            'nip',
+            'password',
+            'current_password',
+        ]
+        read_only_fields = ['id']
+
+    def validate_username(self, value):
+        new_username = str(value).strip()
+        user = self.instance
+        if User.objects.filter(username=new_username).exclude(id=user.id).exists():
+            raise serializers.ValidationError("Username / NIP tersebut sudah digunakan oleh pengguna lain!")
+        return new_username
+
+    def validate(self, attrs):
+        password = attrs.get('password')
+        current_password = attrs.get('current_password')
+
+        if password and password.strip():
+            if not current_password or not current_password.strip():
+                raise serializers.ValidationError({"current_password": "Kata sandi saat ini (lama) wajib diisi untuk mengubah kata sandi!"})
+            if not self.instance.check_password(current_password.strip()):
+                raise serializers.ValidationError({"current_password": "Kata sandi saat ini (lama) tidak sesuai!"})
+        return attrs
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password', None)
+        validated_data.pop('current_password', None)
+
+        new_username = validated_data.get('username')
+        if new_username:
+            new_username = str(new_username).strip()
+            instance.username = new_username
+            if instance.role == User.RoleChoices.TEACHER:
+                instance.nip = new_username
+            elif instance.role == User.RoleChoices.STUDENT:
+                instance.nisn = new_username
+
+        new_nip = validated_data.get('nip')
+        if new_nip:
+            instance.nip = str(new_nip).strip()
+
+        if 'full_name' in validated_data:
+            instance.full_name = validated_data['full_name'].strip()
+
+        if 'email' in validated_data:
+            instance.email = validated_data['email'].strip()
+
+        if password and password.strip():
+            instance.set_password(password.strip())
+
+        instance.save()
+        return instance
 
 
 class UserCreateUpdateSerializer(serializers.ModelSerializer):
@@ -223,15 +319,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         data = super().validate(attrs)
         
-        # Sertakan payload user pada respons login
-        data['user'] = {
-            'id': str(self.user.id),
-            'username': self.user.username,
-            'full_name': self.user.full_name,
-            'role': self.user.role,
-            'classroom_id': self.user.classroom.id if self.user.classroom else None,
-            'classroom_name': self.user.classroom.name if self.user.classroom else None,
-        }
+        # Sertakan payload user lengkap pada respons login
+        data['user'] = UserSerializer(self.user).data
         return data
 
 

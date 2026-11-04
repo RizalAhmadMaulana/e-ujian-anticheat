@@ -29,6 +29,20 @@ export const fetchCurrentUserApi = async () => {
 };
 
 /**
+ * Memperbarui profil detail pengguna yang sedang login (Nama, Email, Username, Password)
+ */
+export const updateCurrentUserProfileApi = async (data) => {
+  const response = await axiosInstance.patch('/auth/me/', data);
+  if (response.data) {
+    const user = response.data;
+    user.fullName = user.full_name || user.fullName || user.username;
+    user.full_name = user.full_name || user.fullName || user.username;
+    localStorage.setItem('user', JSON.stringify(user));
+  }
+  return response.data;
+};
+
+/**
  * CRUD KELAS / ROMBEL
  */
 export const getClassroomsApi = async () => {

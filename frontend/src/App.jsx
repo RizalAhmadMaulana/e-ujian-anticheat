@@ -20,6 +20,7 @@ import ExamSessionSetup from './pages/teacher/ExamSessionSetup';
 import LiveProctoring from './pages/teacher/LiveProctoring';
 import EJournalReport from './pages/teacher/EJournalReport';
 import SchoolSettings from './pages/teacher/SchoolSettings';
+import ProfileSettings from './pages/teacher/ProfileSettings';
 
 // Student Pages
 import GatekeeperPin from './pages/student/GatekeeperPin';
@@ -72,7 +73,14 @@ export default function App() {
           <Route path="proctoring" element={<LiveProctoring />} />
           <Route path="ejournal" element={<EJournalReport />} />
           <Route path="settings" element={<SchoolSettings />} />
+          <Route path="profile" element={<ProfileSettings />} />
         </Route>
+
+        {/* Alias Rute Setting Profile */}
+        <Route
+          path="/setting-profile"
+          element={<Navigate to="/teacher/profile" replace />}
+        />
 
         {/* Portal Siswa (Role: STUDENT) */}
         <Route

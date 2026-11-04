@@ -23,6 +23,7 @@ urlpatterns = [
     # Auth endpoints
     path('login/', CustomLoginView.as_view(), name='auth_login'),
     path('me/', CurrentUserView.as_view(), name='auth_me'),
+    path('profile/', CurrentUserView.as_view(), name='auth_profile'),
 
     # Pengaturan Sekolah Dinamis
     path('school-settings/', SchoolSettingView.as_view(), name='school_settings'),

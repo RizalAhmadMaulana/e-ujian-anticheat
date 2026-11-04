@@ -13,6 +13,7 @@ from .models import User, ClassRoom, SchoolSetting
 from .serializers import (
     UserSerializer, 
     UserCreateUpdateSerializer,
+    UserProfileUpdateSerializer,
     StudentSerializer,
     TeacherSerializer,
     ClassRoomSerializer, 
@@ -31,14 +32,25 @@ class CustomLoginView(TokenObtainPairView):
 
 class CurrentUserView(APIView):
     """
-    GET /api/auth/me/
-    Mengambil data profil pengguna yang sedang login
+    GET /api/auth/me/ -> Mengambil data profil pengguna yang sedang login
+    PATCH /api/auth/me/ -> Memperbarui profil akun sendiri (nama, email, username/nip, kata sandi)
+    PUT /api/auth/me/ -> Memperbarui profil akun sendiri
     """
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         serializer = UserSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def patch(self, request):
+        serializer = UserProfileUpdateSerializer(request.user, data=request.data, partial=True)
+        if serializer.is_valid():
+            user = serializer.save()
+            return Response(UserSerializer(user).data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request):
+        return self.patch(request)
 
 
 # ==========================================

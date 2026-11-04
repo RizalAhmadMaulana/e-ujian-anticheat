@@ -348,6 +348,37 @@ Menu ini digunakan untuk menyesuaikan seluruh identitas sekolah atau madrasah se
 
 ---
 
+### 3.9. Menu 8: Pengaturan Profil Akun Guru & Pengawas (`/teacher/profile`)
+Menu ini digunakan oleh masing-masing guru atau staf pengawas ujian untuk melengkapi biodata diri dan mengamankan kredensial akun login pribadi.
+
+- **Akses Cepat Pengaturan Profil:**
+  1. Klik **Ikon Gerigi (`Settings`)** di bilah atas (navbar header guru) yang berada persis di sebelah kiri identitas pengguna.
+  2. Klik pada **Nama / NIP Pengguna** di navbar atas atau di profil card bawah sidebar.
+  3. Atau klik menu **"Pengaturan Profil"** pada navigasi sidebar kiri.
+- **Logika Pop-Up Lengkapi Profil Otomatis saat Pertama Login (Welcome Security Modal):**
+  - Saat guru baru saja login ke portal asesmen, sistem secara otomatis mengecek status akun:
+    - Apakah **Kata Sandi** masih bernilai bawaan (sama dengan NIP atau kata sandi default awal).
+    - Apakah **Alamat Email** dan **Nama Lengkap** resmi sudah dilengkapi.
+  - Jika belum lengkap atau kata sandi masih bawaan, sistem akan menampilkan pop-up modal peringatan berdesain modern *E-UJIAN PRO*:
+    - **Tombol "Ingatkan Saya Nanti":** Menutup jendela peringatan dan menyimpan flag pada sesi browser (`sessionStorage`) sehingga guru tetap dapat melanjutkan pengawasan tanpa terganggu.
+    - **Tombol "Lengkapi Profil Sekarang":** Langsung mengalihkan guru ke halaman Pengaturan Profil.
+- **Kelola Informasi Data Diri:**
+  1. **Nama Lengkap & Gelar:** Nama lengkap guru yang akan dicantumkan pada Tanda Tangan E-Jurnal Berita Acara Asesmen Sekolah.
+  2. **Username / NIP:** Kredensial nomor induk pegawai yang digunakan untuk login ke portal guru.
+  3. **Alamat Email Aktif:** Email resmi yang digunakan untuk notifikasi akun dan korespondensi asesmen.
+- **Ganti Kata Sandi Pribadi (Opsional):**
+  - Masukkan **Kata Sandi Lama** untuk memvalidasi kepemilikan akun.
+  - Masukkan **Kata Sandi Baru** (minimal 6 karakter, dianjurkan kombinasi huruf dan angka).
+  - Masukkan **Ulangi Kata Sandi Baru** untuk konfirmasi.
+  - Gunakan ikon mata (`Eye`/`EyeOff`) di sebelah kanan kolom untuk melihat karakter kata sandi.
+  - *Catatan: Kosongkan seluruh kolom kata sandi jika hanya ingin mengubah nama atau email.*
+- **Sinkronisasi Otomatis 2-Arah dengan Manajemen Pengguna & Data Guru:**
+  - Karena sistem menggunakan arsitektur basis data relasional terpadu (`Django User Model`), setiap pembaruan nama, NIP/username, email, maupun password di halaman Profil Pengguna ini **seketika langsung mengubah dan menyinkronkan data** yang tampil di menu **Manajemen Pengguna** (`/teacher/users`) dan **Data Guru** (`/teacher/teachers`).
+  - Guru tidak perlu meminta admin untuk mengubah data kembali, dan navbar header langsung menampilkan nama baru secara *real-time* tanpa perlu logout.
+
+
+---
+
 ## 4. Panduan Lengkap Role SISWA (Peserta Ujian)
 
 Berikut urutan langkah wajib bagi siswa dari mulai membuka aplikasi hingga selesai:

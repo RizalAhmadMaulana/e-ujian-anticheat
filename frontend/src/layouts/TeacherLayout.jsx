@@ -10,19 +10,22 @@ import {
   CalendarClock, 
   Radio, 
   FileSpreadsheet, 
-  Building2,
+  Building2, 
+  Settings,
   LogOut, 
   Menu, 
   X, 
   ShieldCheck, 
-  UserCheck,
-  GraduationCap,
-  ShieldAlert,
-  Bell
+  UserCheck, 
+  GraduationCap, 
+  ShieldAlert, 
+  Bell 
 } from 'lucide-react';
+import WelcomeProfileModal from '../components/modals/WelcomeProfileModal';
 
 export default function TeacherLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const { currentUser, logout, proctoringStudents, schoolSettings, fetchSchoolSettings } = useExamStore();
   const navigate = useNavigate();
 
@@ -38,6 +41,11 @@ export default function TeacherLayout() {
         };
         localStorage.setItem('user', JSON.stringify(normalized));
         useExamStore.getState().setCurrentUser(normalized);
+
+        const isDismissed = sessionStorage.getItem('dismiss_profile_welcome_modal') === 'true';
+        if (!isDismissed && normalized.needs_profile_completion) {
+          setShowWelcomeModal(true);
+        }
       }
     }).catch(() => {});
   }, [fetchSchoolSettings]);
@@ -105,6 +113,11 @@ export default function TeacherLayout() {
       label: 'Pengaturan Sekolah', 
       icon: Building2 
     },
+    { 
+      to: '/teacher/profile', 
+      label: 'Pengaturan Profil', 
+      icon: Settings 
+    },
   ];
 
   return (
@@ -133,6 +146,14 @@ export default function TeacherLayout() {
               <span>{lockedStudentsCount}</span>
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => navigate('/teacher/profile')}
+            title="Pengaturan Profil Akun"
+            className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white"
@@ -210,7 +231,14 @@ export default function TeacherLayout() {
         {/* User Profile Card */}
         <div className="p-3 border-t border-slate-800 bg-slate-950/60">
           <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/50">
-            <div className="flex items-center gap-2.5 overflow-hidden">
+            <div 
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                navigate('/teacher/profile');
+              }}
+              className="flex items-center gap-2.5 overflow-hidden cursor-pointer hover:opacity-85 transition"
+              title="Buka Pengaturan Profil"
+            >
               <div className="w-9 h-9 rounded-full bg-indigo-500/20 border border-indigo-400/40 flex items-center justify-center text-indigo-300 font-bold text-xs shrink-0">
                 <UserCheck className="w-4 h-4" />
               </div>
@@ -223,13 +251,26 @@ export default function TeacherLayout() {
                 </div>
               </div>
             </div>
-            <button
-              onClick={handleLogout}
-              title="Keluar dari Akun"
-              className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-700/60 rounded-lg transition shrink-0"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  navigate('/teacher/profile');
+                }}
+                title="Pengaturan Profil Akun"
+                className="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-700/60 rounded-lg transition shrink-0"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+              <button
+                onClick={handleLogout}
+                title="Keluar dari Akun"
+                className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-700/60 rounded-lg transition shrink-0"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </aside>
@@ -260,7 +301,7 @@ export default function TeacherLayout() {
           </div>
 
           <div className="flex items-center gap-4">
-            {lockedStudentsCount > 0 ? (
+            {lockedStudentsCount > 0 && (
               <button
                 onClick={() => navigate('/teacher/proctoring')}
                 className="px-3.5 py-1.5 rounded-lg bg-red-100 border border-red-300 text-red-700 text-xs font-bold flex items-center gap-2 hover:bg-red-200 transition animate-pulse"
@@ -268,21 +309,30 @@ export default function TeacherLayout() {
                 <ShieldAlert className="w-4 h-4 text-red-600" />
                 <span>{lockedStudentsCount} Siswa Perlu Di-Unlock!</span>
               </button>
-            ) : (
-              <span className="text-xs font-medium text-slate-500 flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-emerald-500" /> Semua Siswa Kondusif
-              </span>
             )}
 
-            <div className="h-6 w-px bg-slate-200" />
-
             <div className="flex items-center gap-3">
-              <div className="text-right">
+              {/* Icon Gerigi di Samping Kiri Data User Login */}
+              <button
+                type="button"
+                onClick={() => navigate('/teacher/profile')}
+                title="Pengaturan Profil & Akun"
+                className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl border border-slate-200/80 transition shadow-sm group"
+              >
+                <Settings className="w-4 h-4 group-hover:rotate-45 transition-transform duration-300" />
+              </button>
+
+              <div 
+                onClick={() => navigate('/teacher/profile')}
+                className="text-right cursor-pointer hover:opacity-80 transition"
+                title="Buka Pengaturan Profil Akun"
+              >
                 <div className="text-xs font-bold text-slate-800">
                   {currentUser?.fullName || currentUser?.full_name || currentUser?.username || 'Guru Pengawas'}
                 </div>
                 <div className="text-[11px] text-slate-500">Guru Pengawas Ujian</div>
               </div>
+
               <button
                 onClick={handleLogout}
                 title="Keluar"
@@ -299,6 +349,14 @@ export default function TeacherLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Pop Up Lengkapi Profil / Ganti Kata Sandi Bawaan Pertama Kali Login */}
+      {showWelcomeModal && currentUser && (
+        <WelcomeProfileModal
+          user={currentUser}
+          onClose={() => setShowWelcomeModal(false)}
+        />
+      )}
     </div>
   );
 }

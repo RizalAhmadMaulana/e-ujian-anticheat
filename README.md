@@ -28,6 +28,16 @@
    - [Menu 7: Jadwal & Sesi Ujian (One-Click Copy Password & PIN Pengawas)](#menu-7-jadwal--sesi-ujian-one-click-copy-password--pin-pengawas)
    - [Menu 8: Ruang Pengawas Real-Time (Live Proctoring & Dual Unlock)](#menu-8-ruang-pengawas-real-time-live-proctoring--dual-unlock)
    - [Menu 9: E-Jurnal & Rekapitulasi Berita Acara (Ekspor PDF/Excel)](#menu-9-e-jurnal--rekapitulasi-berita-acara-ekspor-pdfexcel)
+### Menu 10: Pengaturan Profil Akun Guru & Pop-Up Keamanan Login
+- **Rute:** `/teacher/profile`
+- **Fungsi:** Mengelola biodata diri (Nama Lengkap, NIP/Username, Email), mengganti kata sandi secara aman, dan menjamin **Sinkronisasi Otomatis 2-Arah** dengan Manajemen Pengguna & Data Guru.
+- **Fitur Utama:**
+  1. **Ikon Gerigi Header Navbar:** Tombol setting cepat di samping kiri profil pengguna pada header pengawas.
+  2. **Logika Welcome Security Modal:** Pop-up otomatis saat pertama kali login yang mengingatkan guru jika kata sandi masih bawaan atau email belum terisi (dengan opsi *"Lengkapi Profil Sekarang"* atau *"Ingatkan Saya Nanti"*).
+  3. **Sinkronisasi Real-Time:** Perubahan nama atau password seketika mengubah record di tabel database pengguna dan memperbarui data di menu Manajemen Pengguna tanpa memerlukan restart server.
+
+---
+
 6. [👨‍🎓 Panduan Operasional Lengkap: Role SISWA (Peserta Asesmen)](#-panduan-operasional-lengkap-role-siswa-peserta-asesmen)
    - [Layar 1: Login Terpadu (NISN) & Gatekeeper PIN Masuk](#layar-1-login-terpadu-nisn--gatekeeper-pin-masuk)
    - [Layar 2: Beranda Peserta & Orientasi Layar (Portrait/Landscape)](#layar-2-beranda-peserta--orientasi-layar-portraitlandscape)
