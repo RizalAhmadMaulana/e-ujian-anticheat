@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useExamStore } from '../../store/useExamStore';
+import { fetchCurrentUserApi } from '../../api/authApi';
 import Modal from '../../components/common/Modal';
+import WelcomeProfileModal from '../../components/modals/WelcomeProfileModal';
 import { 
   FileText, 
   Calendar, 
@@ -19,7 +21,8 @@ import {
   ShieldCheck,
   CalendarCheck,
   Layers,
-  Lock
+  Lock,
+  Settings
 } from 'lucide-react';
 
 export default function StudentLobby() {
@@ -38,13 +41,31 @@ export default function StudentLobby() {
   const [isOrientationModalOpen, setIsOrientationModalOpen] = useState(false);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   // Digital Clock Real-Time State
   const [currentTime, setCurrentTime] = useState(new Date());
 
+  const studentClassName = typeof currentUser?.classroom === 'object' && currentUser?.classroom !== null
+    ? (currentUser.classroom.name || currentUser.classroom_name || '-')
+    : (currentUser?.classroom || currentUser?.classroom_name || '-');
+
   useEffect(() => {
     fetchSchoolSettings?.();
     fetchSessions?.();
+    
+    // Pengecekan profil akun siswa saat pertama kali masuk lobby
+    fetchCurrentUserApi?.().then((user) => {
+      if (user) {
+        useExamStore.getState().setCurrentUser(user);
+
+        const isDismissed = sessionStorage.getItem('dismiss_profile_welcome_modal') === 'true';
+        if (!isDismissed && user.needs_profile_completion) {
+          setShowWelcomeModal(true);
+        }
+      }
+    }).catch(() => {});
+
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
@@ -184,9 +205,21 @@ export default function StudentLobby() {
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hidden sm:inline-block">
                 Terkunci Aman
               </span>
+              <button
+                type="button"
+                onClick={() => navigate('/student/profile')}
+                title="Pengaturan Profil Akun Siswa"
+                className="p-1 sm:p-1.5 rounded-lg bg-slate-800 hover:bg-indigo-600/30 text-slate-300 hover:text-indigo-300 border border-slate-700/80 transition shadow-sm group"
+              >
+                <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:rotate-45 transition-transform duration-300" />
+              </button>
             </div>
-            <div className="text-xs text-slate-400 truncate max-w-[200px] sm:max-w-md">
-              {currentUser?.fullName} • {currentUser?.classroom} (NISN: {currentUser?.username})
+            <div 
+              onClick={() => navigate('/student/profile')}
+              title="Klik untuk membuka Pengaturan Profil"
+              className="text-xs text-slate-400 truncate max-w-[200px] sm:max-w-md cursor-pointer hover:text-indigo-300 transition"
+            >
+              {currentUser?.fullName} • {studentClassName} (NISN: {currentUser?.username})
             </div>
           </div>
         </div>
@@ -271,7 +304,7 @@ export default function StudentLobby() {
                   <Calendar className="w-7 h-7" />
                 </div>
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-slate-800 text-slate-300">
-                  Kelas {currentUser?.classroom}
+                  Kelas {studentClassName}
                 </span>
               </div>
               <h3 className="text-xl font-black text-white group-hover:text-slate-200 transition">
@@ -389,7 +422,7 @@ export default function StudentLobby() {
       >
         <div className="space-y-3">
           <p className="text-xs text-slate-600">
-            Daftar sesi ujian yang dijadwalkan untuk kelas <strong>{currentUser?.classroom}</strong>:
+            Daftar sesi ujian yang dijadwalkan untuk kelas <strong>{studentClassName}</strong>:
           </p>
 
           <div className="space-y-2.5 max-h-84 overflow-y-auto pr-0.5">
@@ -526,6 +559,14 @@ export default function StudentLobby() {
           </div>
         </div>
       </Modal>
+
+      {/* Pop Up Cek Kelengkapan Biodata / Kata Sandi Bawaan Siswa */}
+      {showWelcomeModal && currentUser && (
+        <WelcomeProfileModal
+          user={currentUser}
+          onClose={() => setShowWelcomeModal(false)}
+        />
+      )}
     </div>
   );
 }

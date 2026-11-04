@@ -14,7 +14,8 @@ import {
   GraduationCap,
   BookOpen,
   ExternalLink,
-  Clock
+  Clock,
+  Settings
 } from 'lucide-react';
 
 export default function GatekeeperPin() {
@@ -53,6 +54,10 @@ export default function GatekeeperPin() {
     minute: '2-digit',
     second: '2-digit',
   });
+
+  const studentClassName = typeof currentUser?.classroom === 'object' && currentUser?.classroom !== null
+    ? (currentUser.classroom.name || currentUser.classroom_name || '-')
+    : (currentUser?.classroom || currentUser?.classroom_name || '-');
 
   // Ambil paket ujian terpilih dari state aktif
   const selectedPackage = activeAttempt?.selectedPackage || examPackages[0];
@@ -214,9 +219,21 @@ export default function GatekeeperPin() {
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hidden sm:inline-block">
                 Terkunci Aman
               </span>
+              <button
+                type="button"
+                onClick={() => navigate('/student/profile')}
+                title="Pengaturan Profil Akun Siswa"
+                className="p-1 sm:p-1.5 rounded-lg bg-slate-800 hover:bg-indigo-600/30 text-slate-300 hover:text-indigo-300 border border-slate-700/80 transition shadow-sm group"
+              >
+                <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:rotate-45 transition-transform duration-300" />
+              </button>
             </div>
-            <div className="text-xs text-slate-400 truncate max-w-[200px] sm:max-w-md">
-              {currentUser?.fullName} • {currentUser?.classroom} (NISN: {currentUser?.username})
+            <div 
+              onClick={() => navigate('/student/profile')}
+              title="Klik untuk membuka Pengaturan Profil"
+              className="text-xs text-slate-400 truncate max-w-[200px] sm:max-w-md cursor-pointer hover:text-indigo-300 transition"
+            >
+              {currentUser?.fullName} • {studentClassName} (NISN: {currentUser?.username})
             </div>
           </div>
         </div>
@@ -292,7 +309,7 @@ export default function GatekeeperPin() {
                   {currentUser?.fullName || 'Peserta Asesmen'}
                 </div>
                 <div className="text-[10px] text-slate-400 truncate">
-                  NISN: {currentUser?.username || '-'} • Kelas: {currentUser?.classroom || '-'}
+                  NISN: {currentUser?.username || '-'} • Kelas: {studentClassName}
                 </div>
               </div>
             </div>

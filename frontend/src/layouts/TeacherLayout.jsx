@@ -33,17 +33,10 @@ export default function TeacherLayout() {
     fetchSchoolSettings?.();
     fetchCurrentUserApi?.().then((user) => {
       if (user) {
-        const name = user.full_name || user.fullName || user.username || 'Guru Pengawas';
-        const normalized = {
-          ...user,
-          fullName: name,
-          full_name: name,
-        };
-        localStorage.setItem('user', JSON.stringify(normalized));
-        useExamStore.getState().setCurrentUser(normalized);
+        useExamStore.getState().setCurrentUser(user);
 
         const isDismissed = sessionStorage.getItem('dismiss_profile_welcome_modal') === 'true';
-        if (!isDismissed && normalized.needs_profile_completion) {
+        if (!isDismissed && user.needs_profile_completion) {
           setShowWelcomeModal(true);
         }
       }
@@ -112,11 +105,6 @@ export default function TeacherLayout() {
       to: '/teacher/settings', 
       label: 'Pengaturan Sekolah', 
       icon: Building2 
-    },
-    { 
-      to: '/teacher/profile', 
-      label: 'Pengaturan Profil', 
-      icon: Settings 
     },
   ];
 

@@ -1,6 +1,31 @@
 import axiosInstance from './axiosInstance';
 
 /**
+ * Normalisasi data pengguna agar nama dan kelas selalu bertipe string aman
+ * @param {object} user - Objek data pengguna dari backend
+ */
+export const normalizeUserData = (user) => {
+  if (!user || typeof user !== 'object') return user;
+  const name = user.full_name || user.fullName || user.username || 'Pengguna';
+  let className = '';
+  if (user.classroom_name) {
+    className = user.classroom_name;
+  } else if (typeof user.classroom === 'object' && user.classroom !== null) {
+    className = user.classroom.name || '';
+  } else if (typeof user.classroom === 'string') {
+    className = user.classroom;
+  }
+  return {
+    ...user,
+    fullName: name,
+    full_name: name,
+    classroom: className,
+    classroom_name: className,
+    classroom_id: user.classroom_id || (typeof user.classroom === 'object' ? user.classroom?.id : null)
+  };
+};
+
+/**
  * Login pengguna (Guru atau Siswa)
  * @param {string} username - NIP Guru / NISN Siswa
  * @param {string} password - Kata sandi akun
@@ -10,12 +35,11 @@ export const loginApi = async (username, password) => {
   if (response.data && response.data.access) {
     localStorage.setItem('access_token', response.data.access);
     localStorage.setItem('refresh_token', response.data.refresh);
-    const user = response.data.user;
+    const user = normalizeUserData(response.data.user);
     if (user) {
-      user.fullName = user.full_name || user.fullName || user.username;
-      user.full_name = user.full_name || user.fullName || user.username;
+      response.data.user = user;
+      localStorage.setItem('user', JSON.stringify(user));
     }
-    localStorage.setItem('user', JSON.stringify(user));
   }
   return response.data;
 };
@@ -25,7 +49,7 @@ export const loginApi = async (username, password) => {
  */
 export const fetchCurrentUserApi = async () => {
   const response = await axiosInstance.get('/auth/me/');
-  return response.data;
+  return normalizeUserData(response.data);
 };
 
 /**
@@ -34,10 +58,9 @@ export const fetchCurrentUserApi = async () => {
 export const updateCurrentUserProfileApi = async (data) => {
   const response = await axiosInstance.patch('/auth/me/', data);
   if (response.data) {
-    const user = response.data;
-    user.fullName = user.full_name || user.fullName || user.username;
-    user.full_name = user.full_name || user.fullName || user.username;
+    const user = normalizeUserData(response.data);
     localStorage.setItem('user', JSON.stringify(user));
+    return user;
   }
   return response.data;
 };

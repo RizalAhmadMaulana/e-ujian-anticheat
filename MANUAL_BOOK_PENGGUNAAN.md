@@ -390,6 +390,23 @@ Berikut urutan langkah wajib bagi siswa dari mulai membuka aplikasi hingga seles
 
 ---
 
+### 4.2. Pengaturan Profil Akun Siswa (`/student/profile`)
+Siswa dapat memeriksa biodata diri dan mengamankan akun asesmen mereka secara mandiri:
+- **Akses Cepat Pengaturan Profil:**
+  1. Klik **Ikon Gerigi (`Settings`)** yang terletak persis di samping teks `ExamBrowser Portal` pada navbar header atas di Beranda Asesmen Siswa, Portal Mata Pelajaran, maupun Gatekeeper.
+  2. Klik pada **Nama / NISN Siswa** di navbar header.
+- **Logika Pop-Up Cek Keamanan saat Pertama Kali Login Siswa:**
+  - Saat siswa pertama kali login, sistem secara otomatis mengecek apakah kata sandi masih default (sama dengan NISN) atau biodata belum lengkap.
+  - Jika terdeteksi belum aman, muncul pop-up peringatan keamanan akun siswa dengan opsi:
+    - **'Lengkapi Profil Sekarang':** Langsung diarahkan ke halaman `/student/profile`.
+    - **'Ingatkan Saya Nanti':** Menutup pop-up dan menandai sesi browser (`sessionStorage`) agar siswa dapat segera mengikuti asesmen tanpa terganggu.
+- **Kelola Biodata Diri:** Nama Lengkap Siswa, NISN / Nomor Induk, dan Alamat Email Aktif.
+- **Ganti Kata Sandi Mandiri:** Mengganti kata sandi bawaan NISN dengan kata sandi pribadi yang aman (dilengkapi toggle intip karakter kata sandi).
+- **Sinkronisasi Otomatis 2-Arah dengan Manajemen Pengguna:**
+  - Setiap pembaruan yang disimpan oleh siswa langsung mengubah record di tabel database backend dan otomatis tersinkronisasi ke menu **Manajemen Pengguna** (`/teacher/users`) dan **Data Siswa** (`/teacher/students`) yang dilihat oleh guru/proktor tanpa perlu restart server.
+
+---
+
 ### 4.2. Layar 1: Beranda Peserta & Pemilihan Orientasi Layar (`/student/lobby`)
 1. Siswa melihat identitas nama, NISN, kelas, dan jam digital real-time.
 2. Siswa dapat mengecek **Jadwal Asesmen** (lengkap dengan rentang tanggal/jam dan status Sesi Dibuka/Belum Dibuka/Sudah Ditutup) dan membaca **Tata Tertib Ujian**.

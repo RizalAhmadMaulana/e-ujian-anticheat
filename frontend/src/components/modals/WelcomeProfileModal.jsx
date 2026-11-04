@@ -10,10 +10,13 @@ import { ShieldAlert, KeyRound, UserCheck, ArrowRight, Clock, CheckCircle2 } fro
 export default function WelcomeProfileModal({ user, onClose }) {
   const navigate = useNavigate();
 
+  const isStudent = user?.role === 'STUDENT';
+  const targetProfileUrl = isStudent ? '/student/profile' : '/teacher/profile';
+
   const handleNavigateToProfile = () => {
     sessionStorage.setItem('dismiss_profile_welcome_modal', 'true');
     onClose();
-    navigate('/teacher/profile');
+    navigate(targetProfileUrl);
   };
 
   const handleDismissLater = () => {
@@ -34,13 +37,13 @@ export default function WelcomeProfileModal({ user, onClose }) {
             <ShieldAlert className="w-7 h-7 text-amber-400" />
           </div>
           <span className="inline-block px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-[11px] font-bold tracking-wider uppercase mb-2">
-            Pemberitahuan Keamanan Akun
+            Pemberitahuan Keamanan Akun {isStudent ? 'Peserta Siswa' : 'Pengawas'}
           </span>
           <h3 className="font-extrabold text-xl sm:text-2xl text-white tracking-tight">
             Selamat Datang di E-UJIAN PRO! 👋
           </h3>
           <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-sm mx-auto">
-            Halo <strong className="text-white">{user?.fullName || user?.full_name || user?.username}</strong>, demi keamanan integritas asesmen, kami menyarankan Anda memperbarui profil akun Anda.
+            Halo <strong className="text-white">{user?.fullName || user?.full_name || user?.username}</strong>, demi menjaga keamanan akun dan privasi nilai asesmen Anda, kami menyarankan Anda memperbarui profil dan mengganti kata sandi bawaan.
           </p>
         </div>
 
@@ -55,7 +58,7 @@ export default function WelcomeProfileModal({ user, onClose }) {
                 <div className="text-xs leading-relaxed">
                   <div className="font-bold text-amber-950">Kata Sandi Masih Bawaan Sistem</div>
                   <div className="text-amber-800/90 text-[11px] mt-0.5">
-                    Akun Anda saat ini masih memakai kata sandi bawaan (NIP/default). Segera ganti dengan sandi pribadi yang aman.
+                    Akun Anda saat ini masih memakai kata sandi bawaan ({isStudent ? 'NISN/default' : 'NIP/default'}). Segera ganti dengan sandi pribadi yang hanya Anda ketahui.
                   </div>
                 </div>
               </div>
@@ -69,7 +72,7 @@ export default function WelcomeProfileModal({ user, onClose }) {
                 <div className="text-xs leading-relaxed">
                   <div className="font-bold text-indigo-950">Biodata Belum Lengkap</div>
                   <div className="text-indigo-800/90 text-[11px] mt-0.5">
-                    Lengkapi alamat email aktif dan nama lengkap Anda untuk keperluan notifikasi berita acara dan pemulihan akun.
+                    Lengkapi alamat email aktif dan periksa nama lengkap Anda untuk keperluan verifikasi dan identitas laporan asesmen.
                   </div>
                 </div>
               </div>

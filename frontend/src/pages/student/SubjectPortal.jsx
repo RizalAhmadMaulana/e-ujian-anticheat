@@ -17,7 +17,8 @@ import {
   Clock,
   AlertCircle,
   GraduationCap,
-  LogOut
+  LogOut,
+  Settings
 } from 'lucide-react';
 
 export default function SubjectPortal() {
@@ -54,6 +55,10 @@ export default function SubjectPortal() {
     minute: '2-digit',
     second: '2-digit',
   });
+
+  const studentClassName = typeof currentUser?.classroom === 'object' && currentUser?.classroom !== null
+    ? (currentUser.classroom.name || currentUser.classroom_name || '-')
+    : (currentUser?.classroom || currentUser?.classroom_name || '-');
 
   const handleLogout = () => {
     logout();
@@ -185,9 +190,21 @@ export default function SubjectPortal() {
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hidden sm:inline-block">
                 Terkunci Aman
               </span>
+              <button
+                type="button"
+                onClick={() => navigate('/student/profile')}
+                title="Pengaturan Profil Akun Siswa"
+                className="p-1 sm:p-1.5 rounded-lg bg-slate-800 hover:bg-indigo-600/30 text-slate-300 hover:text-indigo-300 border border-slate-700/80 transition shadow-sm group"
+              >
+                <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:rotate-45 transition-transform duration-300" />
+              </button>
             </div>
-            <div className="text-xs text-slate-400 truncate max-w-[200px] sm:max-w-md">
-              {currentUser?.fullName} • {currentUser?.classroom} (NISN: {currentUser?.username})
+            <div 
+              onClick={() => navigate('/student/profile')}
+              title="Klik untuk membuka Pengaturan Profil"
+              className="text-xs text-slate-400 truncate max-w-[200px] sm:max-w-md cursor-pointer hover:text-indigo-300 transition"
+            >
+              {currentUser?.fullName} • {studentClassName} (NISN: {currentUser?.username})
             </div>
           </div>
         </div>
@@ -238,7 +255,7 @@ export default function SubjectPortal() {
         {/* Big Title Header */}
         <div className="text-center space-y-2">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-indigo-950/70 border border-indigo-500/30 text-indigo-400 text-xs font-bold mb-1 shadow-sm">
-            <Lock className="w-3.5 h-3.5" /> Ruang Ujian Terproteksi — Kelas {currentUser?.classroom || 'X TKJ 1'}
+            <Lock className="w-3.5 h-3.5" /> Ruang Ujian Terproteksi — Kelas {studentClassName}
           </div>
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-white tracking-tight">
             Selamat Datang di Portal Ujian — Pilih Mata Pelajaran

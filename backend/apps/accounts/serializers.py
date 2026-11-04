@@ -82,6 +82,7 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
             'full_name',
             'email',
             'nip',
+            'nisn',
             'password',
             'current_password',
         ]
@@ -91,7 +92,8 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         new_username = str(value).strip()
         user = self.instance
         if User.objects.filter(username=new_username).exclude(id=user.id).exists():
-            raise serializers.ValidationError("Username / NIP tersebut sudah digunakan oleh pengguna lain!")
+            label = "NISN" if user.role == User.RoleChoices.STUDENT else "NIP"
+            raise serializers.ValidationError(f"Username / {label} tersebut sudah digunakan oleh pengguna lain!")
         return new_username
 
     def validate(self, attrs):
@@ -121,6 +123,11 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         new_nip = validated_data.get('nip')
         if new_nip:
             instance.nip = str(new_nip).strip()
+
+        new_nisn = validated_data.get('nisn')
+        if new_nisn:
+            instance.nisn = str(new_nisn).strip()
+            instance.username = str(new_nisn).strip()
 
         if 'full_name' in validated_data:
             instance.full_name = validated_data['full_name'].strip()

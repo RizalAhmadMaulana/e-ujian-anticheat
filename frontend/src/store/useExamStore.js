@@ -40,10 +40,20 @@ export const useExamStore = create((set, get) => ({
       if (savedUser) {
         const parsed = JSON.parse(savedUser);
         const name = parsed.full_name || parsed.fullName || parsed.username || 'Pengguna';
+        let className = '';
+        if (parsed.classroom_name) {
+          className = parsed.classroom_name;
+        } else if (typeof parsed.classroom === 'object' && parsed.classroom !== null) {
+          className = parsed.classroom.name || '';
+        } else if (typeof parsed.classroom === 'string') {
+          className = parsed.classroom;
+        }
         return {
           ...parsed,
           fullName: name,
           full_name: name,
+          classroom: className,
+          classroom_name: className,
         };
       }
       return null;
@@ -56,10 +66,20 @@ export const useExamStore = create((set, get) => ({
   setCurrentUser: (user) => {
     if (user) {
       const name = user.full_name || user.fullName || user.username || 'Pengguna';
+      let className = '';
+      if (user.classroom_name) {
+        className = user.classroom_name;
+      } else if (typeof user.classroom === 'object' && user.classroom !== null) {
+        className = user.classroom.name || '';
+      } else if (typeof user.classroom === 'string') {
+        className = user.classroom;
+      }
       const normalized = {
         ...user,
         fullName: name,
         full_name: name,
+        classroom: className,
+        classroom_name: className,
       };
       localStorage.setItem('user', JSON.stringify(normalized));
       set({

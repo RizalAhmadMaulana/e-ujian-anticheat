@@ -27,6 +27,7 @@ import GatekeeperPin from './pages/student/GatekeeperPin';
 import StudentLobby from './pages/student/StudentLobby';
 import SubjectPortal from './pages/student/SubjectPortal';
 import ExamWorkspace from './pages/student/ExamWorkspace';
+import StudentProfileSettings from './pages/student/StudentProfileSettings';
 
 export default function App() {
   const { currentUser, isAuthenticated } = useExamStore();
@@ -112,6 +113,14 @@ export default function App() {
           element={
             <RoleRouteGuard allowedRoles={['STUDENT']}>
               <SubjectPortal />
+            </RoleRouteGuard>
+          }
+        />
+        <Route
+          path="/student/profile"
+          element={
+            <RoleRouteGuard allowedRoles={['STUDENT']}>
+              <StudentProfileSettings />
             </RoleRouteGuard>
           }
         />

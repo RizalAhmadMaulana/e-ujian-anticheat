@@ -373,6 +373,14 @@ Setelah masuk melalui portal login terpadu (`/login`) menggunakan **NIP** dan ka
    - Masukkan **Kata Sandi** (Default: sama dengan NISN).
    - Klik **"Masuk ke Sistem"**. Sistem otomatis mendeteksi peran siswa dan langsung mengarahkan ke **Beranda Asesmen Siswa (Lobby)**.
 
+### Layar 2: Pengaturan Profil Akun Siswa & Pop-Up Keamanan Login
+- **Rute:** `/student/profile`
+- **Akses:** Klik ikon gerigi (`Settings`) persis di samping teks `ExamBrowser Portal` pada navbar header siswa.
+- **Fitur:** Melengkapi Nama Lengkap, Email, NISN, dan Ganti Kata Sandi Pribadi yang otomatis tersinkronisasi 2-arah ke menu **Manajemen Pengguna** dan **Data Siswa** guru.
+- **Welcome Security Modal:** Muncul saat siswa pertama kali login jika kata sandi masih menggunakan NISN bawaan sistem.
+
+---
+
 ### Layar 2: Beranda Peserta & Pemilihan Orientasi Layar (Portrait/Landscape)
 1. Siswa melihat kartu identitas, jam digital real-time, status jadwal asesmen kelas, dan tata tertib ujian.
 2. Klik tombol **"E-UJIAN"** (Menu Utama).
