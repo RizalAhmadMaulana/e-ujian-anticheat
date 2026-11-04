@@ -19,13 +19,19 @@ import {
   RefreshCw, 
   Sparkles,
   Wifi,
-  WifiOff
+  WifiOff,
+  Megaphone,
+  Send,
+  X,
+  Volume2,
+  CheckCircle2
 } from 'lucide-react';
 
 export default function LiveProctoring() {
   const { 
     examSessions, 
     proctoringStudents, 
+    currentUser,
     unlockStudent: storeUnlockStudent, 
     disqualifyStudent: storeDisqualifyStudent,
     triggerViolationLock
@@ -37,6 +43,13 @@ export default function LiveProctoring() {
   const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'WORKING' | 'LOCKED_VIOLATION' | 'SUBMITTED'
   const [liveStudents, setLiveStudents] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // State Siaran Pengumuman Langsung (Live Announcement Broadcast)
+  const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [broadcastUrgency, setBroadcastUrgency] = useState('INFO'); // 'INFO' | 'WARNING' | 'URGENT'
+  const [broadcastHistory, setBroadcastHistory] = useState([]);
+  const [broadcastAlertToast, setBroadcastAlertToast] = useState('');
 
   // 1. Ambil daftar sesi ujian dari backend
   useEffect(() => {
@@ -171,7 +184,7 @@ export default function LiveProctoring() {
     );
   }, []);
 
-  const { isConnected, sendUnlockCommand, sendDisqualifyCommand } = useProctorSocket(
+  const { isConnected, sendUnlockCommand, sendDisqualifyCommand, sendAnnouncement } = useProctorSocket(
     selectedSessionId,
     {
       onStudentLocked: handleStudentLocked,
@@ -181,6 +194,30 @@ export default function LiveProctoring() {
       onNetworkHeartbeat: handleNetworkHeartbeat
     }
   );
+
+  // Handler Kirim Siaran Pengumuman
+  const handleSendBroadcast = (e) => {
+    if (e) e.preventDefault();
+    const trimmed = broadcastMessage.trim();
+    if (!trimmed) return;
+
+    const sender = currentUser?.full_name || 'Guru Pengawas';
+    sendAnnouncement(trimmed, broadcastUrgency, sender);
+
+    const newRecord = {
+      id: Date.now(),
+      message: trimmed,
+      urgency: broadcastUrgency,
+      sender: sender,
+      time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+    };
+
+    setBroadcastHistory(prev => [newRecord, ...prev]);
+    setBroadcastMessage('');
+    setIsBroadcastModalOpen(false);
+    setBroadcastAlertToast('Siaran pengumuman berhasil dikirim ke seluruh layar siswa!');
+    setTimeout(() => setBroadcastAlertToast(''), 4500);
+  };
 
   const currentSession = availableSessions.find((s) => s.id === selectedSessionId) || availableSessions[0];
 
@@ -270,6 +307,16 @@ export default function LiveProctoring() {
             )}
           </div>
 
+          {/* Tombol Kirim Siaran ke Siswa */}
+          <button
+            onClick={() => setIsBroadcastModalOpen(true)}
+            className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm shadow-indigo-300"
+            title="Kirim Siaran Pengumuman ke Seluruh Siswa"
+          >
+            <Megaphone className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Kirim Siaran Siswa</span>
+          </button>
+
           <button
             onClick={fetchSessionStatus}
             disabled={isLoading}
@@ -280,6 +327,14 @@ export default function LiveProctoring() {
           </button>
         </div>
       </div>
+
+      {/* Toast Sukses Broadcast */}
+      {broadcastAlertToast && (
+        <div className="p-3.5 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-xl text-xs md:text-sm font-semibold flex items-center gap-2 shadow-sm animate-fadeIn">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>{broadcastAlertToast}</span>
+        </div>
+      )}
 
       {/* Bar Filter Sesi Ujian & Ringkasan Status (Tebal & Berdimensi) */}
       <div className="bg-white rounded-2xl p-5 border-2 border-slate-200 shadow-md space-y-4">
@@ -524,7 +579,7 @@ export default function LiveProctoring() {
                     </button>
                   ) : isSubmitted ? (
                     <div className="flex-1 py-2.5 px-3 bg-blue-50 text-blue-900 border-2 border-blue-300 rounded-xl text-xs font-black text-center shadow-sm flex items-center justify-center gap-1.5">
-                      <CheckCircle className="w-3.5 h-3.5 text-blue-600" />
+                      <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
                       Selesai Terkirim
                     </div>
                   ) : (
@@ -557,6 +612,135 @@ export default function LiveProctoring() {
           </div>
         )}
       </div>
+
+      {/* MODAL SIARAN PENGUMUMAN LANGSUNG KE SISWA */}
+      {isBroadcastModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 my-8">
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center shrink-0">
+                  <Megaphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-800">
+                    Siaran Pengumuman Pengawas
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Kirim ralat soal atau instruksi waktu langsung ke layar seluruh siswa aktif.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsBroadcastModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSendBroadcast} className="space-y-4">
+              {/* Urgensi Level */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Tingkat Urgensi Pengumuman:
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBroadcastUrgency('INFO')}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border-2 transition text-center ${
+                      broadcastUrgency === 'INFO'
+                        ? 'bg-blue-50 border-blue-500 text-blue-800 shadow-sm'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    ℹ️ Info Umum
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBroadcastUrgency('WARNING')}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border-2 transition text-center ${
+                      broadcastUrgency === 'WARNING'
+                        ? 'bg-amber-50 border-amber-500 text-amber-800 shadow-sm'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    ⚠️ Peringatan
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBroadcastUrgency('URGENT')}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border-2 transition text-center ${
+                      broadcastUrgency === 'URGENT'
+                        ? 'bg-rose-50 border-rose-500 text-rose-800 shadow-sm'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    🚨 Ralat Vital
+                  </button>
+                </div>
+              </div>
+
+              {/* Textarea Pesan */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Isi Pesan Pengumuman / Ralat Soal:
+                </label>
+                <textarea
+                  rows={4}
+                  required
+                  placeholder="Contoh: Perhatian siswa, untuk Soal No. 8 satuan yang dimaksud adalah cm bukan meter. Waktu tersisa 15 menit lagi."
+                  value={broadcastMessage}
+                  onChange={(e) => setBroadcastMessage(e.target.value)}
+                  className="w-full p-3 text-xs md:text-sm rounded-xl border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 outline-none transition resize-none font-medium leading-relaxed"
+                />
+              </div>
+
+              {/* Riwayat Pengumuman Sebelumnya (jika ada) */}
+              {broadcastHistory.length > 0 && (
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+                  <div className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                    Riwayat Siaran Sesi Ini:
+                  </div>
+                  <div className="max-h-28 overflow-y-auto space-y-1.5 pr-1 divide-y divide-slate-200/60 text-xs">
+                    {broadcastHistory.map((h) => (
+                      <div key={h.id} className="pt-1.5 first:pt-0">
+                        <div className="flex items-center justify-between text-[10px] text-slate-400">
+                          <span className="font-semibold text-slate-700">[{h.urgency}] {h.time}</span>
+                          <span>Oleh: {h.sender}</span>
+                        </div>
+                        <p className="text-slate-800 text-[11px] mt-0.5 line-clamp-2">
+                          {h.message}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Tombol Aksi */}
+              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsBroadcastModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={!broadcastMessage.trim()}
+                  className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-indigo-600/30 active:scale-95 disabled:opacity-50"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Kirim ke Seluruh Siswa</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

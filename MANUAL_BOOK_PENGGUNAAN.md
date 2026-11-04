@@ -315,6 +315,42 @@ Halaman ini adalah pusat komando guru saat ujian berlangsung untuk mengawasi kej
 - **Membuka Kunci Layar Siswa (Unlock):**
   - Jika siswa yang terkunci telah ditegur oleh pengawas, klik tombol hijau **"Buka Kunci Layar"** pada kartu siswa tersebut di layar monitor guru.
   - Seketika itu juga layar siswa akan terbuka kembali secara otomatis tanpa perlu memuat ulang (*refresh*) halaman siswa.
+- **Siaran Pengumuman Langsung Pengawas (Live Broadcast Announcement):**
+  - Pengawas dapat memberikan ralat soal darurat, klarifikasi opsi, atau pengingat batas waktu ke seluruh peserta ujian tanpa perlu bersuara atau mengganggu konsentrasi ruangan.
+  - Klik tombol ungu **"Kirim Siaran Siswa"** (ikon `Megaphone`) di bar toolbar Live Proctoring.
+  - Pilih tingkat urgensi:
+    - ℹ️ **Info Umum:** Klarifikasi biasa (warna biru).
+    - ⚠️ **Peringatan:** Peringatan waktu tersisa (warna amber/kuning).
+    - 🚨 **Ralat Vital:** Ralat redaksi soal atau kunci jawaban krusial (warna merah/rose).
+  - Tuliskan isi instruksi (misal: *"Perhatian siswa, untuk Soal No. 8 satuan yang dimaksud adalah cm bukan meter"*), lalu klik **Kirim ke Seluruh Siswa**.
+  - Pesan langsung dipancarkan secara instan via WebSocket Daphne dan muncul sebagai **Floating Announcement Banner** melayang di layar seluruh siswa aktif tanpa membatalkan mode Fullscreen lockdown.
+
+---
+
+### 3.7. Menu Khusus: Koreksi Jawaban Esai & Rubrik Penilaian Manual Guru (/teacher/grading)
+Untuk paket ujian yang memiliki butir pertanyaan uraian / esai (`ESSAY`), sistem menyediakan workspace khusus bagi guru untuk mengevaluasi jawaban siswa secara terstruktur:
+
+- **Membuka Menu:** Klik menu **"Koreksi Esai"** (`/teacher/grading`) pada bilah navigasi samping (*sidebar*).
+- **Alur Kerja Pemeriksaan Esai:**
+  1. **Pilih Sesi Ujian:** Pilih sesi asesmen aktif dari dropdown di sudut kanan atas.
+  2. **Monitoring Status Koreksi:** Perhatikan 4 kartu statistik di bagian atas:
+     - **Total Peserta:** Jumlah siswa yang mengikuti sesi ujian.
+     - **Butir Soal Esai:** Jumlah pertanyaan bertipe esai pada paket ujian tersebut.
+     - **Perlu Dikoreksi:** Jumlah siswa yang lembar esainya belum tuntas dinilai.
+     - **Selesai Dikoreksi:** Jumlah siswa yang seluruh butir esainya telah diberikan skor.
+  3. **Panel Daftar Siswa (Sisi Kiri):**
+     - Dilengkapi fitur pencarian nama atau NISN, serta tab penyaring (*Semua*, *Perlu Koreksi*, dan *Selesai*).
+     - Menampilkan indikator kemajuan (misal: `1/2 Dinilai`), status lencana (Selesai / Belum Lengkap), dan total akumulasi nilai siswa saat ini.
+  4. **Workspace Lembar Jawaban & Form Penilaian (Sisi Kanan):**
+     - Menampilkan teks pertanyaan soal esai lengkap dengan rumus matematika KaTeX bila ada.
+     - Menampilkan bobot nilai maksimal per-nomor soal (misal: 20 poin).
+     - Menampilkan **Lembar Jawaban Siswa** persis seperti yang diketikkan siswa. Jika siswa tidak menjawab, muncul keterangan *"Lembar jawaban kosong"*.
+     - **Input Skor Angka:** Masukkan nilai skor angka ($0$ s/d skor maksimal soal). Disediakan tombol jalan pintas **"Maks"** untuk memberikan skor sempurna secara cepat.
+     - **Catatan / Umpan Balik Guru (Feedback):** Guru dapat mengetikkan catatan konstruktif untuk siswa (contoh: *"Penjelasan fotosintesis sudah tepat, namun reaksi gelap belum disebutkan"*).
+     - Klik **"Simpan"** pada butir soal yang bersangkutan.
+  5. **Akumulasi Otomatis ke E-Jurnal:**
+     - Nilai esai yang disimpan otomatis diakumulasikan ke `total_score` siswa (menggabungkan nilai otomatis soal pilihan ganda/objektif + nilai esai manual).
+     - Nilai akhir di menu **E-Jurnal Ujian** otomatis ter-update secara real-time tanpa perlu proses kalkulasi ulang terpisah.
 
 ---
 

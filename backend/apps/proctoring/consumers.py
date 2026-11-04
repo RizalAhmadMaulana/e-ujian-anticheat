@@ -138,6 +138,29 @@ class ProctoringConsumer(AsyncJsonWebsocketConsumer):
                     }
                 )
 
+        # ========================================================
+        # 5. AKSI GURU: SIARAN PENGUMUMAN KE SELURUH SISWA (BROADCAST)
+        # ========================================================
+        elif action in ['BROADCAST_ANNOUNCEMENT', 'SEND_ANNOUNCEMENT']:
+            message = content.get('message', '').strip()
+            urgency = content.get('urgency', 'INFO')  # 'INFO' | 'WARNING' | 'CRITICAL'
+            sender_name = content.get('sender_name') or 'Pengawas Ruangan'
+
+            if message:
+                await self.channel_layer.group_send(
+                    self.group_name,
+                    {
+                        "type": "broadcast_message",
+                        "data": {
+                            "event": "ANNOUNCEMENT_BROADCAST",
+                            "message": message,
+                            "urgency": urgency,
+                            "sender_name": sender_name,
+                            "timestamp": timezone.now().strftime("%H:%M:%S")
+                        }
+                    }
+                )
+
     async def broadcast_message(self, event):
         """Handler untuk meneruskan payload event ke WebSocket client"""
         await self.send_json(event['data'])

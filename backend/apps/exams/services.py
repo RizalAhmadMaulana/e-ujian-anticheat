@@ -135,9 +135,21 @@ def calculate_auto_grading_score(attempt, answers_dict: dict) -> Decimal:
                     ratio = Decimal(str(correct_count)) / Decimal(str(len(pairs)))
                     total_score += (q_points * ratio).quantize(Decimal('0.01'))
 
-    # Simpan skor dan jawaban ke database
+    # Tambahkan akumulasi nilai esai manual (jika guru telah menilai butir esai)
+    essay_total = Decimal('0.00')
+    if hasattr(attempt, 'essay_scores') and attempt.essay_scores:
+        for val in attempt.essay_scores.values():
+            if isinstance(val, dict) and 'score' in val:
+                try:
+                    essay_total += Decimal(str(val['score']))
+                except Exception:
+                    pass
+
+    total_score += essay_total
     attempt.total_score = total_score
     attempt.answers_json = answers_dict
+    attempt.save(update_fields=['total_score', 'answers_json'])
+    return total_score
     attempt.save(update_fields=['total_score', 'answers_json'])
 
     return total_score

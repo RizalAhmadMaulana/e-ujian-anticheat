@@ -152,6 +152,19 @@ export const verifyExitPasswordApi = async (sessionId, exitPassword) => {
   return response.data;
 };
 
+// -------------------------------------------------------------
+// PENILAIAN & KOREKSI ESAI GURU (ROLE GURU)
+// -------------------------------------------------------------
+export const getEssaySubmissionsApi = async (sessionId) => {
+  const response = await axiosInstance.get(`/exams/sessions/${sessionId}/essay-submissions/`);
+  return response.data;
+};
+
+export const saveEssayGradeApi = async (sessionId, payload) => {
+  const response = await axiosInstance.post(`/exams/sessions/${sessionId}/grade-essay/`, payload);
+  return response.data;
+};
+
 export const examApi = {
   getPackagesApi,
   getPackageDetailApi,
@@ -171,6 +184,8 @@ export const examApi = {
   startExamAttemptApi,
   submitExamAnswersApi,
   verifyExitPasswordApi,
+  getEssaySubmissionsApi,
+  saveEssayGradeApi,
 
   // Aliases for compatibility
   getPackages: getPackagesApi,
@@ -191,6 +206,8 @@ export const examApi = {
   startAttempt: startExamAttemptApi,
   submitAttempt: submitExamAnswersApi,
   verifyExitPassword: verifyExitPasswordApi,
+  getEssaySubmissions: getEssaySubmissionsApi,
+  saveEssayGrade: saveEssayGradeApi,
 };
 
 export default examApi;

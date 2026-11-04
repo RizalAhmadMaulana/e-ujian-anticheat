@@ -348,7 +348,7 @@ Setelah masuk melalui portal login terpadu (`/login`) menggunakan **NIP** dan ka
 
 ---
 
-### Menu 8: Ruang Pengawas Real-Time (Live Proctoring & Dual Unlock)
+### Menu 8: Ruang Pengawas Real-Time (Live Proctoring, Dual Unlock & Live Broadcast Announcement)
 - **Rute:** `/teacher/proctoring`
 - **Fungsi:** Pusat monitoring ujian live via WebSocket tanpa perlu me-refresh browser.
 - **Langkah-langkah:**
@@ -360,10 +360,28 @@ Setelah masuk melalui portal login terpadu (`/login`) menggunakan **NIP** dan ka
   3. **Dual Unlock (Buka Kunci Layar 100% Fleksibel):**
      - **Metode 1 (Remote Guru):** Guru mengklik tombol hijau **"Buka Kunci Layar"** pada kartu siswa; sinyal WebSocket dikirim dan layar siswa seketika terbuka kembali ke fullscreen.
      - **Metode 2 (Mandiri Siswa):** Siswa memasukkan **PIN Pengawas Ruangan** yang sah pada formulir layar merah lalu klik **"Buka Kunci"**; layar seketika kembali ke arena ujian dengan masa imunitas sensor 5 detik.
+  4. **Siaran Pengumuman Langsung Pengawas (Live Broadcast Announcement):**
+     - Klik tombol ungu **"Kirim Siaran Siswa"** (ikon `Megaphone`).
+     - Tentukan tingkat urgensi: `ℹ️ Info Umum`, `⚠️ Peringatan Waktu`, atau `🚨 Ralat Vital`.
+     - Tuliskan pesan instruksi atau koreksi nomor soal tertentu, lalu klik **"Kirim ke Seluruh Siswa"**.
+     - Pesan seketika muncul sebagai **Floating Announcement Banner** melayang di atas arena ujian seluruh siswa aktif tanpa mengganggu fullscreen lockdown.
 
 ---
 
-### Menu 9: E-Jurnal & Rekapitulasi Berita Acara (Ekspor PDF/Excel)
+### Menu 9: Koreksi Jawaban Esai Guru & Rubrik Penilaian Manual (/teacher/grading)
+- **Rute:** `/teacher/grading`
+- **Fungsi:** Workspace penilaian terpadu bagi guru untuk mengoreksi lembar jawaban uraian/esai siswa, memberikan skor nilai terbobot, dan mencatat catatan evaluasi/umpan balik.
+- **Fitur Utama:**
+  1. **Pemilihan Sesi Ujian:** Memuat paket soal aktif dan menampilkan hanya paket yang memiliki butir pertanyaan esai.
+  2. **4 Kartu Ringkasan Progres:** Total Peserta, Butir Soal Esai, Siswa Perlu Dikoreksi, dan Siswa Selesai Dinilai.
+  3. **Panel Siswa & Quick Filter:** Tab penyaring (*Semua*, *Perlu Koreksi*, *Selesai*) serta pencarian cepat berdasarkan Nama Siswa atau NISN.
+  4. **Rubrik Nilai Fleksibel:** Guru dapat memasukkan skor angka dari 0 sampai batas maksimal butir soal, dilengkapi tombol cepat nilai **"Maks"**.
+  5. **Catatan / Umpan Balik Guru (Feedback):** Kolom input catatan guru untuk memberikan arahan perbaikan materi bagi siswa.
+  6. **Akumulasi Otomatis ke Total Nilai & E-Jurnal:** Nilai esai langsung diintegrasikan dengan skor otomatis pilihan ganda ke `total_score` dan langsung sinkron ke E-Jurnal Berita Acara tanpa proses kalkulasi manual terpisah.
+
+---
+
+### Menu 10: E-Jurnal & Rekapitulasi Berita Acara (Ekspor PDF/Excel)
 - **Rute:** `/teacher/ejournal`
 - **Fungsi:** Merekap nilai, kehadiran, log pelanggaran, dan mencetak berita acara resmi standar dinas.
 - **Langkah-langkah:**

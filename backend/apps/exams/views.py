@@ -487,4 +487,144 @@ class ImportExcelQuestionsView(APIView):
         }, status=status.HTTP_201_CREATED)
 
 
+class SessionEssaySubmissionsView(APIView):
+    """
+    GET /api/exams/sessions/<uuid:session_id>/essay-submissions/
+    Mengambil daftar butir soal esai dan lembar jawaban seluruh siswa untuk dikoreksi guru
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, session_id):
+        session = get_object_or_404(ExamSession, id=session_id)
+        
+        # Ambil soal-soal bertipe ESSAY pada paket sesi
+        essay_questions = Question.objects.filter(
+            package=session.package,
+            question_type=Question.QuestionTypeChoices.ESSAY
+        ).order_by('order_number')
+
+        questions_data = [
+            {
+                "id": str(q.id),
+                "order_number": q.order_number,
+                "text": q.question_text,
+                "image_url": q.image_url.url if q.image_url else None,
+                "points": q.points
+            }
+            for q in essay_questions
+        ]
+
+        # Ambil seluruh attempt siswa pada sesi ini
+        attempts = StudentAttempt.objects.filter(session=session).select_related('student').order_by('student__full_name')
+
+        submissions = []
+        for att in attempts:
+            answers = att.answers_json or {}
+            essay_scores = att.essay_scores or {}
+
+            student_essay_data = []
+            for q in essay_questions:
+                q_id_str = str(q.id)
+                # Siswa mungkin menyimpan jawaban dengan ID atau q_{order_number}
+                student_answer_text = answers.get(q_id_str) or answers.get(f"q_{q.order_number}") or ""
+                grading_info = essay_scores.get(q_id_str, {})
+
+                student_essay_data.append({
+                    "question_id": q_id_str,
+                    "order_number": q.order_number,
+                    "student_answer": student_answer_text,
+                    "max_points": q.points,
+                    "score": grading_info.get('score'),
+                    "feedback": grading_info.get('feedback', ''),
+                    "graded_at": grading_info.get('graded_at'),
+                    "is_graded": grading_info.get('score') is not None
+                })
+
+            submissions.append({
+                "attempt_id": str(att.id),
+                "student_id": att.student.id,
+                "student_name": att.student.full_name,
+                "nisn": att.student.nisn,
+                "classroom": att.student.classroom.name if getattr(att.student, 'classroom', None) else session.classroom.name,
+                "status": att.status,
+                "status_label": att.get_status_display(),
+                "total_score": float(att.total_score) if att.total_score is not None else 0.0,
+                "answers": student_essay_data
+            })
+
+        return Response({
+            "success": True,
+            "session_id": str(session.id),
+            "session_title": session.title,
+            "subject_name": session.package.subject_name,
+            "classroom": session.classroom.name,
+            "total_essay_questions": len(questions_data),
+            "essay_questions": questions_data,
+            "submissions": submissions
+        }, status=status.HTTP_200_OK)
+
+
+class GradeEssaySubmissionView(APIView):
+    """
+    POST /api/exams/sessions/<uuid:session_id>/grade-essay/
+    Guru menyimpan skor nilai esai dan komentar umpan balik untuk butir soal tertentu
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, session_id):
+        session = get_object_or_404(ExamSession, id=session_id)
+        attempt_id = request.data.get('attempt_id')
+        question_id = request.data.get('question_id')
+        raw_score = request.data.get('score')
+        feedback = request.data.get('feedback', '').strip()
+
+        if not attempt_id or not question_id or raw_score is None:
+            return Response(
+                {"error": "Parameter attempt_id, question_id, dan score wajib disertakan."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        attempt = get_object_or_404(StudentAttempt, id=attempt_id, session=session)
+        question = get_object_or_404(Question, id=question_id, package=session.package)
+
+        try:
+            score = float(raw_score)
+        except (ValueError, TypeError):
+            return Response({"error": "Format skor nilai tidak valid."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if score < 0:
+            return Response({"error": "Skor nilai tidak boleh negatif."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if score > float(question.points):
+            return Response(
+                {"error": f"Skor nilai ({score}) melebihi bobot poin maksimal butir soal ({question.points})."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Update essay_scores
+        current_scores = attempt.essay_scores or {}
+        current_scores[str(question_id)] = {
+            "score": score,
+            "max_points": question.points,
+            "feedback": feedback,
+            "graded_at": timezone.now().isoformat(),
+            "graded_by": request.user.full_name or request.user.username
+        }
+        attempt.essay_scores = current_scores
+        attempt.save(update_fields=['essay_scores'])
+
+        # Hitung ulang total score secara otomatis
+        recalculated_total = calculate_auto_grading_score(attempt, attempt.answers_json or {})
+
+        return Response({
+            "success": True,
+            "message": f"Nilai esai nomor {question.order_number} berhasil disimpan.",
+            "attempt_id": str(attempt.id),
+            "question_id": str(question.id),
+            "score": score,
+            "feedback": feedback,
+            "total_score": float(recalculated_total) if recalculated_total is not None else float(attempt.total_score or 0)
+        }, status=status.HTTP_200_OK)
+
+
 

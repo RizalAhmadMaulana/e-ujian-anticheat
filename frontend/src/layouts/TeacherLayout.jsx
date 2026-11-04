@@ -19,7 +19,8 @@ import {
   UserCheck, 
   GraduationCap, 
   ShieldAlert, 
-  Bell 
+  Bell,
+  FileCheck 
 } from 'lucide-react';
 import WelcomeProfileModal from '../components/modals/WelcomeProfileModal';
 
@@ -95,6 +96,11 @@ export default function TeacherLayout() {
       icon: Radio, 
       badge: lockedStudentsCount > 0 ? `${lockedStudentsCount} Terkunci` : null,
       isAlert: lockedStudentsCount > 0 
+    },
+    { 
+      to: '/teacher/grading', 
+      label: 'Koreksi Esai', 
+      icon: FileCheck 
     },
     { 
       to: '/teacher/ejournal', 

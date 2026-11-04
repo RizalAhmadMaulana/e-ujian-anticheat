@@ -52,6 +52,11 @@ class StudentAttempt(models.Model):
         blank=True, 
         verbose_name="Skor Akhir"
     )
+    essay_scores = models.JSONField(
+        default=dict, 
+        blank=True, 
+        verbose_name="Penilaian Esai Guru (JSON)"
+    )
     network_latency_ms = models.IntegerField(default=0, verbose_name="Latensi Jaringan Siswa (ms)")
     started_at = models.DateTimeField(auto_now_add=True, verbose_name="Waktu Mulai")
     finished_at = models.DateTimeField(null=True, blank=True, verbose_name="Waktu Selesai")

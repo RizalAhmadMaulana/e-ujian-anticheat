@@ -12,6 +12,8 @@ from .views import (
     DownloadQuestionTemplateExcelView,
     ImportDocxQuestionsView,
     ImportExcelQuestionsView,
+    SessionEssaySubmissionsView,
+    GradeEssaySubmissionView,
 )
 
 urlpatterns = [
@@ -38,5 +40,9 @@ urlpatterns = [
     path('sessions/<uuid:session_id>/start/', StartExamSessionView.as_view(), name='session_start_exam'),
     path('sessions/<uuid:session_id>/submit/', SubmitExamAnswersView.as_view(), name='session_submit_answers'),
     path('sessions/<uuid:session_id>/verify-exit/', VerifyExitPasswordView.as_view(), name='session_verify_exit'),
+
+    # Koreksi Esai Guru
+    path('sessions/<uuid:session_id>/essay-submissions/', SessionEssaySubmissionsView.as_view(), name='session_essay_submissions'),
+    path('sessions/<uuid:session_id>/grade-essay/', GradeEssaySubmissionView.as_view(), name='session_grade_essay'),
 ]
 

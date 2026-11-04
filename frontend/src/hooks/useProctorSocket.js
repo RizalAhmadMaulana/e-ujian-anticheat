@@ -80,6 +80,12 @@ export const useProctorSocket = (sessionId, callbacks = {}) => {
               }
               break;
 
+            case 'ANNOUNCEMENT_BROADCAST':
+              if (callbacksRef.current.onAnnouncement) {
+                callbacksRef.current.onAnnouncement(data);
+              }
+              break;
+
             default:
               break;
           }
@@ -157,6 +163,15 @@ export const useProctorSocket = (sessionId, callbacks = {}) => {
     });
   }, [sendMessage]);
 
+  // 5. Guru Mengirim Siaran Pengumuman Instan ke Seluruh Siswa
+  const sendAnnouncement = useCallback((message, urgency = 'INFO', senderName = 'Guru Pengawas') => {
+    return sendMessage('BROADCAST_ANNOUNCEMENT', {
+      message,
+      urgency,
+      sender_name: senderName
+    });
+  }, [sendMessage]);
+
   return {
     isConnected,
     lastMessage,
@@ -164,6 +179,7 @@ export const useProctorSocket = (sessionId, callbacks = {}) => {
     sendUnlockCommand,
     sendDisqualifyCommand,
     notifySubmission,
+    sendAnnouncement,
     sendMessage,
     // Aliases for compatibility
     reportViolation: sendViolationReport,

@@ -32,7 +32,8 @@ import {
   Grid,
   GitCompare,
   ListOrdered,
-  Save
+  Save,
+  Megaphone
 } from 'lucide-react';
 
 export default function ExamWorkspace() {
@@ -58,6 +59,7 @@ export default function ExamWorkspace() {
   const [unlockSuccessToast, setUnlockSuccessToast] = useState('');
   const [supervisorUnlockPin, setSupervisorUnlockPin] = useState('');
   const [unlockError, setUnlockError] = useState('');
+  const [activeAnnouncement, setActiveAnnouncement] = useState(null); // { message, urgency, senderName, timestamp }
 
   // Formatter Jenis Pelanggaran Human-Readable
   const formatViolationType = (type) => {
@@ -144,11 +146,21 @@ export default function ExamWorkspace() {
     }
   }, [activeAttempt.attemptId, navigate]);
 
+  const handleReceiveAnnouncement = useCallback((payload) => {
+    setActiveAnnouncement({
+      message: payload.message,
+      urgency: payload.urgency || 'INFO',
+      senderName: payload.sender_name || 'Guru Pengawas',
+      timestamp: payload.timestamp ? new Date(payload.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+    });
+  }, []);
+
   const { isConnected: isWsConnected, sendViolationReport } = useProctorSocket(
     activeAttempt.sessionId,
     {
       onStudentUnlocked: handleRemoteUnlocked,
-      onStudentDisqualified: handleRemoteDisqualified
+      onStudentDisqualified: handleRemoteDisqualified,
+      onAnnouncement: handleReceiveAnnouncement
     }
   );
 
@@ -527,6 +539,55 @@ export default function ExamWorkspace() {
           </button>
         </div>
       </header>
+
+      {/* ======================================================== */}
+      {/* FLOATING ANNOUNCEMENT BANNER DARI GURU PENGAWAS */}
+      {/* ======================================================== */}
+      {activeAnnouncement && (
+        <div className={`border-b px-4 py-3 shadow-xl z-40 animate-slideDown transition-all ${
+          activeAnnouncement.urgency === 'URGENT'
+            ? 'bg-rose-950/95 border-rose-500 text-rose-100'
+            : activeAnnouncement.urgency === 'WARNING'
+            ? 'bg-amber-950/95 border-amber-500 text-amber-100'
+            : 'bg-indigo-950/95 border-indigo-500 text-indigo-100'
+        }`}>
+          <div className="max-w-4xl mx-auto flex items-start justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${
+                activeAnnouncement.urgency === 'URGENT'
+                  ? 'bg-rose-600 text-white animate-pulse'
+                  : activeAnnouncement.urgency === 'WARNING'
+                  ? 'bg-amber-500 text-slate-950 font-bold'
+                  : 'bg-indigo-600 text-white'
+              }`}>
+                <Megaphone className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-black/40 border border-white/10">
+                    {activeAnnouncement.urgency === 'URGENT' ? '🚨 Ralat Vital' : activeAnnouncement.urgency === 'WARNING' ? '⚠️ Peringatan Pengawas' : '📢 Pengumuman Pengawas'}
+                  </span>
+                  <span className="text-xs text-slate-300 font-semibold">
+                    {activeAnnouncement.senderName} • {activeAnnouncement.timestamp}
+                  </span>
+                </div>
+                <div className="text-sm font-bold text-white mt-1 leading-relaxed">
+                  {activeAnnouncement.message}
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setActiveAnnouncement(null)}
+              className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white text-xs font-bold transition shrink-0 flex items-center gap-1 border border-white/20"
+              title="Tutup Pengumuman"
+            >
+              <span>Mengerti</span>
+              <Check className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ======================================================== */}
       {/* SLIDE-DOWN EXIT PASSWORD BAR DI BAGIAN ATAS */}
