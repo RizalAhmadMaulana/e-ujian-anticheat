@@ -180,5 +180,47 @@ class AttemptStatusAPIView(APIView):
             "attempt_id": str(attempt.id),
             "status": attempt.status,
             "violation_count": attempt.violation_count,
+            "network_latency_ms": attempt.network_latency_ms,
         }, status=status.HTTP_200_OK)
+
+
+class StudentHeartbeatAPIView(APIView):
+    """
+    POST /api/proctoring/attempts/<uuid:attempt_id>/heartbeat/
+    Siswa mengirim sinyal heartbeat & latensi ping (ms) untuk indikator kualitas jaringan
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, attempt_id):
+        attempt = get_object_or_404(StudentAttempt, id=attempt_id)
+        latency = int(request.data.get('latency_ms', 0) or 0)
+        attempt.network_latency_ms = latency
+        attempt.save(update_fields=['network_latency_ms'])
+
+        # Broadcast update latency ke grup pengawas Guru jika ada WebSocket
+        try:
+            from asgiref.sync import async_to_sync
+            from channels.layers import get_channel_layer
+            channel_layer = get_channel_layer()
+            if channel_layer and attempt.session_id:
+                async_to_sync(channel_layer.group_send)(
+                    f"proctoring_{attempt.session_id}",
+                    {
+                        "type": "broadcast_message",
+                        "data": {
+                            "event": "NETWORK_HEARTBEAT",
+                            "attempt_id": str(attempt.id),
+                            "latency_ms": latency
+                        }
+                    }
+                )
+        except Exception:
+            pass
+
+        return Response({
+            "success": True,
+            "latency_ms": latency,
+            "timestamp": timezone.now().isoformat()
+        }, status=status.HTTP_200_OK)
+
 

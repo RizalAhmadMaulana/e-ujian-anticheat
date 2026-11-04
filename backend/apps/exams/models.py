@@ -43,6 +43,10 @@ class ExamPackage(models.Model):
 class Question(models.Model):
     class QuestionTypeChoices(models.TextChoices):
         MULTIPLE_CHOICE = 'MULTIPLE_CHOICE', 'Pilihan Ganda'
+        MULTIPLE_CHOICE_COMPLEX = 'MULTIPLE_CHOICE_COMPLEX', 'Pilihan Ganda Kompleks (Multi-Select)'
+        MATCHING_PAIR = 'MATCHING_PAIR', 'Menjodohkan (Matching Pair)'
+        TRUE_FALSE_MATRIX = 'TRUE_FALSE_MATRIX', 'Tabel Benar/Salah'
+        SHORT_ANSWER = 'SHORT_ANSWER', 'Isian Singkat'
         ESSAY = 'ESSAY', 'Esai'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -55,13 +59,14 @@ class Question(models.Model):
     question_text = models.TextField(verbose_name="Teks Pertanyaan")
     image_url = models.CharField(max_length=500, blank=True, null=True, verbose_name="URL Gambar Soal")
     question_type = models.CharField(
-        max_length=20, 
+        max_length=35, 
         choices=QuestionTypeChoices.choices, 
         default=QuestionTypeChoices.MULTIPLE_CHOICE,
         verbose_name="Tipe Pertanyaan"
     )
     points = models.IntegerField(default=10, verbose_name="Bobot Poin")
     order_number = models.IntegerField(default=1, verbose_name="Nomor Urut")
+    extra_data = models.JSONField(default=dict, blank=True, verbose_name="Data Format Tambahan")
 
     class Meta:
         db_table = 'questions'
@@ -116,6 +121,8 @@ class ExamSession(models.Model):
     exit_password = models.CharField(max_length=50, verbose_name="Password Keluar (Token Keluar)")
     supervisor_pin = models.CharField(max_length=50, default='PIN-1234', verbose_name="PIN Pengawas Ruangan")
     strict_lockdown = models.BooleanField(default=True, verbose_name="Zero-Tolerance Lockdown Aktif")
+    shuffle_questions = models.BooleanField(default=False, verbose_name="Acak Urutan Nomor Soal")
+    shuffle_options = models.BooleanField(default=False, verbose_name="Acak Urutan Pilihan Opsi")
     is_active = models.BooleanField(default=True, verbose_name="Status Sesi Aktif")
     created_at = models.DateTimeField(auto_now_add=True)
 

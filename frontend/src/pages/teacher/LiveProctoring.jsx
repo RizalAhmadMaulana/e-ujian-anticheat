@@ -77,6 +77,7 @@ export default function LiveProctoring() {
           screenOrientation: s.screen_orientation,
           violationCount: s.violation_count,
           score: s.total_score,
+          networkLatencyMs: s.network_latency_ms || 0,
           startedAt: s.started_at ? new Date(s.started_at).toLocaleTimeString('id-ID') : '-',
           finishedAt: s.finished_at ? new Date(s.finished_at).toLocaleTimeString('id-ID') : null,
           lastViolation: s.violations && s.violations.length > 0 ? {
@@ -156,13 +157,28 @@ export default function LiveProctoring() {
     }));
   }, []);
 
+  const handleNetworkHeartbeat = useCallback((payload) => {
+    setLiveStudents((prev) =>
+      prev.map((student) => {
+        if (student.attemptId === payload.attempt_id) {
+          return {
+            ...student,
+            networkLatencyMs: payload.latency_ms || 0
+          };
+        }
+        return student;
+      })
+    );
+  }, []);
+
   const { isConnected, sendUnlockCommand, sendDisqualifyCommand } = useProctorSocket(
     selectedSessionId,
     {
       onStudentLocked: handleStudentLocked,
       onStudentUnlocked: handleStudentUnlocked,
       onStudentDisqualified: handleStudentDisqualified,
-      onStudentSubmitted: handleStudentSubmitted
+      onStudentSubmitted: handleStudentSubmitted,
+      onNetworkHeartbeat: handleNetworkHeartbeat
     }
   );
 
@@ -429,6 +445,37 @@ export default function LiveProctoring() {
                     <div className="flex items-center justify-between">
                       <span className="text-slate-600 font-bold">Waktu Selesai:</span>
                       <span className="font-bold text-slate-800">{student.finishedAt || 'Sedang Berjalan'}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-600 font-bold flex items-center gap-1.5">
+                        <Wifi className="w-3.5 h-3.5 text-indigo-600" />
+                        Sinyal & Latensi:
+                      </span>
+                      <span
+                        className={`font-black text-[11px] px-2 py-0.5 rounded border flex items-center gap-1 ${
+                          student.networkLatencyMs > 0 && student.networkLatencyMs < 150
+                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                            : student.networkLatencyMs >= 150 && student.networkLatencyMs < 400
+                            ? 'bg-amber-100 text-amber-800 border-amber-300'
+                            : student.networkLatencyMs >= 400
+                            ? 'bg-rose-100 text-rose-800 border-rose-300'
+                            : 'bg-slate-100 text-slate-600 border-slate-300'
+                        }`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            student.networkLatencyMs > 0 && student.networkLatencyMs < 150
+                              ? 'bg-emerald-500'
+                              : student.networkLatencyMs >= 150 && student.networkLatencyMs < 400
+                              ? 'bg-amber-500'
+                              : student.networkLatencyMs >= 400
+                              ? 'bg-rose-500'
+                              : 'bg-slate-400'
+                          }`}
+                        />
+                        {student.networkLatencyMs ? `${student.networkLatencyMs} ms` : 'Aktif'}
+                      </span>
                     </div>
 
                     <div className="flex items-center justify-between border-t-2 border-slate-200/80 pt-1.5 mt-1">

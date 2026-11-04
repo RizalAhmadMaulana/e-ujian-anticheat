@@ -222,27 +222,42 @@ Menu induk pengendali seluruh akun pengguna sistem (Guru, Siswa, dan Administrat
 
 ---
 
-### 3.6. Menu 5: Bank Soal & Paket Ujian (Hybrid Mode)
-Guru dapat menyusun bank soal menggunakan dua pilihan metode:
+### 3.6. Menu 5: Bank Soal & Paket Ujian Tingkat Lanjut (Standar AKM / ANBK & Import Massal)
+Guru dapat menyusun bank soal menggunakan ragam format butir soal Kurikulum Merdeka / Asesmen Nasional serta fasilitas impor massal:
 
 - **Membuka Menu:** Klik menu **"Bank Soal & Paket Ujian"** (`/teacher/packages`).
 - **Membuat Paket Soal Baru:** Klik tombol **"+ Tambah Paket Soal Baru"**.
-  - **Pilihan A: Soal Mandiri (Native Pilihan Ganda & Esai):**
+  - **Pilihan A: Soal Mandiri Tingkat Lanjut (Ragam Tipe AKM / ANBK):**
     1. Pilih opsi **"Soal Mandiri (Native)"**.
-    2. Isi **Judul Paket Ujian** (contoh: *Ulangan Harian Pemrograman Dasar*).
-    3. Pilih **Kelas Peserta** dan isi **Nama Mata Pelajaran**.
-    4. Pada bagian butir soal:
-       - Tulis teks pertanyaan pada area input soal.
-       - Tentukan opsi jawaban A, B, C, D, dan E.
-       - Berikan centang hijau pada opsi yang menjadi **Kunci Jawaban Benar**.
-       - Tentukan bobot poin soal (contoh: 20 poin).
-       - Klik **"+ Tambah Pilihan Ganda"** atau **"+ Tambah Soal Esai"** untuk menambah nomor soal berikutnya.
-    5. Klik **"Simpan Paket Soal"**.
-  - **Pilihan B: Tautan Google Form / MS Teams (Secure Iframe):**
+    2. Isi **Judul Paket Ujian**, pilih **Kelas Peserta**, dan isi **Nama Mata Pelajaran**.
+    3. **Ragam 6 Tipe Butir Soal Asesmen Standar Nasional:**
+       - **1. Pilihan Ganda Tunggal (`MULTIPLE_CHOICE`):** Memilih 1 opsi jawaban paling benar dari pilihan A s/d E.
+       - **2. Pilihan Ganda Kompleks (`MULTIPLE_CHOICE_COMPLEX`):** Siswa dapat mencentang lebih dari satu pilihan jawaban yang benar (*multi-select checkboxes*) dengan penilaian otomatis proporsional.
+       - **3. Menjodohkan / Pasangan (`MATCHING_PAIR`):** Menghubungkan pernyataan premis kiri dengan pilihan pasangan yang tepat di kolom kanan melalui interaksi dropdown atau pemetaan.
+       - **4. Tabel Benar / Salah (`TRUE_FALSE_MATRIX`):** Matriks tabel pernyataan terstruktur di mana siswa mengevaluasi tiap baris pernyataan dengan memilih kolom Benar atau Salah.
+       - **5. Isian Singkat (`SHORT_ANSWER`):** Siswa mengetikkan jawaban singkat (angka, istilah, rumus pendek) dengan verifikasi otomatis toleran huruf besar/kecil (*case-insensitive*) dan pembersihan spasi berlebih (*trimming*).
+       - **6. Esai Terstruktur (`ESSAY`):** Lembar jawaban uraian terbuka dengan kotak teks terstruktur.
+    4. **Editor Rumus Matematika & Sains (KaTeX + Toolbar Simbol Cepat):**
+       - Guru dapat menyisipkan rumus matematika, fisika, atau kimia menggunakan notasi LaTeX diapit tanda dolar (`$ rumus $` untuk inline, atau `$$ rumus $$` untuk display block).
+       - Tersedia **Formula Toolbar** di atas kotak input teks soal dengan tombol pintas sekali klik untuk simbol umum: Pecahan (`\frac{a}{b}`), Akar Kuadrat (`\sqrt{x}`), Pangkat/Eksponen (`x^{n}`), Indeks Bawah (`x_{i}`), Integral (`\int`), Notasi Sigma (`\sum`), Simbol Pi (`\pi`), Alfa (`\alpha`), Beta (`\beta`), Tanda Derajat (`^\circ`), Simbol Kali silang (`\times`), dan Pembagian (`\div`).
+       - Dilengkapi **Live KaTeX Preview** langsung di bawah input soal sehingga guru dapat melihat pratinjau ketepatan rumus seketika sebelum disimpan.
+    5. **Sisipkan Gambar pada Soal & Pilihan Jawaban:** Guru dapat mengunggah ilustrasi grafis, bagan, atau diagram pada setiap teks pertanyaan maupun tiap opsi pilihan jawaban.
+    6. **Opsi Jawaban Fleksibel & Dinamis:** Bebas menambah opsi baru (`+ Tambahkan Opsi`) atau menghapus opsi tertentu (minimal 2 opsi).
+    7. Klik **"Simpan Paket Soal"**.
+
+  - **Pilihan B: Import Soal Massal via Microsoft Word (.docx) & Excel (.xlsx):**
+    1. Klik tombol **"Import Soal (Word / Excel)"** pada bilah atas Bank Soal.
+    2. **Tab Impor Microsoft Word (`.docx`):**
+       - Guru dapat mengunggah berkas Word yang sudah ada. Parser cerdas akan otomatis membaca nomor soal, paragraf pertanyaan, pilihan opsi jawaban (A, B, C, D), dan kunci jawaban `KUNCI: A` atau teks bertanda tebal (*bold*).
+    3. **Tab Impor Spreadsheet Excel (`.xlsx`):**
+       - Klik tombol **"Unduh Template Excel"** untuk memperoleh template resmi `Template_Import_Soal_E-Ujian.xlsx`.
+       - Isi lembar kerja dengan format kolom baku (`Tipe Soal`, `Teks Soal`, `Poin`, `Opsi A`, `Opsi B`, `Opsi C`, `Opsi D`, `Opsi E`, `Kunci Jawaban`).
+       - Unggah berkas `.xlsx` dan klik **"Mulai Impor Soal"**. Puluhan soal seketika terdaftar ke dalam paket soal tanpa perlu mengetik ulang satu per satu.
+
+  - **Pilihan C: Tautan Google Form / MS Teams (Secure Iframe):**
     1. Pilih opsi **"Link Google Form / Teams"**.
     2. Isi Judul, Kelas, dan Mata Pelajaran.
     3. Masukkan tautan form pada kolom URL:
-       - Contoh URL biasa: `https://docs.google.com/forms/d/e/1FAIpQLSf.../viewform`
        - *Sistem secara otomatis mengubah URL menjadi mode sematan terproteksi (`/viewform?embedded=true`).*
     4. Anda dapat menguji tampilan form dengan menekan tombol **"Uji Tampilan (Preview Iframe)"**.
     5. Klik **"Simpan Paket Soal"**.
@@ -262,7 +277,10 @@ Ruang ujian harus dibuka terlebih dahulu agar siswa dapat mulai mengerjakan sesu
      - **Jadwal Mulai Ujian:** Tanggal Mulai dan Waktu Mulai (jam:menit).
      - **Jadwal Berakhir Ujian:** Tanggal Berakhir dan Waktu Berakhir (jam:menit).
      - *Catatan:* Tanggal dan waktu berakhir harus lebih lambat dari waktu mulai.
-  6. Atur **Password Masuk (Token Masuk)**:
+  6. **Pengacakan Butir Soal & Opsi Jawaban (Item & Choice Randomization):**
+     - Centang **"Acak Urutan Butir Soal"**: Urutan soal diacak secara deterministik per-siswa sehingga nomor 1 pada siswa A berbeda dengan siswa B.
+     - Centang **"Acak Urutan Pilihan (A-E)"**: Posisi pilihan ganda (A, B, C, D) diacak posisinya antar-siswa untuk mematikan potensi menyontek *"nomor 5 jawabannya B"*. Penilaian otomatis backend tetap 100% akurat dan kebal pengacakan.
+  7. Atur **Password Masuk (Token Masuk)**:
      - Dibuat otomatis atau klik acak (contoh: `MSK-2JM4`). Berikan token ini kepada siswa saat ujian dimulai.
   7. Atur **Password Keluar**:
      - Dibuat otomatis atau klik acak (contoh: `KLR-BUR8`).
@@ -438,7 +456,17 @@ Siswa dapat memeriksa biodata diri dan mengamankan akun asesmen mereka secara ma
 ---
 
 ### 4.5. Layar 4: Arena Ujian Terkunci (`/student/exam-workspace`)
-Di arena ujian ini, siswa berada dalam pengawasan ketat:
+Di arena ujian ini, siswa berada dalam pengawasan ketat berteknologi tinggi:
+
+- **⚡ Ketahanan Jaringan & Mode Mandiri (Dual-Layer Auto-Save):**
+  - **Instant Local Mirroring (0 ms):** Setiap kali siswa memilih opsi A-E, mencentang pilihan ganda kompleks, memilih pasangan menjodohkan, mengisi isian singkat, atau mengetik esai, jawaban seketika tersimpan di `localStorage` peramban siswa (`exam_mirror_[attemptId]`).
+  - **Debounced Server Sync (1500 ms):** Jawaban disinkronkan otomatis di latar belakang ke server Django. Jika laptop/HP siswa mati mendadak atau koneksi Wi-Fi putus total, saat masuk kembali seluruh jawaban tersimpan 100% utuh tanpa ada yang hilang.
+- **📡 Indikator Kualitas Sinyal & Latensi Ping Real-Time:**
+  - Di bilah keamanan atas (Security Bar) terdapat indikator sinyal jaringan siswa:
+    - 🟢 **Stabil (<150 ms):** Latensi cepat, pengerjaan optimal.
+    - 🟡 **Sedang (150 - 400 ms):** Latensi menengah, koneksi data lambat.
+    - 🔴 **Terputus (>400 ms):** Sinyal terputus atau offline.
+  - Latensi ini secara otomatis dipancarkan (*heartbeat*) ke layar Live Proctoring guru pengawas.
 
 - **Bagian Atas (Security Bar):**
   - Indikator merah berkedip `REC • Terproteksi`.

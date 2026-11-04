@@ -1,6 +1,9 @@
 import os
 import uuid
+import random
+from io import BytesIO
 from django.conf import settings
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics, permissions, status
@@ -8,9 +11,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
 
-from .models import ExamPackage, ExamSession
+from .models import ExamPackage, ExamSession, Question, QuestionOption
 from .serializers import ExamPackageSerializer, ExamSessionSerializer
 from .services import calculate_auto_grading_score
+from .parsers import parse_docx_questions, parse_excel_questions, generate_question_excel_template
 from apps.accounts.permissions import IsTeacherRole
 from apps.proctoring.models import StudentAttempt
 
@@ -179,6 +183,32 @@ class StartExamSessionView(APIView):
 
         # Ambil paket soal dengan serializer yang context-aware (tanpa is_correct untuk siswa!)
         package_serializer = ExamPackageSerializer(session.package, context={'request': request})
+        package_data = package_serializer.data
+
+        # Pengacakan Butir Soal & Opsi Jawaban Deterministik berbasis Seed (attempt.id)
+        if session.package.exam_type == 'NATIVE_QUESTIONS' and package_data.get('questions'):
+            questions = list(package_data['questions'])
+            rng = random.Random(str(attempt.id))
+
+            if session.shuffle_questions:
+                rng.shuffle(questions)
+                for idx, q in enumerate(questions):
+                    q['order_number'] = idx + 1
+                    q['orderNumber'] = idx + 1
+
+            if session.shuffle_options:
+                labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+                for q in questions:
+                    if q.get('options') and q.get('question_type') in ['MULTIPLE_CHOICE', 'MULTIPLE_CHOICE_COMPLEX']:
+                        opts = list(q['options'])
+                        rng.shuffle(opts)
+                        for o_idx, opt in enumerate(opts):
+                            lbl = labels[o_idx] if o_idx < len(labels) else f"Opt {o_idx + 1}"
+                            opt['option_label'] = lbl
+                            opt['label'] = lbl
+                        q['options'] = opts
+
+            package_data['questions'] = questions
 
         return Response({
             "success": True,
@@ -186,7 +216,7 @@ class StartExamSessionView(APIView):
             "status": attempt.status,
             "screen_orientation": attempt.screen_orientation,
             "duration_minutes": session.duration_minutes,
-            "package": package_serializer.data,
+            "package": package_data,
             "existing_answers": attempt.answers_json,
         }, status=status.HTTP_200_OK)
 
@@ -293,5 +323,168 @@ class ExamImageUploadView(APIView):
             'filename': unique_name,
             'message': 'Gambar berhasil diunggah'
         }, status=status.HTTP_201_CREATED)
+
+
+class DownloadQuestionTemplateExcelView(APIView):
+    """
+    GET /api/exams/packages/template-excel/
+    Unduh template format Excel (.xlsx) resmi untuk import massal butir soal
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        wb = generate_question_excel_template()
+        stream = BytesIO()
+        wb.save(stream)
+        stream.seek(0)
+
+        response = HttpResponse(
+            stream.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="Template_Bank_Soal_E-Ujian.xlsx"'
+        return response
+
+
+class ImportDocxQuestionsView(APIView):
+    """
+    POST /api/exams/packages/import-docx/
+    POST /api/exams/packages/<uuid:pk>/import-docx/
+    Import butir soal massal dari berkas Microsoft Word (.docx)
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, pk=None):
+        file_obj = request.FILES.get('file') or request.FILES.get('docx_file')
+        if not file_obj:
+            return Response({'error': 'Berkas Microsoft Word (.docx) wajib dilampirkan.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not file_obj.name.lower().endswith('.docx'):
+            return Response({'error': 'Format berkas tidak valid. Harap unggah berkas berekstensi .docx'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            parsed_questions = parse_docx_questions(file_obj)
+        except Exception as e:
+            return Response({'error': f'Gagal membaca berkas Word: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not parsed_questions:
+            return Response({'error': 'Tidak ada butir soal yang berhasil terdeteksi dari berkas Word.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Cari atau buat ExamPackage
+        if pk:
+            package = get_object_or_404(ExamPackage, id=pk)
+        else:
+            title = request.data.get('title') or f"Import Word - {os.path.splitext(file_obj.name)[0]}"
+            subject_name = request.data.get('subject_name') or "Mata Pelajaran"
+            package = ExamPackage.objects.create(
+                title=title,
+                subject_name=subject_name,
+                exam_type=ExamPackage.ExamTypeChoices.NATIVE_QUESTIONS,
+                teacher=request.user
+            )
+
+        # Tambahkan pertanyaan dan opsi
+        start_order = package.questions.count()
+        created_count = 0
+        for idx, q_data in enumerate(parsed_questions):
+            options_data = q_data.pop('options', [])
+            q_data.pop('keys', None)
+            order_num = start_order + idx + 1
+            question = Question.objects.create(
+                package=package,
+                question_text=q_data.get('question_text', ''),
+                question_type=q_data.get('question_type', 'MULTIPLE_CHOICE'),
+                points=q_data.get('points', 10),
+                order_number=order_num,
+                extra_data=q_data.get('extra_data', {})
+            )
+            for opt_data in options_data:
+                QuestionOption.objects.create(
+                    question=question,
+                    option_label=opt_data.get('option_label', 'A'),
+                    option_text=opt_data.get('option_text', ''),
+                    is_correct=opt_data.get('is_correct', False)
+                )
+            created_count += 1
+
+        serializer = ExamPackageSerializer(package, context={'request': request})
+        return Response({
+            'success': True,
+            'message': f'Berhasil mengimpor {created_count} butir soal dari dokumen Word.',
+            'package': serializer.data,
+            'imported_count': created_count
+        }, status=status.HTTP_201_CREATED)
+
+
+class ImportExcelQuestionsView(APIView):
+    """
+    POST /api/exams/packages/import-excel/
+    POST /api/exams/packages/<uuid:pk>/import-excel/
+    Import butir soal massal dari berkas Microsoft Excel (.xlsx)
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, pk=None):
+        file_obj = request.FILES.get('file') or request.FILES.get('excel_file')
+        if not file_obj:
+            return Response({'error': 'Berkas Microsoft Excel (.xlsx) wajib dilampirkan.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not file_obj.name.lower().endswith(('.xlsx', '.xlsm')):
+            return Response({'error': 'Format berkas tidak valid. Harap unggah berkas berekstensi .xlsx'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            parsed_questions = parse_excel_questions(file_obj)
+        except Exception as e:
+            return Response({'error': f'Gagal membaca berkas Excel: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not parsed_questions:
+            return Response({'error': 'Tidak ada butir soal yang terdeteksi dari berkas Excel.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Cari atau buat ExamPackage
+        if pk:
+            package = get_object_or_404(ExamPackage, id=pk)
+        else:
+            title = request.data.get('title') or f"Import Excel - {os.path.splitext(file_obj.name)[0]}"
+            subject_name = request.data.get('subject_name') or "Mata Pelajaran"
+            package = ExamPackage.objects.create(
+                title=title,
+                subject_name=subject_name,
+                exam_type=ExamPackage.ExamTypeChoices.NATIVE_QUESTIONS,
+                teacher=request.user
+            )
+
+        start_order = package.questions.count()
+        created_count = 0
+        for idx, q_data in enumerate(parsed_questions):
+            options_data = q_data.pop('options', [])
+            q_data.pop('keys', None)
+            order_num = start_order + idx + 1
+            question = Question.objects.create(
+                package=package,
+                question_text=q_data.get('question_text', ''),
+                question_type=q_data.get('question_type', 'MULTIPLE_CHOICE'),
+                points=q_data.get('points', 10),
+                order_number=order_num,
+                extra_data=q_data.get('extra_data', {})
+            )
+            for opt_data in options_data:
+                QuestionOption.objects.create(
+                    question=question,
+                    option_label=opt_data.get('option_label', 'A'),
+                    option_text=opt_data.get('option_text', ''),
+                    is_correct=opt_data.get('is_correct', False)
+                )
+            created_count += 1
+
+        serializer = ExamPackageSerializer(package, context={'request': request})
+        return Response({
+            'success': True,
+            'message': f'Berhasil mengimpor {created_count} butir soal dari berkas Excel.',
+            'package': serializer.data,
+            'imported_count': created_count
+        }, status=status.HTTP_201_CREATED)
+
 
 

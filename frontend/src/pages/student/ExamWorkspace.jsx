@@ -8,6 +8,8 @@ import { submitExamAnswersApi, verifyExitPasswordApi } from '../../api/examApi';
 import { proctoringApi } from '../../api/proctoringApi';
 import { resolveImageUrl } from '../../utils/imageUrlFormatter';
 import Modal from '../../components/common/Modal';
+import MathText from '../../components/common/MathText';
+import NetworkSignalIndicator from '../../components/common/NetworkSignalIndicator';
 import { 
   ShieldAlert, 
   Lock, 
@@ -25,7 +27,12 @@ import {
   HelpCircle,
   Pin,
   CameraOff,
-  LogOut
+  LogOut,
+  CheckSquare,
+  Grid,
+  GitCompare,
+  ListOrdered,
+  Save
 } from 'lucide-react';
 
 export default function ExamWorkspace() {
@@ -183,6 +190,57 @@ export default function ExamWorkspace() {
 
     return () => clearInterval(pollInterval);
   }, [activeAttempt.isLocked, activeAttempt.attemptId, currentUser, unlockStudent]);
+
+  // -------------------------------------------------------------
+  // DUAL-LAYER AUTO-SAVE (LOCALSTORAGE MIRRORING + DEBOUNCED API)
+  // -------------------------------------------------------------
+  // Layer 1: Instant Local Mirroring
+  useEffect(() => {
+    const mirrorKey = `exam_mirror_${activeAttempt.attemptId || activeAttempt.sessionId || 'current'}`;
+    if (activeAttempt.studentAnswers && Object.keys(activeAttempt.studentAnswers).length > 0) {
+      localStorage.setItem(mirrorKey, JSON.stringify(activeAttempt.studentAnswers));
+    }
+  }, [activeAttempt.studentAnswers, activeAttempt.attemptId, activeAttempt.sessionId]);
+
+  // Restore dari LocalStorage jika browser ter-refresh / restart
+  useEffect(() => {
+    const mirrorKey = `exam_mirror_${activeAttempt.attemptId || activeAttempt.sessionId || 'current'}`;
+    const cached = localStorage.getItem(mirrorKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed && typeof parsed === 'object') {
+          Object.entries(parsed).forEach(([qId, ans]) => {
+            if (activeAttempt.studentAnswers[qId] === undefined) {
+              setStudentAnswer(qId, ans);
+            }
+          });
+        }
+      } catch (err) {
+        console.warn('Gagal membaca mirror localStorage:', err);
+      }
+    }
+  }, [activeAttempt.attemptId, activeAttempt.sessionId]);
+
+  // Layer 2: Debounced Server Sync (1500ms)
+  const syncTimeoutRef = useRef(null);
+  useEffect(() => {
+    if (!activeAttempt.sessionId || !activeAttempt.studentAnswers || Object.keys(activeAttempt.studentAnswers).length === 0) return;
+    if (selectedPackage?.examType !== 'NATIVE_QUESTIONS') return;
+
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    syncTimeoutRef.current = setTimeout(async () => {
+      try {
+        await submitExamAnswersApi(activeAttempt.sessionId, activeAttempt.studentAnswers);
+      } catch (err) {
+        // Fallback hening: Jawaban tetap 100% aman tersimpan di Layer 1 LocalStorage
+      }
+    }, 1500);
+
+    return () => {
+      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    };
+  }, [activeAttempt.studentAnswers, activeAttempt.sessionId, selectedPackage?.examType]);
 
   // Countdown Timer Interval
   useEffect(() => {
@@ -411,8 +469,18 @@ export default function ExamWorkspace() {
           </div>
         </div>
 
-        {/* Countdown Timer & Action Bar */}
+        {/* Countdown Timer, Indikator Sinyal & Action Bar */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Indikator Sinyal Jaringan & Ping Real-Time */}
+          <NetworkSignalIndicator
+            attemptId={activeAttempt.attemptId}
+            onPingRecorded={(ms) => {
+              if (activeAttempt.attemptId) {
+                proctoringApi.sendHeartbeat(activeAttempt.attemptId, ms).catch(() => {});
+              }
+            }}
+          />
+
           {/* Tombol Keluar Simulasi (Khusus Mode Simulasi Guru) */}
           {activeAttempt.isSimulation && (
             <button
@@ -663,15 +731,22 @@ export default function ExamWorkspace() {
                         <span>Ragu-ragu</span>
                       </button>
 
-                      <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
-                        {currentQuestion.questionType === 'MULTIPLE_CHOICE' ? 'Pilihan Ganda' : 'Esai'}
+                      <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
+                        {({
+                          MULTIPLE_CHOICE: 'Pilihan Ganda',
+                          MULTIPLE_CHOICE_COMPLEX: 'Pilihan Ganda Kompleks (Multi-Centang)',
+                          SHORT_ANSWER: 'Isian Singkat',
+                          TRUE_FALSE_MATRIX: 'Benar / Salah',
+                          MATCHING_PAIR: 'Menjodohkan Pasangan',
+                          ESSAY: 'Uraian / Esai',
+                        })[currentQuestion.questionType || currentQuestion.question_type] || 'Soal Ujian'}
                       </span>
                     </div>
                   </div>
 
-                  {/* Teks Pertanyaan Soal */}
+                  {/* Teks Pertanyaan Soal (Dukungan Tipografi Rumus Matematika KaTeX) */}
                   <div className="text-sm sm:text-base text-slate-100 font-semibold leading-relaxed">
-                    {currentQuestion.questionText || currentQuestion.question_text}
+                    <MathText text={currentQuestion.questionText || currentQuestion.question_text || ''} />
                   </div>
 
                   {/* Gambar Pertanyaan Soal (Jika Ada) */}
@@ -685,10 +760,14 @@ export default function ExamWorkspace() {
                     </div>
                   )}
 
-                  {/* Pilihan Jawaban Pilihan Ganda (A-E / Dinamis) */}
-                  {currentQuestion.questionType === 'MULTIPLE_CHOICE' ? (
+                  {/* ======================================================== */}
+                  {/* RAGAM INTERAKTIF TIPE SOAL (STANDAR AKM & ANBK)           */}
+                  {/* ======================================================== */}
+
+                  {/* 1. PILIHAN GANDA BIASA (1 Jawaban Benar) */}
+                  {(currentQuestion.questionType === 'MULTIPLE_CHOICE' || currentQuestion.question_type === 'MULTIPLE_CHOICE') && (
                     <div className="space-y-3 pt-2">
-                      {currentQuestion.options.map((opt) => {
+                      {(currentQuestion.options || []).map((opt) => {
                         const optLabel = opt.label || opt.option_label;
                         const optText = opt.text || opt.option_text;
                         const optImg = opt.imageUrl || opt.image_url;
@@ -710,10 +789,11 @@ export default function ExamWorkspace() {
                               }`}>
                                 {optLabel}
                               </div>
-                              <span className="leading-relaxed truncate-none">{optText}</span>
+                              <div className="leading-relaxed truncate-none">
+                                <MathText text={optText} />
+                              </div>
                             </div>
 
-                            {/* Gambar Pilihan Jawaban (Jika Ada) */}
                             {optImg && (
                               <div className="sm:ml-auto rounded-xl overflow-hidden border border-slate-700 max-h-32 bg-slate-900 p-1 shrink-0">
                                 <img
@@ -727,8 +807,195 @@ export default function ExamWorkspace() {
                         );
                       })}
                     </div>
-                  ) : (
-                    /* Input Esai */
+                  )}
+
+                  {/* 2. PILIHAN GANDA KOMPLEKS (Multi-Centang Checkbox) */}
+                  {(currentQuestion.questionType === 'MULTIPLE_CHOICE_COMPLEX' || currentQuestion.question_type === 'MULTIPLE_CHOICE_COMPLEX') && (
+                    <div className="space-y-3 pt-2">
+                      <div className="text-xs text-blue-400 font-bold flex items-center gap-1.5 pb-1">
+                        <CheckSquare className="w-4 h-4 text-blue-400" />
+                        <span>Pilihlah satu atau lebih jawaban yang menurut Anda benar:</span>
+                      </div>
+                      {(currentQuestion.options || []).map((opt) => {
+                        const optLabel = opt.label || opt.option_label;
+                        const optText = opt.text || opt.option_text;
+                        const rawAns = activeAttempt.studentAnswers[currentQuestion.id];
+                        const selectedList = Array.isArray(rawAns) ? rawAns : (typeof rawAns === 'string' ? rawAns.split(',') : []);
+                        const isChecked = selectedList.includes(optLabel);
+
+                        const handleToggle = () => {
+                          let next;
+                          if (isChecked) {
+                            next = selectedList.filter(x => x !== optLabel);
+                          } else {
+                            next = [...selectedList, optLabel];
+                          }
+                          setStudentAnswer(currentQuestion.id, next);
+                        };
+
+                        return (
+                          <button
+                            key={optLabel}
+                            type="button"
+                            onClick={handleToggle}
+                            className={`w-full p-4 rounded-2xl border text-left text-xs sm:text-sm font-semibold transition flex items-center gap-3 sm:gap-4 ${
+                              isChecked
+                                ? 'bg-blue-600/30 border-blue-500 text-white shadow-lg shadow-blue-600/20 ring-2 ring-blue-500/50'
+                                : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:bg-slate-800 hover:text-white'
+                            }`}
+                          >
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 transition ${
+                              isChecked ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-800 text-slate-400'
+                            }`}>
+                              {isChecked ? <Check className="w-4 h-4 stroke-[3]" /> : optLabel}
+                            </div>
+                            <div className="leading-relaxed flex-1">
+                              <MathText text={optText} />
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* 3. ISIAN SINGKAT (Short Answer / Exact Match) */}
+                  {(currentQuestion.questionType === 'SHORT_ANSWER' || currentQuestion.question_type === 'SHORT_ANSWER') && (
+                    <div className="space-y-3 pt-2">
+                      <label className="block text-xs font-bold text-teal-400 flex items-center gap-1.5">
+                        <ListOrdered className="w-4 h-4" />
+                        <span>Ketikkan jawaban singkat Anda pada kotak di bawah ini:</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={activeAttempt.studentAnswers[currentQuestion.id] || ''}
+                        onChange={(e) => setStudentAnswer(currentQuestion.id, e.target.value)}
+                        placeholder="Ketik jawaban singkat di sini..."
+                        className="w-full p-4 bg-slate-950 border border-slate-700 rounded-2xl text-sm font-bold text-white placeholder-slate-600 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/30 font-mono"
+                      />
+                      <p className="text-[11px] text-slate-400 italic">
+                        Tip: Jawaban tidak membedakan huruf besar dan huruf kecil (case-insensitive).
+                      </p>
+                    </div>
+                  )}
+
+                  {/* 4. TABEL BENAR / SALAH (Grid Matrix) */}
+                  {(currentQuestion.questionType === 'TRUE_FALSE_MATRIX' || currentQuestion.question_type === 'TRUE_FALSE_MATRIX') && (
+                    <div className="space-y-3 pt-2">
+                      <div className="text-xs text-amber-400 font-bold flex items-center gap-1.5 pb-1">
+                        <Grid className="w-4 h-4" />
+                        <span>Tentukan apakah setiap pernyataan di bawah ini BENAR atau SALAH:</span>
+                      </div>
+                      <div className="space-y-2">
+                        {((currentQuestion.extra_data?.rows || currentQuestion.extraData?.rows) || []).map((row, rIdx) => {
+                          const currentMatrixAns = (typeof activeAttempt.studentAnswers[currentQuestion.id] === 'object' && activeAttempt.studentAnswers[currentQuestion.id]) || {};
+                          const rowAns = currentMatrixAns[String(rIdx)];
+
+                          const handleSetChoice = (isTrue) => {
+                            const updated = { ...currentMatrixAns, [String(rIdx)]: isTrue };
+                            setStudentAnswer(currentQuestion.id, updated);
+                          };
+
+                          return (
+                            <div key={rIdx} className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                              <div className="flex items-start gap-2.5 flex-1">
+                                <span className="w-6 h-6 rounded-lg bg-slate-800 text-slate-300 font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                                  {rIdx + 1}
+                                </span>
+                                <div className="text-xs sm:text-sm text-slate-200 font-medium leading-relaxed">
+                                  <MathText text={row.statement || ''} />
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetChoice(true)}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition flex items-center gap-1 ${
+                                    rowAns === true
+                                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30 ring-2 ring-emerald-400'
+                                      : 'bg-slate-900 text-slate-400 hover:text-emerald-400 border border-slate-800'
+                                  }`}
+                                >
+                                  {rowAns === true && <Check className="w-3.5 h-3.5 stroke-[3]" />} Benar
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetChoice(false)}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition flex items-center gap-1 ${
+                                    rowAns === false
+                                      ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30 ring-2 ring-rose-400'
+                                      : 'bg-slate-900 text-slate-400 hover:text-rose-400 border border-slate-800'
+                                  }`}
+                                >
+                                  {rowAns === false && <Check className="w-3.5 h-3.5 stroke-[3]" />} Salah
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 5. MENJODOHKAN (Matching Pair) */}
+                  {(currentQuestion.questionType === 'MATCHING_PAIR' || currentQuestion.question_type === 'MATCHING_PAIR') && (
+                    <div className="space-y-3 pt-2">
+                      <div className="text-xs text-purple-400 font-bold flex items-center gap-1.5 pb-1">
+                        <GitCompare className="w-4 h-4" />
+                        <span>Pasangkan setiap pernyataan di sebelah kiri dengan pilihan yang tepat di sebelah kanan:</span>
+                      </div>
+                      {(() => {
+                        const pairs = (currentQuestion.extra_data?.pairs || currentQuestion.extraData?.pairs) || [];
+                        const rightChoices = pairs.map(p => p.right).filter(Boolean);
+                        const currentPairsAns = (typeof activeAttempt.studentAnswers[currentQuestion.id] === 'object' && activeAttempt.studentAnswers[currentQuestion.id]) || {};
+
+                        return (
+                          <div className="space-y-2.5">
+                            {pairs.map((p, pIdx) => {
+                              const leftKey = p.left;
+                              const selectedVal = currentPairsAns[leftKey] || '';
+
+                              const handleChangePair = (val) => {
+                                const updated = { ...currentPairsAns, [leftKey]: val };
+                                setStudentAnswer(currentQuestion.id, updated);
+                              };
+
+                              return (
+                                <div key={pIdx} className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                  <div className="flex items-start gap-2.5 flex-1">
+                                    <span className="w-6 h-6 rounded-lg bg-purple-900/60 text-purple-300 font-black text-xs flex items-center justify-center shrink-0 mt-0.5 border border-purple-500/40">
+                                      {pIdx + 1}
+                                    </span>
+                                    <div className="text-xs sm:text-sm text-slate-200 font-medium leading-relaxed">
+                                      <MathText text={leftKey} />
+                                    </div>
+                                  </div>
+
+                                  <div className="shrink-0 w-full sm:w-64">
+                                    <select
+                                      value={selectedVal}
+                                      onChange={(e) => handleChangePair(e.target.value)}
+                                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs font-semibold text-white focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30"
+                                    >
+                                      <option value="">-- Pilih Pasangan --</option>
+                                      {rightChoices.map((choice, cIdx) => (
+                                        <option key={cIdx} value={choice}>
+                                          {choice}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {/* 6. INPUT ESAI */}
+                  {(currentQuestion.questionType === 'ESSAY' || currentQuestion.question_type === 'ESSAY') && (
                     <div>
                       <label className="block text-xs font-bold text-slate-300 mb-2">
                         Jawaban Esai Anda:
@@ -779,16 +1046,39 @@ export default function ExamWorkspace() {
                 <h3 className="text-xs font-black uppercase text-white tracking-wider">
                   Daftar Nomor Soal
                 </h3>
-                <span className="text-[11px] font-bold text-slate-400">
-                  {Object.keys(activeAttempt.studentAnswers).length}/{questions.length} Terjawab
-                </span>
+                {(() => {
+                  const checkAnswered = (ans) => {
+                    if (ans === undefined || ans === null || ans === '') return false;
+                    if (Array.isArray(ans)) return ans.length > 0;
+                    if (typeof ans === 'object') {
+                      const values = Object.values(ans);
+                      return values.length > 0 && values.some((v) => v !== undefined && v !== null && v !== '');
+                    }
+                    return true;
+                  };
+                  const answeredCount = questions.filter((q) => checkAnswered(activeAttempt.studentAnswers[q.id])).length;
+                  return (
+                    <span className="text-[11px] font-bold text-slate-400">
+                      {answeredCount}/{questions.length} Terjawab
+                    </span>
+                  );
+                })()}
               </div>
 
               {/* Grid Kotak Nomor Soal */}
               <div className="grid grid-cols-5 gap-2">
                 {questions.map((q, i) => {
                   const isCurrent = currentQuestionIndex === i;
-                  const isAnswered = Boolean(activeAttempt.studentAnswers[q.id]);
+                  const ans = activeAttempt.studentAnswers[q.id];
+                  const isAnswered =
+                    ans !== undefined &&
+                    ans !== null &&
+                    ans !== '' &&
+                    (Array.isArray(ans)
+                      ? ans.length > 0
+                      : typeof ans === 'object'
+                      ? Object.values(ans).some((v) => v !== undefined && v !== null && v !== '')
+                      : true);
                   const isDoubt = Boolean(doubtQuestions[q.id]);
 
                   return (

@@ -43,6 +43,16 @@ export const proctoringApi = {
   disqualifyStudent: async (attemptId) => {
     const response = await axiosInstance.post(`/proctoring/attempts/${attemptId}/disqualify/`);
     return response.data;
+  },
+
+  /**
+   * Siswa mengirim heartbeat & latensi ping (ms)
+   */
+  sendHeartbeat: async (attemptId, latencyMs) => {
+    const response = await axiosInstance.post(`/proctoring/attempts/${attemptId}/heartbeat/`, {
+      latency_ms: latencyMs,
+    });
+    return response.data;
   }
 };
 

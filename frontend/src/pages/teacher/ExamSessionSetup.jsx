@@ -43,6 +43,8 @@ export default function ExamSessionSetup() {
   const [entryPassword, setEntryPassword] = useState('MASUK' + Math.floor(100 + Math.random() * 900));
   const [exitPassword, setExitPassword] = useState('KELUAR' + Math.floor(100 + Math.random() * 900));
   const [supervisorPin, setSupervisorPin] = useState('PIN-' + Math.floor(1000 + Math.random() * 9000));
+  const [shuffleQuestions, setShuffleQuestions] = useState(false);
+  const [shuffleOptions, setShuffleOptions] = useState(false);
 
   // Copy Feedback State
   const [copiedKey, setCopiedKey] = useState(null);
@@ -165,6 +167,8 @@ export default function ExamSessionSetup() {
     handleGenerateEntryPassword();
     handleGenerateExitPassword();
     handleGenerateSupervisorPin();
+    setShuffleQuestions(false);
+    setShuffleOptions(false);
     setIsModalOpen(true);
   };
 
@@ -198,6 +202,8 @@ export default function ExamSessionSetup() {
     setEntryPassword(session.entryPassword || session.entry_password || '');
     setExitPassword(session.exitPassword || session.exit_password || '');
     setSupervisorPin(session.supervisorPin || session.supervisor_pin || 'PIN-1234');
+    setShuffleQuestions(Boolean(session.shuffleQuestions || session.shuffle_questions));
+    setShuffleOptions(Boolean(session.shuffleOptions || session.shuffle_options));
     setIsModalOpen(true);
   };
 
@@ -257,6 +263,8 @@ export default function ExamSessionSetup() {
         entry_password: entryPassword.toUpperCase(),
         exit_password: exitPassword.toUpperCase(),
         supervisor_pin: (supervisorPin || 'PIN-1234').toUpperCase(),
+        shuffle_questions: Boolean(shuffleQuestions),
+        shuffle_options: Boolean(shuffleOptions),
       };
 
       if (isEditing && editingSessionId && editingSessionId.length > 10) {
@@ -414,6 +422,17 @@ export default function ExamSessionSetup() {
                     <span className="text-[10px] font-black px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 border border-slate-300 flex items-center gap-1.5 shadow-2xs">
                       <Lock className="w-3 h-3 text-slate-500" />
                       Telah Berakhir
+                    </span>
+                  )}
+
+                  {(session.shuffleQuestions || session.shuffle_questions) && (
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-purple-100 text-purple-800 border border-purple-300 flex items-center gap-1 shadow-2xs">
+                      <Shuffle className="w-3 h-3 text-purple-600" /> Acak Soal
+                    </span>
+                  )}
+                  {(session.shuffleOptions || session.shuffle_options) && (
+                    <span className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-indigo-100 text-indigo-800 border border-indigo-300 flex items-center gap-1 shadow-2xs">
+                      <Shuffle className="w-3 h-3 text-indigo-600" /> Acak Opsi
                     </span>
                   )}
                 </div>
@@ -786,6 +805,46 @@ export default function ExamSessionSetup() {
                 className="w-full px-3 py-2 border border-amber-300 rounded-lg text-sm font-mono font-bold tracking-wider text-amber-950 bg-white uppercase text-center"
               />
               <span className="text-[10px] text-slate-500 block">Dipegang guru untuk buka kunci lokal</span>
+            </div>
+          </div>
+
+          {/* Pengacakan Soal & Opsi Jawaban (Standar Ujian Anti-Contek) */}
+          <div className="p-3.5 rounded-2xl bg-purple-50/70 border border-purple-200 space-y-2.5">
+            <div className="text-xs font-black uppercase text-purple-900 tracking-wider flex items-center gap-1.5">
+              <Shuffle className="w-3.5 h-3.5 text-purple-600" />
+              <span>Pengacakan Butir Soal & Pilihan Jawaban (Anti-Sontek)</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-purple-200 cursor-pointer hover:border-purple-400 transition">
+                <input
+                  type="checkbox"
+                  checked={shuffleQuestions}
+                  onChange={(e) => setShuffleQuestions(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded text-purple-600 accent-purple-600 cursor-pointer"
+                />
+                <div>
+                  <span className="font-bold text-slate-800 block">Acak Urutan Butir Soal</span>
+                  <span className="text-[11px] text-slate-500 block leading-tight">
+                    Nomor 1 siswa A berbeda dengan nomor 1 siswa B.
+                  </span>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-2.5 p-2.5 rounded-xl bg-white border border-purple-200 cursor-pointer hover:border-purple-400 transition">
+                <input
+                  type="checkbox"
+                  checked={shuffleOptions}
+                  onChange={(e) => setShuffleOptions(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded text-purple-600 accent-purple-600 cursor-pointer"
+                />
+                <div>
+                  <span className="font-bold text-slate-800 block">Acak Urutan Pilihan (A-E)</span>
+                  <span className="text-[11px] text-slate-500 block leading-tight">
+                    Posisi opsi A, B, C, D diacak posisinya antar siswa.
+                  </span>
+                </div>
+              </label>
             </div>
           </div>
 

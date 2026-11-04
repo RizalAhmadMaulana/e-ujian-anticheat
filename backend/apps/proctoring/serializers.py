@@ -32,6 +32,7 @@ class StudentAttemptDetailSerializer(serializers.ModelSerializer):
             'screen_orientation',
             'violation_count',
             'total_score',
+            'network_latency_ms',
             'started_at',
             'finished_at',
             'last_violation'
@@ -54,6 +55,8 @@ class StudentAttemptDetailSerializer(serializers.ModelSerializer):
         data['fullName'] = instance.student.full_name
         data['screenOrientation'] = instance.screen_orientation
         data['violationCount'] = instance.violation_count
+        data['networkLatencyMs'] = instance.network_latency_ms
+        data['network_latency_ms'] = instance.network_latency_ms
         data['startedAt'] = instance.started_at.strftime("%H:%M:%S") if instance.started_at else None
         data['finishedAt'] = instance.finished_at.strftime("%H:%M:%S") if instance.finished_at else None
         data['score'] = float(instance.total_score) if instance.total_score is not None else None

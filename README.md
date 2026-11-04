@@ -297,19 +297,26 @@ Setelah masuk melalui portal login terpadu (`/login`) menggunakan **NIP** dan ka
 
 ---
 
-### Menu 6: Bank Soal & Paket Ujian (Hybrid Mode)
+### Menu 6: Bank Soal & Paket Ujian Tingkat Lanjut (Ragam Tipe AKM / ANBK & Import Massal)
 - **Rute:** `/teacher/packages`
-- **Fungsi:** Menyusun soal ujian baik mode mandiri maupun integrasi formulir eksternal.
-- **Langkah-langkah Pembuatan:**
-  - **Opsi A: Soal Mandiri (Native PG & Esai):**
-    1. Pilih `Soal Mandiri (Native)`, masukkan Judul Paket, Kelas, dan Mata Pelajaran.
-    2. Tulis pertanyaan, atur opsi A–E, centang hijau pada opsi jawaban benar, dan tentukan bobot poin.
-    3. Nilai akan dihitung secara otomatis (*auto-grading*) saat siswa mengumpulkan ujian.
-  - **Opsi B: Tautan Google Form / MS Teams:**
-    1. Pilih `Link Google Form / Teams`.
-    2. Tempelkan tautan biasa (contoh: `https://docs.google.com/forms/d/e/.../viewform`).
-    3. Sistem otomatis mengonversinya menjadi format sematan aman (`?embedded=true`).
-    4. Klik **"Uji Tampilan (Preview Iframe)"** untuk memverifikasi tampilan sebelum disimpan.
+- **Fungsi:** Menyusun bank soal berstandar Asesmen Nasional (AKM/ANBK), editor rumus matematika KaTeX, fasilitas impor massal Word/Excel, serta integrasi formulir online.
+- **Fitur Pembuatan Soal:**
+  - **Opsi A: Soal Mandiri Tingkat Lanjut (6 Tipe Butir Soal):**
+    1. **Pilihan Ganda Biasa (`MULTIPLE_CHOICE`):** Memilih 1 opsi jawaban benar dari A-E.
+    2. **Pilihan Ganda Kompleks (`MULTIPLE_CHOICE_COMPLEX`):** Multi-select checkboxes di mana siswa dapat memilih lebih dari satu jawaban benar dengan auto-grading proporsional.
+    3. **Menjodohkan / Pasangan (`MATCHING_PAIR`):** Menghubungkan premis kiri dengan pasangan jawaban kanan yang sesuai.
+    4. **Tabel Benar/Salah (`TRUE_FALSE_MATRIX`):** Matriks pernyataan ber-radio button untuk mengevaluasi tiap butir pernyataan.
+    5. **Isian Singkat (`SHORT_ANSWER`):** Input teks singkat dengan verifikasi toleransi huruf besar/kecil (*case-insensitive*) dan pembersihan spasi.
+    6. **Esai Terstruktur (`ESSAY`):** Lembar uraian panjang dengan form responsif.
+  - **Editor Rumus Matematika & Sains (KaTeX + Formula Toolbar):**
+    - Mendukung format LaTeX inline (`$...$`) dan block (`$$...$$`).
+    - Dilengkapi **Formula Toolbar** sekali klik (pecahan, akar, pangkat, indeks, integral, sigma, simbol pi, alfa, beta, derajat, dll) serta live preview rumus.
+  - **Opsi B: Import Soal Massal Word (.docx) & Excel (.xlsx):**
+    1. Klik tombol **"Import Soal (Word / Excel)"**.
+    2. **Impor Word (`.docx`):** Membaca teks soal, pilihan A-E, dan penanda kunci jawaban tebal (*bold*) secara otomatis.
+    3. **Impor Excel (`.xlsx`):** Mengunduh template resmi via tombol **"Unduh Template Excel"**, mengisi tabel, dan mengimpor puluhan butir soal seketika.
+  - **Opsi C: Tautan Google Form / MS Teams:**
+    - Menyematkan tautan formulir dalam bingkai terproteksi (*Secure Iframe*) dengan konversi otomatis `?embedded=true`.
 
 ---
 
@@ -323,7 +330,11 @@ Setelah masuk melalui portal login terpadu (`/login`) menggunakan **NIP** dan ka
      - **Jadwal Mulai Ujian:** Tanggal Mulai dan Waktu Mulai (jam:menit).
      - **Jadwal Berakhir Ujian:** Tanggal Berakhir dan Waktu Berakhir (jam:menit).
      - *Validasi Otomatis:* Waktu berakhir wajib lebih lambat dari waktu mulai.
-  4. Sistem otomatis menghasilkan **Trio Token Keamanan**:
+  4. **Pengacakan Soal & Pilihan Jawaban Deterministik:**
+     - Toggle **"Acak Urutan Butir Soal"**: Nomor soal siswa A berbeda urutannya dengan siswa B.
+     - Toggle **"Acak Urutan Pilihan (A-E)"**: Posisi pilihan diacak sehingga mematikan potensi menyontek nomor & opsi.
+     - Sistem auto-grading backend terintegrasi evaluasi ID opsi kebal terhadap pengacakan posisi pilihan.
+  5. Sistem otomatis menghasilkan **Trio Token Keamanan**:
      - 🔑 **Password Masuk** (contoh: `MSK-2JM4`): Token gerbang gatekeeper pengerjaan soal.
      - 🔒 **Password Keluar** (contoh: `KLR-BUR8`): Token penutup ujian resmi bersirene.
      - 🛡️ **PIN Pengawas** (contoh: `PIN-9378`): PIN darurat untuk membuka layar merah siswa yang terkunci secara mandiri.
@@ -405,6 +416,13 @@ Setelah masuk melalui portal login terpadu (`/login`) menggunakan **NIP** dan ka
 *(Jika siswa ingin membatalkan atau mengganti mapel, tersedia tombol "Kembali ke Pilihan Mata Pelajaran").*
 
 ### Layar 4: Arena Ujian Terkunci (Pengerjaan Soal Mandiri / Google Form)
+- **⚡ Dual-Layer Auto-Save (Local Mirroring & Server Sync):**
+  - Setiap perubahan jawaban langsung tersimpan di `localStorage` peramban (0 ms).
+  - Jawaban disinkronkan otomatis secara berkala ke server Django (1500 ms debounce).
+  - Bebas resiko mati listrik atau koneksi putus; siswa dapat melanjutkan ujian seketika tanpa kehilangan jawaban.
+- **📡 Indikator Kualitas Jaringan Real-Time:**
+  - Security Bar atas menampilkan latensi ping siswa (Stabil hijau <150ms, Sedang kuning 150-400ms, Terputus merah).
+  - Mengirim heartbeat berkala ke Live Proctoring guru untuk monitoring stabilitas sinyal kelas.
 - **Security Bar Atas:** Menampilkan indikator `REC • Terproteksi`, sisa waktu pengerjaan, dan tombol gembok *Password untuk Keluar*.
 - **Soal Mandiri:** Pilih opsi jawaban (lingkaran A–E), manfaatkan tombol kuning *Ragu-ragu*, dan pantau navigasi nomor soal di bilah kanan.
 - **Soal Google Form:** Kerjakan formulir langsung di dalam bingkai aman (*Secure Iframe*). Berkat teknologi *Iframe Focus Guard*, siswa dapat mengklik pilihan form dengan leluasa tanpa memicu deteksi kecurangan.

@@ -9,11 +9,21 @@ from .views import (
     SubmitExamAnswersView,
     VerifyExitPasswordView,
     ExamImageUploadView,
+    DownloadQuestionTemplateExcelView,
+    ImportDocxQuestionsView,
+    ImportExcelQuestionsView,
 )
 
 urlpatterns = [
     # Upload Gambar Soal & Opsi Jawaban
     path('upload-image/', ExamImageUploadView.as_view(), name='exam_upload_image'),
+
+    # Template Excel & Import Massal Word/Excel (Letakkan sebelum <uuid:pk>!)
+    path('packages/template-excel/', DownloadQuestionTemplateExcelView.as_view(), name='exam_package_template_excel'),
+    path('packages/import-docx/', ImportDocxQuestionsView.as_view(), name='exam_package_import_docx'),
+    path('packages/<uuid:pk>/import-docx/', ImportDocxQuestionsView.as_view(), name='exam_package_pk_import_docx'),
+    path('packages/import-excel/', ImportExcelQuestionsView.as_view(), name='exam_package_import_excel'),
+    path('packages/<uuid:pk>/import-excel/', ImportExcelQuestionsView.as_view(), name='exam_package_pk_import_excel'),
 
     # CRUD Paket Ujian
     path('packages/', ExamPackageListCreateView.as_view(), name='exam_package_list_create'),

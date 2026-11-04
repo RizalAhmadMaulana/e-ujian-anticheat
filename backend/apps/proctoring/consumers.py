@@ -118,6 +118,26 @@ class ProctoringConsumer(AsyncJsonWebsocketConsumer):
                     }
                 )
 
+        # ========================================================
+        # 4. AKSI SISWA: SINKRONISASI HEARTBEAT & LATENSI PING
+        # ========================================================
+        elif action in ['HEARTBEAT', 'NETWORK_PING']:
+            attempt_id = content.get('attempt_id')
+            latency = int(content.get('latency_ms', 0) or 0)
+            if attempt_id:
+                await self.update_latency_in_db(attempt_id, latency)
+                await self.channel_layer.group_send(
+                    self.group_name,
+                    {
+                        "type": "broadcast_message",
+                        "data": {
+                            "event": "NETWORK_HEARTBEAT",
+                            "attempt_id": str(attempt_id),
+                            "latency_ms": latency
+                        }
+                    }
+                )
+
     async def broadcast_message(self, event):
         """Handler untuk meneruskan payload event ke WebSocket client"""
         await self.send_json(event['data'])
@@ -182,4 +202,14 @@ class ProctoringConsumer(AsyncJsonWebsocketConsumer):
             }
         except StudentAttempt.DoesNotExist:
             return None
+
+    @database_sync_to_async
+    def update_latency_in_db(self, attempt_id, latency_ms):
+        try:
+            attempt = StudentAttempt.objects.get(id=attempt_id)
+            attempt.network_latency_ms = latency_ms
+            attempt.save(update_fields=['network_latency_ms'])
+            return True
+        except StudentAttempt.DoesNotExist:
+            return False
 

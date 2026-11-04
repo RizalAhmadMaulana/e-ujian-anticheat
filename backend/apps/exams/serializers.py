@@ -44,8 +44,45 @@ class QuestionSerializer(serializers.ModelSerializer):
             'question_type', 
             'points', 
             'order_number', 
+            'extra_data',
             'options'
         ]
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Sediakan kompatibilitas camelCase untuk UI Frontend
+        data['questionText'] = instance.question_text
+        data['imageUrl'] = instance.image_url
+        data['questionType'] = instance.question_type
+        data['orderNumber'] = instance.order_number
+        data['extraData'] = instance.extra_data or {}
+
+        request = self.context.get('request')
+        is_student = False
+        if request and hasattr(request, 'user') and request.user.is_authenticated:
+            if getattr(request.user, 'role', None) == 'STUDENT':
+                is_student = True
+
+        if is_student and isinstance(data.get('extra_data'), dict):
+            clean_extra = dict(data['extra_data'])
+            clean_extra.pop('exact_keys', None)
+            clean_extra.pop('accepted_answers', None)
+            clean_extra.pop('keys', None)
+            if 'rows' in clean_extra and isinstance(clean_extra['rows'], list):
+                sanitized_rows = []
+                for r in clean_extra['rows']:
+                    if isinstance(r, dict):
+                        row_copy = dict(r)
+                        row_copy.pop('correct', None)
+                        row_copy.pop('is_correct', None)
+                        sanitized_rows.append(row_copy)
+                    else:
+                        sanitized_rows.append(r)
+                clean_extra['rows'] = sanitized_rows
+            data['extra_data'] = clean_extra
+            data['extraData'] = clean_extra
+
+        return data
 
 
 class ExamPackageSerializer(serializers.ModelSerializer):
@@ -157,6 +194,8 @@ class ExamSessionSerializer(serializers.ModelSerializer):
             'exit_password',
             'supervisor_pin',
             'strict_lockdown',
+            'shuffle_questions',
+            'shuffle_options',
             'is_active',
             'created_at'
         ]
@@ -174,6 +213,8 @@ class ExamSessionSerializer(serializers.ModelSerializer):
         data['exitPassword'] = instance.exit_password
         data['supervisorPin'] = instance.supervisor_pin or 'PIN-1234'
         data['strictLockdown'] = instance.strict_lockdown
+        data['shuffleQuestions'] = instance.shuffle_questions
+        data['shuffleOptions'] = instance.shuffle_options
         data['isActive'] = instance.is_active
         data['startTime'] = instance.start_time.isoformat() if instance.start_time else None
         data['endTime'] = instance.end_time.isoformat() if instance.end_time else None

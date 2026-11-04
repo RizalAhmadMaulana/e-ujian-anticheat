@@ -40,6 +40,60 @@ export const uploadExamImageApi = async (file) => {
 };
 
 // -------------------------------------------------------------
+// IMPORT MASSAL SOAL (WORD .DOCX & EXCEL .XLSX) + TEMPLATE
+// -------------------------------------------------------------
+export const importDocxQuestionsApi = async (file, packageId = null, title = '', subjectName = '') => {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (title) formData.append('title', title);
+  if (subjectName) formData.append('subject_name', subjectName);
+
+  const url = packageId 
+    ? `/exams/packages/${packageId}/import-docx/` 
+    : '/exams/packages/import-docx/';
+
+  const response = await axiosInstance.post(url, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+
+export const importExcelQuestionsApi = async (file, packageId = null, title = '', subjectName = '') => {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (title) formData.append('title', title);
+  if (subjectName) formData.append('subject_name', subjectName);
+
+  const url = packageId 
+    ? `/exams/packages/${packageId}/import-excel/` 
+    : '/exams/packages/import-excel/';
+
+  const response = await axiosInstance.post(url, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+
+export const downloadQuestionTemplateExcelApi = async () => {
+  const response = await axiosInstance.get('/exams/packages/template-excel/', {
+    responseType: 'blob',
+  });
+  // Auto trigger browser download
+  const blob = new Blob([response.data], { 
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+  });
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = downloadUrl;
+  link.setAttribute('download', 'Template_Bank_Soal_E-Ujian.xlsx');
+  document.body.appendChild(link);
+  link.click();
+  link.parentNode.removeChild(link);
+  window.URL.revokeObjectURL(downloadUrl);
+  return true;
+};
+
+// -------------------------------------------------------------
 // JADWAL & SESI UJIAN (ROLE GURU)
 // -------------------------------------------------------------
 export const getSessionsApi = async () => {
@@ -105,6 +159,9 @@ export const examApi = {
   updatePackageApi,
   deletePackageApi,
   uploadExamImageApi,
+  importDocxQuestionsApi,
+  importExcelQuestionsApi,
+  downloadQuestionTemplateExcelApi,
   getSessionsApi,
   getSessionDetailApi,
   createSessionApi,
@@ -121,6 +178,10 @@ export const examApi = {
   createPackage: createPackageApi,
   updatePackage: updatePackageApi,
   deletePackage: deletePackageApi,
+  uploadExamImage: uploadExamImageApi,
+  importDocxQuestions: importDocxQuestionsApi,
+  importExcelQuestions: importExcelQuestionsApi,
+  downloadQuestionTemplateExcel: downloadQuestionTemplateExcelApi,
   getSessions: getSessionsApi,
   getSessionDetail: getSessionDetailApi,
   createSession: createSessionApi,
