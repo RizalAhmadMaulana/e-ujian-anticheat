@@ -240,16 +240,16 @@ export default function EssayGrading() {
       {/* ======================================================== */}
       {/* 1. HEADER SECTION */}
       {/* ======================================================== */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-sm shrink-0">
-            <FileCheck className="w-6 h-6" />
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-zinc-200/90 shadow-2xs">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-800 shadow-2xs shrink-0">
+            <FileCheck className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
               Koreksi Jawaban Esai & Rubrik Nilai
             </h1>
-            <p className="text-xs md:text-sm text-slate-500">
+            <p className="text-xs sm:text-sm text-zinc-500 mt-0.5 leading-relaxed">
               Evaluasi lembar esai uraian siswa, masukkan skor bobot manual, dan berikan catatan umpan balik.
             </p>
           </div>
@@ -262,7 +262,7 @@ export default function EssayGrading() {
               value={selectedSessionId}
               onChange={(e) => setSelectedSessionId(e.target.value)}
               disabled={isLoadingSessions}
-              className="w-full text-sm font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-300 rounded-xl px-3.5 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer"
+              className="w-full text-xs sm:text-sm font-medium text-zinc-800 bg-white hover:bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 outline-none focus:border-zinc-400 transition cursor-pointer"
             >
               {sessions.map((s) => (
                 <option key={s.id} value={s.id}>
@@ -279,9 +279,9 @@ export default function EssayGrading() {
             onClick={() => fetchSubmissions(selectedSessionId)}
             disabled={isLoadingSubmissions || !selectedSessionId}
             title="Muat Ulang Data"
-            className="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-indigo-600 transition shadow-sm active:scale-95 disabled:opacity-50"
+            className="p-2 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-600 transition shadow-2xs hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-50"
           >
-            <RefreshCw className={`w-4 h-4 ${isLoadingSubmissions ? 'animate-spin text-indigo-600' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingSubmissions ? 'animate-spin text-zinc-900' : ''}`} />
           </button>
         </div>
       </div>
@@ -290,56 +290,56 @@ export default function EssayGrading() {
       {/* 2. STATISTIK RINGKAS CARDS */}
       {/* ======================================================== */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 md:gap-4">
-        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+        <div className="bg-white p-4 rounded-xl border border-zinc-200/90 shadow-2xs flex items-center justify-between">
           <div>
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Peserta</div>
-            <div className="text-2xl font-bold text-slate-800 mt-1">{stats.total}</div>
+            <div className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Total Peserta</div>
+            <div className="text-xl sm:text-2xl font-bold font-mono text-zinc-900 mt-1">{stats.total}</div>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-            <User className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-lg bg-zinc-100 text-zinc-700 border border-zinc-200 flex items-center justify-center">
+            <User className="w-4 h-4" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+        <div className="bg-white p-4 rounded-xl border border-zinc-200/90 shadow-2xs flex items-center justify-between">
           <div>
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Butir Soal Esai</div>
-            <div className="text-2xl font-bold text-slate-800 mt-1">{stats.totalQuestions} Soal</div>
+            <div className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">Butir Soal Esai</div>
+            <div className="text-xl sm:text-2xl font-bold font-mono text-zinc-900 mt-1">{stats.totalQuestions} Soal</div>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-            <BookOpen className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-lg bg-zinc-100 text-zinc-700 border border-zinc-200 flex items-center justify-center">
+            <BookOpen className="w-4 h-4" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-amber-200/70 bg-gradient-to-br from-amber-50/40 to-white shadow-sm flex items-center justify-between">
+        <div className="bg-white p-4 rounded-xl border border-amber-200/70 shadow-2xs flex items-center justify-between">
           <div>
-            <div className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Perlu Dikoreksi</div>
-            <div className="text-2xl font-bold text-amber-600 mt-1">{stats.pending} Siswa</div>
+            <div className="text-[11px] font-semibold text-amber-700 uppercase tracking-wider">Perlu Dikoreksi</div>
+            <div className="text-xl sm:text-2xl font-bold font-mono text-amber-700 mt-1">{stats.pending} Siswa</div>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-amber-100/80 text-amber-700 flex items-center justify-center">
-            <Clock className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center">
+            <Clock className="w-4 h-4" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50/40 to-white shadow-sm flex items-center justify-between">
+        <div className="bg-white p-4 rounded-xl border border-emerald-200/70 shadow-2xs flex items-center justify-between">
           <div>
-            <div className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Selesai Dikoreksi</div>
-            <div className="text-2xl font-bold text-emerald-600 mt-1">{stats.completed} Siswa</div>
+            <div className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wider">Selesai Dikoreksi</div>
+            <div className="text-xl sm:text-2xl font-bold font-mono text-emerald-700 mt-1">{stats.completed} Siswa</div>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-emerald-100/80 text-emerald-700 flex items-center justify-center">
-            <CheckCircle2 className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center">
+            <CheckCircle2 className="w-4 h-4" />
           </div>
         </div>
       </div>
 
       {/* Global Alert Messages */}
       {saveSuccessMsg && (
-        <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-sm flex items-center gap-2 shadow-sm animate-fadeIn">
+        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-xs font-medium flex items-center gap-2 shadow-2xs animate-fadeIn">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>{saveSuccessMsg}</span>
         </div>
       )}
       {saveErrorMsg && (
-        <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-sm flex items-center gap-2 shadow-sm animate-fadeIn">
+        <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg text-xs font-medium flex items-center gap-2 shadow-2xs animate-fadeIn">
           <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
           <span>{saveErrorMsg}</span>
         </div>
@@ -349,55 +349,55 @@ export default function EssayGrading() {
       {/* 3. MAIN WORKSPACE: MASTER-DETAIL SPLIT */}
       {/* ======================================================== */}
       {isLoadingSubmissions ? (
-        <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center space-y-3">
-          <RefreshCw className="w-8 h-8 text-indigo-600 animate-spin mx-auto" />
-          <div className="text-sm font-semibold text-slate-700">Memuat lembar pengerjaan esai siswa...</div>
-          <p className="text-xs text-slate-400">Menghubungkan data jawaban dan rubrik penilaian.</p>
+        <div className="bg-white p-12 rounded-xl border border-zinc-200 text-center space-y-2.5">
+          <RefreshCw className="w-6 h-6 text-zinc-800 animate-spin mx-auto" />
+          <div className="text-xs font-semibold text-zinc-800">Memuat lembar pengerjaan esai siswa...</div>
+          <p className="text-[11px] text-zinc-400">Menghubungkan data jawaban dan rubrik penilaian.</p>
         </div>
       ) : !submissionData || submissionData.essay_questions?.length === 0 ? (
-        <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center space-y-3">
-          <BookOpen className="w-10 h-10 text-slate-300 mx-auto" />
-          <div className="text-base font-bold text-slate-700">Tidak Ada Soal Esai pada Paket Ujian Ini</div>
-          <p className="text-xs text-slate-400 max-w-md mx-auto">
+        <div className="bg-white p-12 rounded-xl border border-zinc-200 text-center space-y-2">
+          <BookOpen className="w-8 h-8 text-zinc-300 mx-auto" />
+          <div className="text-sm font-semibold text-zinc-800">Tidak Ada Soal Esai pada Paket Ujian Ini</div>
+          <p className="text-xs text-zinc-500 max-w-md mx-auto leading-relaxed">
             Paket ujian sesi ini hanya berisi butir soal objektif (Pilihan Ganda, Isian Singkat, dsb) yang telah dinilai 100% otomatis oleh sistem.
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           {/* ======================================================== */}
           {/* SISI KIRI: DAFTAR SISWA (4 COLS) */}
           {/* ======================================================== */}
-          <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col h-[750px]">
+          <div className="lg:col-span-4 bg-white rounded-xl border border-zinc-200/90 shadow-2xs overflow-hidden flex flex-col h-[720px]">
             {/* Filter & Search Bar */}
-            <div className="p-4 border-b border-slate-100 space-y-3 bg-slate-50/50">
+            <div className="p-3.5 border-b border-zinc-100 space-y-2.5 bg-zinc-50/50">
               <div className="relative">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   placeholder="Cari nama atau NISN..."
                   value={studentSearch}
                   onChange={(e) => setStudentSearch(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 text-xs md:text-sm bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition"
+                  className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-zinc-200 rounded-lg outline-none focus:border-zinc-400 transition"
                 />
               </div>
 
               {/* Status Filter Tabs */}
-              <div className="flex rounded-lg bg-slate-200/70 p-1 text-xs font-semibold">
+              <div className="flex rounded-md bg-zinc-100 p-0.5 text-xs font-medium border border-zinc-200/60">
                 <button
                   onClick={() => setFilterStatus('ALL')}
-                  className={`flex-1 py-1.5 rounded-md transition ${filterStatus === 'ALL' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
+                  className={`flex-1 py-1 rounded transition text-xs ${filterStatus === 'ALL' ? 'bg-white text-zinc-900 shadow-2xs font-semibold' : 'text-zinc-600 hover:text-zinc-900'}`}
                 >
                   Semua ({submissionData.students.length})
                 </button>
                 <button
                   onClick={() => setFilterStatus('PENDING')}
-                  className={`flex-1 py-1.5 rounded-md transition ${filterStatus === 'PENDING' ? 'bg-white text-amber-700 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
+                  className={`flex-1 py-1 rounded transition text-xs ${filterStatus === 'PENDING' ? 'bg-white text-amber-800 shadow-2xs font-semibold' : 'text-zinc-600 hover:text-zinc-900'}`}
                 >
-                  Perlu Koreksi ({stats.pending})
+                  Perlu ({stats.pending})
                 </button>
                 <button
                   onClick={() => setFilterStatus('COMPLETED')}
-                  className={`flex-1 py-1.5 rounded-md transition ${filterStatus === 'COMPLETED' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}
+                  className={`flex-1 py-1 rounded transition text-xs ${filterStatus === 'COMPLETED' ? 'bg-white text-emerald-800 shadow-2xs font-semibold' : 'text-zinc-600 hover:text-zinc-900'}`}
                 >
                   Selesai ({stats.completed})
                 </button>
@@ -405,9 +405,9 @@ export default function EssayGrading() {
             </div>
 
             {/* List Siswa Scrollable */}
-            <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+            <div className="flex-1 overflow-y-auto divide-y divide-zinc-100">
               {filteredStudents.length === 0 ? (
-                <div className="p-8 text-center text-xs text-slate-400">
+                <div className="p-8 text-center text-xs text-zinc-400">
                   Tidak ada data siswa yang cocok dengan filter.
                 </div>
               ) : (
@@ -419,35 +419,35 @@ export default function EssayGrading() {
                     <button
                       key={std.student_id}
                       onClick={() => setSelectedStudentId(std.student_id)}
-                      className={`w-full text-left p-3.5 transition flex items-center justify-between gap-3 border-l-4 ${
+                      className={`w-full text-left p-3 transition flex items-center justify-between gap-2.5 border-l-2 ${
                         isSelected 
-                          ? 'bg-indigo-50/60 border-l-indigo-600 shadow-sm' 
-                          : 'border-l-transparent hover:bg-slate-50'
+                          ? 'bg-zinc-100/80 border-l-zinc-900 text-zinc-900 shadow-2xs' 
+                          : 'border-l-transparent hover:bg-zinc-50'
                       }`}
                     >
                       <div className="min-w-0">
-                        <div className="text-xs md:text-sm font-bold text-slate-800 truncate">
+                        <div className="text-xs sm:text-sm font-semibold text-zinc-900 truncate">
                           {std.student_name}
                         </div>
-                        <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2">
-                          <span>NISN: {std.nisn || '-'}</span>
+                        <div className="text-[11px] text-zinc-500 mt-0.5 flex items-center gap-1.5 font-mono">
+                          <span>{std.nisn || '-'}</span>
                           <span>•</span>
-                          <span className="font-semibold text-indigo-600">
+                          <span className="font-sans font-medium text-zinc-700">
                             {std.graded_count}/{std.total_essays} Dinilai
                           </span>
                         </div>
                       </div>
 
                       <div className="flex flex-col items-end shrink-0">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                        <span className={`text-[10px] font-medium px-1.5 py-0.2 rounded border ${
                           isComplete 
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
                             : 'bg-amber-50 text-amber-700 border-amber-200'
                         }`}>
-                          {isComplete ? 'Selesai' : 'Belum Lengkap'}
+                          {isComplete ? 'Selesai' : 'Belum'}
                         </span>
-                        <span className="text-[11px] font-bold text-slate-700 mt-1">
-                          Skor: {std.total_score !== null ? parseFloat(std.total_score).toFixed(1) : '0'}
+                        <span className="text-[11px] font-mono font-semibold text-zinc-800 mt-1">
+                          {std.total_score !== null ? parseFloat(std.total_score).toFixed(1) : '0'} Poin
                         </span>
                       </div>
                     </button>
@@ -460,25 +460,25 @@ export default function EssayGrading() {
           {/* ======================================================== */}
           {/* SISI KANAN: DETAIL LEMBAR JAWABAN & FORM KOREKSI (8 COLS) */}
           {/* ======================================================== */}
-          <div className="lg:col-span-8 space-y-5">
+          <div className="lg:col-span-8 space-y-4">
             {selectedStudent ? (
               <>
                 {/* Header Siswa Terpilih & Navigator */}
-                <div className="bg-white p-4 md:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div className="bg-white p-4 rounded-xl border border-zinc-200/90 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold text-base shadow-sm">
+                    <div className="w-9 h-9 rounded-lg bg-zinc-900 text-white flex items-center justify-center font-mono font-bold text-sm shadow-2xs">
                       {selectedStudent.student_name.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <div className="text-base font-bold text-slate-900 flex items-center gap-2">
+                      <div className="text-sm sm:text-base font-semibold text-zinc-900 flex items-center gap-2">
                         <span>{selectedStudent.student_name}</span>
-                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600">
+                        <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-zinc-100 text-zinc-600 border border-zinc-200">
                           {selectedStudent.status === 'SUBMITTED' ? 'Selesai Ujian' : 'Sedang Mengerjakan'}
                         </span>
                       </div>
-                      <div className="text-xs text-slate-500 mt-0.5">
-                        NISN: {selectedStudent.nisn || '-'} • Total Nilai Akumulasi:{' '}
-                        <span className="font-bold text-indigo-700">
+                      <div className="text-xs text-zinc-500 mt-0.5">
+                        NISN: <span className="font-mono text-zinc-700">{selectedStudent.nisn || '-'}</span> • Total Nilai Akumulasi:{' '}
+                        <span className="font-mono font-semibold text-zinc-900">
                           {selectedStudent.total_score !== null ? parseFloat(selectedStudent.total_score).toFixed(1) : '0.0'} Poin
                         </span>
                       </div>
@@ -486,29 +486,29 @@ export default function EssayGrading() {
                   </div>
 
                   {/* Navigasi Siswa Prev / Next */}
-                  <div className="flex items-center gap-2 self-end md:self-auto">
+                  <div className="flex items-center gap-1.5 self-end md:self-auto">
                     <button
                       onClick={handlePrevStudent}
                       disabled={currentStudentIndex <= 0}
-                      className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 transition flex items-center gap-1 text-slate-700"
+                      className="px-2.5 py-1 text-xs font-medium rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 disabled:opacity-40 transition flex items-center gap-1 text-zinc-700 shadow-2xs"
                     >
-                      <ChevronLeft className="w-3.5 h-3.5" /> Prev
+                      <ChevronLeft className="w-3 h-3" /> Prev
                     </button>
-                    <span className="text-xs text-slate-400 font-medium">
+                    <span className="text-xs font-mono text-zinc-400">
                       {currentStudentIndex + 1} / {filteredStudents.length}
                     </span>
                     <button
                       onClick={handleNextStudent}
                       disabled={currentStudentIndex >= filteredStudents.length - 1}
-                      className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 transition flex items-center gap-1 text-slate-700"
+                      className="px-2.5 py-1 text-xs font-medium rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 disabled:opacity-40 transition flex items-center gap-1 text-zinc-700 shadow-2xs"
                     >
-                      Next <ChevronRight className="w-3.5 h-3.5" />
+                      Next <ChevronRight className="w-3 h-3" />
                     </button>
                   </div>
                 </div>
 
                 {/* Daftar Soal Esai Siswa */}
-                <div className="space-y-5">
+                <div className="space-y-4">
                   {submissionData.essay_questions.map((question, qIdx) => {
                     const studentAns = selectedStudent.answers?.[question.id];
                     const rawAnswer = studentAns?.student_answer || '';
@@ -519,64 +519,64 @@ export default function EssayGrading() {
                     return (
                       <div 
                         key={question.id}
-                        className="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden transition-all"
+                        className="bg-white rounded-xl border border-zinc-200/90 shadow-2xs overflow-hidden transition-all"
                       >
                         {/* Header Butir Soal */}
-                        <div className="bg-slate-50/80 px-5 py-3.5 border-b border-slate-200/80 flex items-center justify-between">
-                          <div className="flex items-center gap-2.5">
-                            <span className="w-7 h-7 rounded-lg bg-indigo-600 text-white text-xs font-bold flex items-center justify-center">
+                        <div className="bg-zinc-50 px-4 py-2.5 border-b border-zinc-200/80 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-md bg-zinc-900 text-white text-xs font-mono font-semibold flex items-center justify-center">
                               {question.order || qIdx + 1}
                             </span>
-                            <span className="text-sm font-bold text-slate-800">
+                            <span className="text-xs font-semibold text-zinc-900">
                               Soal Esai / Uraian
                             </span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-lg">
-                              Bobot Maksimal: {question.max_score} Poin
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[11px] font-mono font-medium text-zinc-700 bg-zinc-100 border border-zinc-200 px-2 py-0.5 rounded">
+                              Bobot Maks: {question.max_score} Poin
                             </span>
                             {isGraded && (
-                              <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-lg flex items-center gap-1">
-                                <CheckCircle2 className="w-3.5 h-3.5" /> Sudah Dinilai
+                              <span className="text-[11px] font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3" /> Sudah Dinilai
                               </span>
                             )}
                           </div>
                         </div>
 
-                        <div className="p-5 space-y-4">
+                        <div className="p-4 space-y-3.5">
                           {/* Teks Pertanyaan Soal */}
-                          <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 text-sm text-slate-800 leading-relaxed font-medium">
+                          <div className="bg-zinc-50 p-3 rounded-lg border border-zinc-200 text-xs sm:text-sm text-zinc-800 leading-relaxed font-medium">
                             {question.text}
                           </div>
 
                           {/* Lembar Jawaban Siswa */}
-                          <div className="space-y-1.5">
-                            <div className="text-xs font-bold text-slate-600 flex items-center justify-between">
+                          <div className="space-y-1">
+                            <div className="text-[11px] font-semibold text-zinc-500 flex items-center justify-between">
                               <span>Lembar Jawaban Siswa:</span>
                               {!rawAnswer && (
-                                <span className="text-amber-600 text-[11px] font-normal italic">
+                                <span className="text-amber-600 text-[10px] italic">
                                   (Tidak ada jawaban diketik oleh siswa)
                                 </span>
                               )}
                             </div>
-                            <div className={`p-4 rounded-xl border text-sm leading-relaxed whitespace-pre-wrap min-h-[90px] ${
+                            <div className={`p-3 rounded-lg border text-xs sm:text-sm leading-relaxed whitespace-pre-wrap min-h-[80px] ${
                               rawAnswer 
-                                ? 'bg-indigo-50/20 border-indigo-200/70 text-slate-900 font-sans' 
-                                : 'bg-slate-50 border-slate-200 text-slate-400 italic'
+                                ? 'bg-zinc-50/70 border-zinc-200 text-zinc-900' 
+                                : 'bg-zinc-50 border-zinc-200 text-zinc-400 italic'
                             }`}>
                               {rawAnswer || 'Lembar jawaban kosong.'}
                             </div>
                           </div>
 
                           {/* Form Penilaian & Feedback Guru */}
-                          <div className="pt-2 border-t border-slate-100 grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                          <div className="pt-2 border-t border-zinc-100 grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
                             {/* Input Skor Angka */}
-                            <div className="md:col-span-4 space-y-1.5">
-                              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                                <Award className="w-3.5 h-3.5 text-indigo-600" />
-                                <span>Beri Skor Nilai (0 - {question.max_score}):</span>
+                            <div className="md:col-span-4 space-y-1">
+                              <label className="text-[11px] font-semibold text-zinc-700 flex items-center gap-1">
+                                <Award className="w-3 h-3 text-zinc-500" />
+                                <span>Skor (0 - {question.max_score}):</span>
                               </label>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1.5">
                                 <input
                                   type="number"
                                   min="0"
@@ -585,13 +585,13 @@ export default function EssayGrading() {
                                   placeholder="0"
                                   value={curInput.score}
                                   onChange={(e) => handleScoreChange(question.id, e.target.value, question.max_score)}
-                                  className="w-full px-3.5 py-2 text-sm font-bold text-slate-900 bg-white border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition text-center"
+                                  className="w-full px-2.5 py-1.5 text-xs font-mono font-semibold text-zinc-900 bg-white border border-zinc-200 rounded-lg outline-none focus:border-zinc-400 transition text-center"
                                 />
                                 {/* Quick max button */}
                                 <button
                                   type="button"
                                   onClick={() => handleScoreChange(question.id, question.max_score, question.max_score)}
-                                  className="px-2.5 py-2 text-xs font-bold bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-600 rounded-xl border border-slate-200 transition shrink-0"
+                                  className="px-2 py-1.5 text-xs font-medium bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-lg border border-zinc-200 transition shrink-0"
                                   title="Beri Nilai Maksimal"
                                 >
                                   Maks
@@ -600,29 +600,29 @@ export default function EssayGrading() {
                             </div>
 
                             {/* Input Umpan Balik / Komentar Guru */}
-                            <div className="md:col-span-8 space-y-1.5">
-                              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                                <MessageSquare className="w-3.5 h-3.5 text-indigo-600" />
-                                <span>Catatan / Umpan Balik Guru (Opsional):</span>
+                            <div className="md:col-span-8 space-y-1">
+                              <label className="text-[11px] font-semibold text-zinc-700 flex items-center gap-1">
+                                <MessageSquare className="w-3 h-3 text-zinc-500" />
+                                <span>Catatan Umpan Balik (Opsional):</span>
                               </label>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1.5">
                                 <input
                                   type="text"
                                   placeholder="Contoh: Penjelasan cukup baik, perlu dilengkapi rincian..."
                                   value={curInput.feedback}
                                   onChange={(e) => handleFeedbackChange(question.id, e.target.value)}
-                                  className="w-full px-3.5 py-2 text-xs md:text-sm bg-white border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-indigo-500 transition"
+                                  className="w-full px-2.5 py-1.5 text-xs bg-white border border-zinc-200 rounded-lg outline-none focus:border-zinc-400 transition"
                                 />
                                 <button
                                   type="button"
                                   onClick={() => handleSaveGrade(question.id, question.max_score)}
                                   disabled={isSaving || curInput.score === ''}
-                                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white text-xs md:text-sm font-bold rounded-xl transition flex items-center gap-1.5 shadow-sm disabled:opacity-50 shrink-0"
+                                  className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 active:scale-[0.98] text-white text-xs font-semibold rounded-lg transition flex items-center gap-1 shadow-xs disabled:opacity-50 shrink-0 hover:-translate-y-0.5"
                                 >
                                   {isSaving ? (
-                                    <RefreshCw className="w-4 h-4 animate-spin" />
+                                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                                   ) : (
-                                    <Save className="w-4 h-4" />
+                                    <Save className="w-3.5 h-3.5" />
                                   )}
                                   <span>Simpan</span>
                                 </button>
@@ -636,10 +636,10 @@ export default function EssayGrading() {
                 </div>
               </>
             ) : (
-              <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center space-y-2">
-                <User className="w-10 h-10 text-slate-300 mx-auto" />
-                <div className="text-sm font-semibold text-slate-700">Pilih Siswa untuk Mulai Mengoreksi</div>
-                <p className="text-xs text-slate-400">Pilih salah satu nama siswa pada daftar di sisi kiri.</p>
+              <div className="bg-white p-12 rounded-xl border border-zinc-200 text-center space-y-2">
+                <User className="w-8 h-8 text-zinc-300 mx-auto" />
+                <div className="text-xs font-semibold text-zinc-800">Pilih Siswa untuk Mulai Mengoreksi</div>
+                <p className="text-[11px] text-zinc-400">Pilih salah satu nama siswa pada daftar di sisi kiri.</p>
               </div>
             )}
           </div>

@@ -209,86 +209,86 @@ export default function ClassroomManagement() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center">
-              <School className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-lg bg-zinc-100 border border-zinc-200 text-zinc-800 flex items-center justify-center shadow-2xs">
+              <School className="w-4 h-4" />
             </div>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
               Data Kelas & Rombongan Belajar
             </h1>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+          <p className="text-xs sm:text-sm text-zinc-500 mt-1 leading-relaxed">
             Kelola data kelas dan tahun ajaran untuk alokasi siswa, paket soal, dan sesi ujian.
           </p>
         </div>
 
         <button
           onClick={handleOpenAdd}
-          className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shadow-md shadow-indigo-600/30 self-start sm:self-auto"
+          className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shadow-xs hover:-translate-y-0.5 active:scale-[0.98] self-start sm:self-auto"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
           <span>Tambah Kelas Baru</span>
         </button>
       </div>
 
       {/* Bar Pencarian & Refresh */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="bg-white rounded-xl p-4 border border-zinc-200/90 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="relative flex-1 max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Cari nama kelas atau tahun ajaran..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            className="w-full pl-9 pr-3 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs focus:border-zinc-400 focus:outline-none"
           />
         </div>
 
         <div className="flex items-center gap-2 self-end sm:self-auto">
-          <span className="text-xs text-slate-500 font-medium">
-            Total: <strong className="text-slate-800">{filteredClassrooms.length}</strong> Kelas
+          <span className="text-xs text-zinc-500 font-medium">
+            Total: <strong className="text-zinc-900 font-mono font-semibold">{filteredClassrooms.length}</strong> Kelas
           </span>
           <button
             onClick={fetchClassrooms}
             disabled={isLoading}
-            className="p-2 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 transition"
+            className="p-1.5 rounded-lg bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-600 transition shadow-2xs hover:-translate-y-0.5 active:scale-[0.98]"
             title="Muat Ulang"
           >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-indigo-600' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-zinc-900' : ''}`} />
           </button>
         </div>
       </div>
 
       {/* Tabel Data Kelas */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-zinc-200/90 shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-700">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
+          <table className="w-full text-left text-xs text-zinc-700">
+            <thead className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 font-semibold uppercase tracking-wider text-[10px]">
               <tr>
-                <th className="py-3.5 px-4 w-12 text-center">No</th>
-                <th className="py-3.5 px-4">Nama Kelas / Rombel</th>
-                <th className="py-3.5 px-4">Tahun Ajaran</th>
-                <th className="py-3.5 px-4 text-center">Jumlah Siswa</th>
-                <th className="py-3.5 px-4 text-center">Aksi</th>
+                <th className="py-3 px-4 w-12 text-center">No</th>
+                <th className="py-3 px-4">Nama Kelas / Rombel</th>
+                <th className="py-3 px-4">Tahun Ajaran</th>
+                <th className="py-3 px-4 text-center">Jumlah Siswa</th>
+                <th className="py-3 px-4 text-center">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-zinc-100">
               {filteredClassrooms.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="py-12 text-center text-slate-400 text-xs">
+                  <td colSpan="5" className="py-12 text-center text-zinc-400 text-xs">
                     {isLoading ? 'Memuat data kelas...' : 'Belum ada data kelas yang terdaftar.'}
                   </td>
                 </tr>
               ) : (
                 filteredClassrooms.map((cls, index) => (
-                  <tr key={cls.id} className="hover:bg-slate-50/80 transition">
-                    <td className="py-3 px-4 text-center font-bold text-slate-500">
+                  <tr key={cls.id} className="hover:bg-zinc-50/80 transition">
+                    <td className="py-3 px-4 text-center font-mono text-zinc-500">
                       {index + 1}
                     </td>
-                    <td className="py-3 px-4 font-bold text-slate-900 text-sm">
+                    <td className="py-3 px-4 font-semibold text-zinc-900 text-sm">
                       {cls.name}
                     </td>
                     <td className="py-3 px-4">
-                      <span className="px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-[11px]">
+                      <span className="px-2 py-0.5 rounded bg-zinc-100 border border-zinc-200 text-zinc-700 font-mono text-[11px]">
                         {cls.academic_year || '2026/2027'}
                       </span>
                     </td>
@@ -297,26 +297,26 @@ export default function ClassroomManagement() {
                         type="button"
                         onClick={() => handleOpenStudentList(cls)}
                         title={`Klik untuk melihat detail ${cls.student_count || 0} siswa kelas ${cls.name}`}
-                        className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-900 font-extrabold text-xs border-2 border-indigo-200 hover:border-indigo-400 transition-all transform hover:scale-105 active:scale-95 shadow-xs cursor-pointer group mx-auto"
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200/80 text-zinc-800 font-mono text-xs border border-zinc-200 transition-all hover:-translate-y-0.5 active:scale-[0.98] shadow-2xs cursor-pointer group mx-auto"
                       >
-                        <Users className="w-4 h-4 text-indigo-600 group-hover:text-indigo-800 transition" />
-                        <span className="group-hover:underline underline-offset-2">
+                        <Users className="w-3.5 h-3.5 text-zinc-500 group-hover:text-zinc-800 transition" />
+                        <span>
                           {cls.student_count || 0} Siswa
                         </span>
                       </button>
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
+                      <div className="flex items-center justify-center gap-1.5">
                         <button
                           onClick={() => handleOpenEdit(cls)}
-                          className="p-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition"
+                          className="p-1 rounded-md bg-white text-zinc-700 hover:bg-zinc-50 border border-zinc-200 transition shadow-2xs hover:-translate-y-0.5 active:scale-[0.98]"
                           title="Edit Kelas"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => handleDelete(cls)}
-                          className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition"
+                          className="p-1 rounded-md text-zinc-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition active:scale-[0.98]"
                           title="Hapus Kelas"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -340,15 +340,15 @@ export default function ClassroomManagement() {
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           {modalError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs flex items-center gap-2">
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{modalError}</span>
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
-              Nama Kelas / Rombel <span className="text-red-500">*</span>
+            <label className="block text-xs font-semibold text-zinc-700 mb-1">
+              Nama Kelas / Rombel <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
@@ -356,13 +356,13 @@ export default function ClassroomManagement() {
               placeholder="Contoh: X TKJ 1, XII MIPA 2"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-xs focus:border-zinc-400 focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
-              Tahun Ajaran <span className="text-red-500">*</span>
+            <label className="block text-xs font-semibold text-zinc-700 mb-1">
+              Tahun Ajaran <span className="text-rose-500">*</span>
             </label>
             <input
               type="text"
@@ -370,22 +370,22 @@ export default function ClassroomManagement() {
               placeholder="Contoh: 2026/2027"
               value={formData.academic_year}
               onChange={(e) => setFormData({ ...formData, academic_year: e.target.value })}
-              className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-xs focus:border-zinc-400 focus:outline-none"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100">
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="px-4 py-2 border border-slate-300 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-50 transition"
+              className="px-3.5 py-2 border border-zinc-200 text-zinc-700 font-medium text-xs rounded-lg hover:bg-zinc-50 transition"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center gap-2 disabled:opacity-50"
+              className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white font-semibold text-xs rounded-lg shadow-xs transition flex items-center gap-1.5 hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>
@@ -413,58 +413,58 @@ export default function ClassroomManagement() {
         maxWidth="max-w-3xl"
       >
         <div className="space-y-4">
-          {/* Header Banner */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-md">
+          {/* Header Banner - Architectural Dark Zinc */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-[#090D16] border border-zinc-800 text-zinc-100 shadow-xs">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-600/30 border border-indigo-400/40 flex items-center justify-center text-indigo-300">
-                <School className="w-5 h-5" />
+              <div className="w-9 h-9 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-300">
+                <School className="w-4 h-4" />
               </div>
               <div>
-                <div className="font-extrabold text-base text-white">
+                <div className="font-semibold text-sm sm:text-base text-white">
                   Alokasi Rombongan Belajar
                 </div>
-                <div className="text-xs text-indigo-200">
+                <div className="text-xs text-zinc-400">
                   Kelas {selectedClassForStudents?.name} • Tahun Ajaran {selectedClassForStudents?.academic_year || '2026/2027'}
                 </div>
               </div>
             </div>
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-bold text-slate-100 self-start sm:self-auto">
-              <Users className="w-4 h-4 text-indigo-300" />
-              <span>Total <strong>{classStudents.length}</strong> Siswa Terdaftar</span>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-zinc-800/90 border border-zinc-700 text-xs font-mono font-medium text-zinc-200 self-start sm:self-auto">
+              <Users className="w-3.5 h-3.5 text-zinc-400" />
+              <span>Total {classStudents.length} Siswa</span>
             </div>
           </div>
 
           {/* Kontrol: Show Entries & Search Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500 font-medium">Show</span>
+              <span className="text-xs text-zinc-500 font-medium">Show</span>
               <select
                 value={studentEntriesPerPage}
                 onChange={(e) => setStudentEntriesPerPage(Number(e.target.value))}
-                className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="px-2 py-1 bg-white border border-zinc-200 rounded-lg text-xs font-medium text-zinc-700 focus:outline-none focus:border-zinc-400"
               >
                 <option value={5}>5</option>
                 <option value={10}>10</option>
                 <option value={25}>25</option>
                 <option value={50}>50</option>
               </select>
-              <span className="text-xs text-slate-500 font-medium">entries</span>
+              <span className="text-xs text-zinc-500 font-medium">entries</span>
             </div>
 
             <div className="relative flex-1 sm:max-w-xs">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder="Cari nama atau NISN..."
                 value={studentSearchQuery}
                 onChange={(e) => setStudentSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-8 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-800 font-medium"
+                className="w-full pl-8 pr-7 py-1 bg-zinc-50 border border-zinc-200 rounded-lg text-xs focus:border-zinc-400 focus:outline-none text-zinc-800 font-medium"
               />
               {studentSearchQuery && (
                 <button
                   type="button"
                   onClick={() => setStudentSearchQuery('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -473,31 +473,31 @@ export default function ClassroomManagement() {
           </div>
 
           {/* Tabel Siswa */}
-          <div className="rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
+          <div className="rounded-xl border border-zinc-200 overflow-hidden shadow-2xs">
             <div className="overflow-x-auto max-h-[380px]">
-              <table className="w-full text-left text-xs text-slate-700">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px] sticky top-0 z-10">
+              <table className="w-full text-left text-xs text-zinc-700">
+                <thead className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 font-semibold uppercase tracking-wider text-[10px] sticky top-0 z-10">
                   <tr>
-                    <th className="py-3 px-3.5 w-12 text-center">No</th>
-                    <th className="py-3 px-3.5">Nama Lengkap Siswa</th>
-                    <th className="py-3 px-3.5">NISN / Username</th>
-                    <th className="py-3 px-3.5">Email</th>
-                    <th className="py-3 px-3.5 text-center">Status Akun</th>
+                    <th className="py-2.5 px-3 w-12 text-center">No</th>
+                    <th className="py-2.5 px-3">Nama Lengkap Siswa</th>
+                    <th className="py-2.5 px-3">NISN / Username</th>
+                    <th className="py-2.5 px-3">Email</th>
+                    <th className="py-2.5 px-3 text-center">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-zinc-100">
                   {isLoadingClassStudents ? (
                     <tr>
-                      <td colSpan="5" className="py-12 text-center text-slate-400">
+                      <td colSpan="5" className="py-12 text-center text-zinc-400">
                         <div className="flex items-center justify-center gap-2">
-                          <RefreshCw className="w-4 h-4 animate-spin text-indigo-600" />
+                          <RefreshCw className="w-4 h-4 animate-spin text-zinc-800" />
                           <span>Memuat data siswa kelas...</span>
                         </div>
                       </td>
                     </tr>
                   ) : currentClassStudents.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="py-12 text-center text-slate-400">
+                      <td colSpan="5" className="py-12 text-center text-zinc-400">
                         {studentSearchQuery
                           ? 'Tidak ada siswa yang cocok dengan kata kunci pencarian.'
                           : 'Belum ada siswa yang terdaftar pada kelas ini.'}
@@ -505,31 +505,31 @@ export default function ClassroomManagement() {
                     </tr>
                   ) : (
                     currentClassStudents.map((std, idx) => (
-                      <tr key={std.id || idx} className="hover:bg-slate-50/80 transition">
-                        <td className="py-2.5 px-3.5 text-center font-bold text-slate-500">
+                      <tr key={std.id || idx} className="hover:bg-zinc-50/80 transition">
+                        <td className="py-2 px-3 text-center font-mono text-zinc-500">
                           {studentIndexOfFirst + idx + 1}
                         </td>
-                        <td className="py-2.5 px-3.5 font-bold text-slate-900">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 text-white font-black text-[10px] flex items-center justify-center shrink-0 shadow-2xs">
+                        <td className="py-2 px-3 font-medium text-zinc-900">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded bg-zinc-800 text-white font-mono text-[10px] flex items-center justify-center shrink-0">
                               {getInitials(std.full_name)}
                             </div>
                             <div>
-                              <div className="text-slate-900 font-bold">{std.full_name}</div>
-                              <div className="text-[10px] text-slate-400 font-normal">Peserta Ujian Asesmen</div>
+                              <div className="text-zinc-900 font-medium">{std.full_name}</div>
+                              <div className="text-[10px] text-zinc-400 font-normal">Peserta Ujian</div>
                             </div>
                           </div>
                         </td>
-                        <td className="py-2.5 px-3.5">
-                          <span className="font-mono px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-[11px]">
+                        <td className="py-2 px-3">
+                          <span className="font-mono px-1.5 py-0.2 rounded bg-zinc-100 border border-zinc-200 text-zinc-700 text-[11px]">
                             {std.nisn || std.username}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3.5 text-slate-600 font-medium">
+                        <td className="py-2 px-3 text-zinc-500 font-mono text-[11px]">
                           {std.email || '-'}
                         </td>
-                        <td className="py-2.5 px-3.5 text-center">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold text-[11px] border border-emerald-200">
+                        <td className="py-2 px-3 text-center">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.2 rounded bg-emerald-50 text-emerald-800 font-medium text-[10px] border border-emerald-200">
                             <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                             <span>Aktif</span>
                           </span>
@@ -543,32 +543,30 @@ export default function ClassroomManagement() {
           </div>
 
           {/* Footer: Keterangan Entri, Paginasi & Tombol Tutup */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500 font-medium pt-2 border-t border-slate-100">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-zinc-500 font-medium pt-2 border-t border-zinc-100">
             <div>
-              Menampilkan <strong>{filteredClassStudents.length > 0 ? studentIndexOfFirst + 1 : 0}</strong> sampai{' '}
-              <strong>{Math.min(studentIndexOfLast, filteredClassStudents.length)}</strong> dari{' '}
-              <strong>{filteredClassStudents.length}</strong> siswa
+              Menampilkan <span className="font-mono text-zinc-800">{filteredClassStudents.length > 0 ? studentIndexOfFirst + 1 : 0}</span> - <span className="font-mono text-zinc-800">{Math.min(studentIndexOfLast, filteredClassStudents.length)}</span> dari <span className="font-mono text-zinc-800">{filteredClassStudents.length}</span> siswa
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               {studentTotalPages > 1 && (
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
                     onClick={() => setStudentCurrentPage((p) => Math.max(p - 1, 1))}
                     disabled={studentCurrentPage === 1}
-                    className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold disabled:opacity-40 transition text-xs"
+                    className="px-2 py-1 rounded border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 font-medium disabled:opacity-40 transition text-xs"
                   >
                     Prev
                   </button>
-                  <span className="px-2 text-xs font-bold text-slate-700">
+                  <span className="px-1 text-xs font-mono text-zinc-700">
                     {studentCurrentPage} / {studentTotalPages}
                   </span>
                   <button
                     type="button"
                     onClick={() => setStudentCurrentPage((p) => Math.min(p + 1, studentTotalPages))}
                     disabled={studentCurrentPage === studentTotalPages}
-                    className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold disabled:opacity-40 transition text-xs"
+                    className="px-2 py-1 rounded border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 font-medium disabled:opacity-40 transition text-xs"
                   >
                     Next
                   </button>
@@ -577,7 +575,7 @@ export default function ClassroomManagement() {
               <button
                 type="button"
                 onClick={() => setIsStudentListModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition ml-auto"
+                className="px-3 py-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 text-xs font-medium transition ml-auto"
               >
                 Tutup
               </button>

@@ -4,6 +4,9 @@
 
 @layer base {
   body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     -khtml-user-select: none;

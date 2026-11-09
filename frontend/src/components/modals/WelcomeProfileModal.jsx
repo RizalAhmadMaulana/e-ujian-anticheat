@@ -28,81 +28,84 @@ export default function WelcomeProfileModal({ user, onClose }) {
   const isProfileIncomplete = !user?.is_profile_complete;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-zoom-in">
-        {/* Header Visual with Indigo & Slate gradient */}
-        <div className="relative bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-6 text-white text-center">
-          <div className="absolute top-0 right-0 transform translate-x-4 -translate-y-4 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
-          <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300 shadow-lg shadow-indigo-950/50">
-            <ShieldAlert className="w-7 h-7 text-amber-400" />
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+      <div className="relative w-full max-w-md bg-white rounded-xl shadow-xl border border-zinc-200/90 overflow-hidden animate-zoom-in">
+        {/* Clean Header */}
+        <div className="p-5 border-b border-zinc-100">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-100 shrink-0">
+              <ShieldAlert className="w-4 h-4 text-amber-400" />
+            </div>
+            <div>
+              <span className="text-[10px] font-mono font-medium text-zinc-400 uppercase tracking-wider block">
+                Pemberitahuan Keamanan • {isStudent ? 'Siswa' : 'Pengawas'}
+              </span>
+              <h3 className="text-base font-bold text-zinc-900 tracking-tight mt-0.5">
+                Konfigurasi Kredensial Akun
+              </h3>
+              <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                Halo <strong className="text-zinc-800 font-semibold">{user?.fullName || user?.full_name || user?.username}</strong>, demi keamanan integritas asesmen, kami menyarankan Anda memperbarui profil dan mengganti kata sandi bawaan.
+              </p>
+            </div>
           </div>
-          <span className="inline-block px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-[11px] font-bold tracking-wider uppercase mb-2">
-            Pemberitahuan Keamanan Akun {isStudent ? 'Peserta Siswa' : 'Pengawas'}
-          </span>
-          <h3 className="font-extrabold text-xl sm:text-2xl text-white tracking-tight">
-            Selamat Datang di E-UJIAN PRO! 👋
-          </h3>
-          <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-sm mx-auto">
-            Halo <strong className="text-white">{user?.fullName || user?.full_name || user?.username}</strong>, demi menjaga keamanan akun dan privasi nilai asesmen Anda, kami menyarankan Anda memperbarui profil dan mengganti kata sandi bawaan.
-          </p>
         </div>
 
         {/* Content Body: Highlight Warnings */}
-        <div className="p-6 space-y-4 bg-slate-50/50">
-          <div className="space-y-2.5">
+        <div className="p-5 space-y-3 bg-zinc-50/50">
+          <div className="space-y-2">
             {isPasswordDefault && (
-              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-900">
-                <div className="p-2 rounded-xl bg-amber-100/80 text-amber-700 shrink-0 mt-0.5">
-                  <KeyRound className="w-4 h-4" />
+              <div className="flex items-start gap-2.5 p-3 rounded-lg bg-amber-50/80 border border-amber-200 text-amber-900">
+                <div className="p-1.5 rounded-md bg-amber-100/80 text-amber-700 shrink-0 mt-0.5">
+                  <KeyRound className="w-3.5 h-3.5" />
                 </div>
                 <div className="text-xs leading-relaxed">
-                  <div className="font-bold text-amber-950">Kata Sandi Masih Bawaan Sistem</div>
-                  <div className="text-amber-800/90 text-[11px] mt-0.5">
-                    Akun Anda saat ini masih memakai kata sandi bawaan ({isStudent ? 'NISN/default' : 'NIP/default'}). Segera ganti dengan sandi pribadi yang hanya Anda ketahui.
+                  <div className="font-semibold text-amber-950">Kata Sandi Bawaan Sistem</div>
+                  <div className="text-amber-800 text-[11px] mt-0.5">
+                    Akun Anda masih memakai kata sandi bawaan ({isStudent ? 'NISN' : 'NIP'}). Harap perbarui ke sandi pribadi yang aman.
                   </div>
                 </div>
               </div>
             )}
 
             {isProfileIncomplete && (
-              <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-indigo-50 border border-indigo-200/80 text-indigo-950">
-                <div className="p-2 rounded-xl bg-indigo-100 text-indigo-700 shrink-0 mt-0.5">
-                  <UserCheck className="w-4 h-4" />
+              <div className="flex items-start gap-2.5 p-3 rounded-lg bg-blue-50/80 border border-blue-200 text-blue-950">
+                <div className="p-1.5 rounded-md bg-blue-100 text-blue-700 shrink-0 mt-0.5">
+                  <UserCheck className="w-3.5 h-3.5" />
                 </div>
                 <div className="text-xs leading-relaxed">
-                  <div className="font-bold text-indigo-950">Biodata Belum Lengkap</div>
-                  <div className="text-indigo-800/90 text-[11px] mt-0.5">
-                    Lengkapi alamat email aktif dan periksa nama lengkap Anda untuk keperluan verifikasi dan identitas laporan asesmen.
+                  <div className="font-semibold text-blue-950">Biodata Belum Lengkap</div>
+                  <div className="text-blue-800 text-[11px] mt-0.5">
+                    Lengkapi alamat email aktif dan periksa nama lengkap untuk keperluan rekapitulasi berita acara asesmen.
                   </div>
                 </div>
               </div>
             )}
 
             {!isPasswordDefault && !isProfileIncomplete && (
-              <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                <span>Profil dan kredensial Anda sudah terpasang dengan baik.</span>
+              <div className="flex items-center gap-2.5 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Profil dan kredensial akun Anda sudah terpasang dengan baik.</span>
               </div>
             )}
           </div>
 
           {/* Action Buttons */}
-          <div className="pt-3 flex flex-col-reverse sm:flex-row gap-2.5 sm:justify-end">
+          <div className="pt-2 flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
             <button
               type="button"
               onClick={handleDismissLater}
-              className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-sm"
+              className="w-full sm:w-auto h-9 px-3.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 text-xs font-medium transition flex items-center justify-center gap-1.5 shadow-xs"
             >
-              <Clock className="w-3.5 h-3.5 text-slate-400" />
-              <span>Ingatkan Saya Nanti</span>
+              <Clock className="w-3.5 h-3.5 text-zinc-400" />
+              <span>Nanti Saja</span>
             </button>
             <button
               type="button"
               onClick={handleNavigateToProfile}
-              className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white text-xs font-bold transition flex items-center justify-center gap-2 shadow-md shadow-indigo-600/30"
+              className="w-full sm:w-auto h-9 px-4 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold tracking-tight transition-all duration-150 hover:-translate-y-0.5 active:scale-[0.98] flex items-center justify-center gap-1.5 shadow-xs"
             >
-              <span>Lengkapi Profil Sekarang</span>
-              <ArrowRight className="w-4 h-4" />
+              <span>Lengkapi Profil</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>

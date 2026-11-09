@@ -73,46 +73,51 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden">
-      {/* Background Glow Orbs */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-600/20 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen bg-[#090D16] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative selection:bg-blue-600/30">
+      {/* Subtle Architectural Grid Pattern */}
+      <div 
+        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        style={{
+          backgroundImage: 'linear-gradient(to right, #ffffff 1px, transparent 1px), linear-gradient(to bottom, #ffffff 1px, transparent 1px)',
+          backgroundSize: '40px 40px'
+        }}
+      />
 
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center z-10 px-4">
-        <div className="inline-flex items-center justify-center p-3 bg-indigo-600/20 border border-indigo-500/30 rounded-2xl mb-4 shadow-lg shadow-indigo-500/10">
-          <ShieldCheck className="w-10 h-10 text-indigo-400" />
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center z-10">
+        <div className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-zinc-900/80 border border-zinc-800 text-zinc-200 mb-4 shadow-sm">
+          <ShieldCheck className="w-5 h-5 text-blue-400" />
         </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+        <h1 className="text-xl sm:text-2xl font-bold text-zinc-100 tracking-tight">
           E-Ujian & E-Jurnal
         </h1>
-        <p className="mt-2 text-sm text-slate-400">
-          Portal Asesmen Sekolah Anti-Cheat Terintegrasi Berita Acara Otomatis
+        <p className="mt-1.5 text-xs text-zinc-400 font-medium">
+          Portal Asesmen Sekolah Anti-Cheat & Rekapitulasi Berita Acara
         </p>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md z-10 px-4">
-        <div className="bg-slate-800/80 backdrop-blur-xl border border-slate-700/60 py-8 px-6 sm:px-10 shadow-2xl rounded-2xl">
-          <div className="mb-6 text-center">
-            <h2 className="text-xl font-black text-white">Masuk ke Sistem</h2>
-            <p className="text-xs text-slate-400 mt-1">
-              Gunakan NIP untuk Guru atau NISN untuk Siswa
+      <div className="mt-7 sm:mx-auto sm:w-full sm:max-w-md z-10">
+        <div className="bg-zinc-900/70 backdrop-blur-md border border-zinc-800/90 py-7 px-6 sm:px-8 shadow-xl rounded-xl">
+          <div className="mb-6">
+            <h2 className="text-base font-semibold text-zinc-100 tracking-tight">Masuk ke Sistem</h2>
+            <p className="text-xs text-zinc-400 mt-0.5">
+              Gunakan NIP untuk Guru Pengawas atau NISN untuk Siswa
             </p>
           </div>
 
           {/* Login Form (Bebas Dialog Simpan Password Browser & Rekomendasi Isian) */}
           <div className="space-y-4">
             {errorMessage && (
-              <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-xl flex items-center gap-2 text-red-200 text-xs">
-                <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+              <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-lg flex items-center gap-2 text-rose-300 text-xs font-medium">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
                 <span>{errorMessage}</span>
               </div>
             )}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="block text-xs font-medium text-zinc-300 mb-1.5">
                 Nomor Induk (NIP / NISN)
               </label>
-              <div className="relative rounded-lg shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <div className="relative rounded-lg">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
                   <User className="h-4 w-4" />
                 </div>
                 <input
@@ -131,17 +136,17 @@ export default function LoginPage() {
                   onChange={(e) => setUsername(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleManualLogin(e)}
                   placeholder="Masukkan NIP Guru atau NISN Siswa"
-                  className="block w-full pl-10 pr-3 py-2.5 bg-slate-900/80 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                  className="block w-full pl-9 pr-3 py-2 bg-zinc-950/80 border border-zinc-800 rounded-lg text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="block text-xs font-medium text-zinc-300 mb-1.5">
                 Kata Sandi
               </label>
-              <div className="relative rounded-lg shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <div className="relative rounded-lg">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-zinc-500">
                   <Lock className="h-4 w-4" />
                 </div>
                 <input
@@ -164,12 +169,12 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleManualLogin(e)}
                   placeholder="Masukkan kata sandi (Default: NIP / NISN)"
-                  className="block w-full pl-10 pr-10 py-2.5 bg-slate-900/80 border border-slate-700 rounded-lg text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition font-mono"
+                  className="block w-full pl-9 pr-10 py-2 bg-zinc-950/80 border border-zinc-800 rounded-lg text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition font-mono"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-200"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-500 hover:text-zinc-300 transition"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -180,25 +185,26 @@ export default function LoginPage() {
               type="button"
               onClick={handleManualLogin}
               disabled={isLoading}
-              className="w-full mt-2 py-3 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-sm font-bold shadow-lg shadow-indigo-600/25 transition flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full mt-2 h-10 px-4 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs sm:text-sm font-semibold tracking-tight transition-all duration-150 hover:-translate-y-0.5 active:scale-[0.98] shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none"
             >
               {isLoading ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-zinc-950/20 border-t-zinc-950 rounded-full animate-spin" />
               ) : (
                 <>
                   <span>Masuk ke Sistem</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </>
               )}
             </button>
           </div>
 
           {/* Zero-Tolerance Security Footnote */}
-          <div className="mt-6 pt-5 border-t border-slate-700/60 flex items-center justify-between text-[11px] text-slate-400">
+          <div className="mt-6 pt-4 border-t border-zinc-800/80 flex items-center justify-between text-[11px] text-zinc-400">
             <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Zero-Tolerance Lockdown Aktif
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Zero-Tolerance Lockdown Aktif
             </span>
-            <span>Versi Web 2.1</span>
+            <span className="font-mono text-zinc-500">v2.1</span>
           </div>
         </div>
       </div>

@@ -119,14 +119,14 @@ export default function TeacherLayout() {
       {/* ======================================================== */}
       {/* MOBILE HEADER BAR */}
       {/* ======================================================== */}
-      <div className="md:hidden bg-slate-900 text-white flex items-center justify-between px-4 py-3 border-b border-slate-800 sticky top-0 z-40 shadow-md">
+      <div className="md:hidden bg-[#090D16] text-zinc-100 flex items-center justify-between px-4 py-3 border-b border-zinc-800 sticky top-0 z-40">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-indigo-600/30 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
-            <ShieldCheck className="w-5 h-5" />
+          <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-200">
+            <ShieldCheck className="w-4 h-4 text-blue-400" />
           </div>
           <div>
-            <div className="font-bold text-sm tracking-tight">E-Ujian & E-Jurnal</div>
-            <div className="text-[10px] text-slate-400">Guru Pengawas</div>
+            <div className="font-bold text-sm tracking-tight text-zinc-100">E-Ujian & E-Jurnal</div>
+            <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">Guru Pengawas</div>
           </div>
         </div>
 
@@ -134,7 +134,7 @@ export default function TeacherLayout() {
           {lockedStudentsCount > 0 && (
             <button
               onClick={() => navigate('/teacher/proctoring')}
-              className="px-2 py-1 rounded bg-red-600 text-white text-[11px] font-bold flex items-center gap-1 animate-pulse"
+              className="px-2 py-1 rounded bg-rose-500/20 border border-rose-500/40 text-rose-300 text-[11px] font-medium flex items-center gap-1 animate-pulse"
             >
               <ShieldAlert className="w-3.5 h-3.5" />
               <span>{lockedStudentsCount}</span>
@@ -144,15 +144,15 @@ export default function TeacherLayout() {
             type="button"
             onClick={() => navigate('/teacher/profile')}
             title="Pengaturan Profil Akun"
-            className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white"
+            className="p-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200"
           >
             <Settings className="w-4 h-4" />
           </button>
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white"
+            className="p-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200"
           >
-            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
           </button>
         </div>
       </div>
@@ -161,32 +161,32 @@ export default function TeacherLayout() {
       {/* SIDEBAR NAVIGATION (Desktop & Mobile Drawer) */}
       {/* ======================================================== */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-slate-300 flex flex-col border-r border-slate-800 transform transition-transform duration-200 ease-in-out md:static md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 w-60 bg-[#090D16] text-zinc-300 flex flex-col border-r border-zinc-800/80 transform transition-transform duration-200 ease-in-out md:static md:translate-x-0 ${
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Brand / Logo */}
-        <div className="p-5 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-400 border border-indigo-400/50 flex items-center justify-center text-white shadow-lg shadow-indigo-600/30">
-              <ShieldCheck className="w-6 h-6" />
+        <div className="p-4 border-b border-zinc-800/80 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-200 shadow-xs">
+              <ShieldCheck className="w-4 h-4 text-blue-400" />
             </div>
             <div>
-              <div className="font-black text-white text-base tracking-tight">E-UJIAN PRO</div>
-              <div className="text-[10px] text-indigo-400 font-bold tracking-wider uppercase">Portal Guru & E-Jurnal</div>
+              <div className="font-bold text-zinc-100 text-sm tracking-tight">E-UJIAN PRO</div>
+              <div className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">Portal Pengawas</div>
             </div>
           </div>
           <button
             onClick={() => setIsMobileMenuOpen(false)}
-            className="md:hidden text-slate-400 hover:text-white"
+            className="md:hidden text-zinc-400 hover:text-zinc-200 p-1"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Navigation Items */}
-        <nav className="flex-1 p-3 space-y-1.5 overflow-y-auto">
-          <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+        <nav className="flex-1 p-2.5 space-y-1 overflow-y-auto">
+          <div className="px-2.5 py-1 text-[10px] font-mono font-medium uppercase tracking-wider text-zinc-500">
             Menu Utama
           </div>
           {navItems.map((item) => {
@@ -197,22 +197,22 @@ export default function TeacherLayout() {
                 to={item.to}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={({ isActive }) =>
-                  `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition duration-150 ${
+                  `flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-medium transition-all duration-150 ${
                     isActive
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 font-semibold'
-                      : 'hover:bg-slate-800 hover:text-white text-slate-400'
+                      ? 'bg-zinc-800/90 text-white font-semibold border border-zinc-700/60 shadow-xs'
+                      : 'hover:bg-zinc-900 hover:text-zinc-200 text-zinc-400'
                   }`
                 }
               >
-                <div className="flex items-center gap-3">
-                  <Icon className="w-4 h-4 shrink-0" />
-                  <span>{item.label}</span>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <Icon className="w-4 h-4 shrink-0 text-zinc-400" />
+                  <span className="truncate">{item.label}</span>
                 </div>
                 {item.badge && (
-                  <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                  <span className={`text-[10px] font-semibold px-1.5 py-0.2 rounded border ${
                     item.isAlert
-                      ? 'bg-red-500 text-white border border-red-400 animate-pulse-fast shadow-sm shadow-red-500/50'
-                      : 'bg-indigo-500/20 text-indigo-300'
+                      ? 'bg-rose-500/10 text-rose-300 border-rose-500/30 animate-pulse'
+                      : 'bg-zinc-800 text-zinc-300 border-zinc-700'
                   }`}>
                     {item.badge}
                   </span>
@@ -223,29 +223,29 @@ export default function TeacherLayout() {
         </nav>
 
         {/* User Profile Card */}
-        <div className="p-3 border-t border-slate-800 bg-slate-950/60">
-          <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/50">
+        <div className="p-2.5 border-t border-zinc-800/80 bg-zinc-950/40">
+          <div className="flex items-center justify-between p-2 rounded-lg bg-zinc-900/60 border border-zinc-800">
             <div 
               onClick={() => {
                 setIsMobileMenuOpen(false);
                 navigate('/teacher/profile');
               }}
-              className="flex items-center gap-2.5 overflow-hidden cursor-pointer hover:opacity-85 transition"
+              className="flex items-center gap-2 overflow-hidden cursor-pointer hover:opacity-85 transition"
               title="Buka Pengaturan Profil"
             >
-              <div className="w-9 h-9 rounded-full bg-indigo-500/20 border border-indigo-400/40 flex items-center justify-center text-indigo-300 font-bold text-xs shrink-0">
-                <UserCheck className="w-4 h-4" />
+              <div className="w-7 h-7 rounded-md bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-300 font-semibold text-xs shrink-0">
+                {currentUser?.fullName?.charAt(0) || currentUser?.username?.charAt(0) || 'G'}
               </div>
-              <div className="overflow-hidden">
-                <div className="text-xs font-bold text-white truncate">
+              <div className="overflow-hidden min-w-0">
+                <div className="text-xs font-semibold text-zinc-100 truncate">
                   {currentUser?.fullName || currentUser?.full_name || currentUser?.username || 'Guru Pengawas'}
                 </div>
-                <div className="text-[11px] text-slate-400 truncate">
-                  NIP: {currentUser?.nip || currentUser?.username || '-'}
+                <div className="text-[10px] font-mono text-zinc-400 truncate">
+                  {currentUser?.nip || currentUser?.username || '-'}
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 shrink-0">
               <button
                 type="button"
                 onClick={() => {
@@ -253,16 +253,16 @@ export default function TeacherLayout() {
                   navigate('/teacher/profile');
                 }}
                 title="Pengaturan Profil Akun"
-                className="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-700/60 rounded-lg transition shrink-0"
+                className="p-1 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded transition"
               >
-                <Settings className="w-4 h-4" />
+                <Settings className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={handleLogout}
                 title="Keluar dari Akun"
-                className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-700/60 rounded-lg transition shrink-0"
+                className="p-1 text-zinc-400 hover:text-rose-400 hover:bg-zinc-800 rounded transition"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -273,66 +273,65 @@ export default function TeacherLayout() {
       {isMobileMenuOpen && (
         <div
           onClick={() => setIsMobileMenuOpen(false)}
-          className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-xs md:hidden"
         />
       )}
 
       {/* ======================================================== */}
       {/* MAIN CONTENT AREA WITH DESKTOP TOP BAR */}
       {/* ======================================================== */}
-      <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
+      <div className="flex-1 flex flex-col min-h-0 overflow-y-auto bg-zinc-50">
         {/* Desktop Header */}
-        <header className="hidden md:flex bg-white border-b border-slate-200/80 px-8 py-4 items-center justify-between sticky top-0 z-30 shadow-sm">
+        <header className="hidden md:flex bg-white border-b border-zinc-200/80 px-6 py-3 items-center justify-between sticky top-0 z-30">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+            <span className="text-xs font-medium px-2 py-0.5 rounded bg-zinc-100 text-zinc-700 border border-zinc-200/80">
               {schoolSettings?.name || 'MIS RISALAH'}
             </span>
-            <span className="text-xs text-slate-400">•</span>
-            <span className="text-xs text-emerald-600 font-bold flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-zinc-300">•</span>
+            <span className="text-xs text-emerald-700 font-medium flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               Zero-Tolerance Lockdown Aktif
             </span>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {lockedStudentsCount > 0 && (
               <button
                 onClick={() => navigate('/teacher/proctoring')}
-                className="px-3.5 py-1.5 rounded-lg bg-red-100 border border-red-300 text-red-700 text-xs font-bold flex items-center gap-2 hover:bg-red-200 transition animate-pulse"
+                className="px-2.5 py-1 rounded-md bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-1.5 hover:bg-rose-100 transition animate-pulse"
               >
-                <ShieldAlert className="w-4 h-4 text-red-600" />
-                <span>{lockedStudentsCount} Siswa Perlu Di-Unlock!</span>
+                <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
+                <span>{lockedStudentsCount} Siswa Terkunci</span>
               </button>
             )}
 
-            <div className="flex items-center gap-3">
-              {/* Icon Gerigi di Samping Kiri Data User Login */}
+            <div className="flex items-center gap-2.5 pl-3 border-l border-zinc-200">
               <button
                 type="button"
                 onClick={() => navigate('/teacher/profile')}
                 title="Pengaturan Profil & Akun"
-                className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl border border-slate-200/80 transition shadow-sm group"
+                className="p-1.5 text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100 rounded-md border border-zinc-200 transition group"
               >
-                <Settings className="w-4 h-4 group-hover:rotate-45 transition-transform duration-300" />
+                <Settings className="w-3.5 h-3.5 group-hover:rotate-45 transition-transform duration-200" />
               </button>
 
               <div 
                 onClick={() => navigate('/teacher/profile')}
-                className="text-right cursor-pointer hover:opacity-80 transition"
+                className="text-right cursor-pointer hover:opacity-85 transition"
                 title="Buka Pengaturan Profil Akun"
               >
-                <div className="text-xs font-bold text-slate-800">
+                <div className="text-xs font-semibold text-zinc-800 leading-tight">
                   {currentUser?.fullName || currentUser?.full_name || currentUser?.username || 'Guru Pengawas'}
                 </div>
-                <div className="text-[11px] text-slate-500">Guru Pengawas Ujian</div>
+                <div className="text-[10px] text-zinc-400 font-mono">Guru Pengawas Ujian</div>
               </div>
 
               <button
                 onClick={handleLogout}
                 title="Keluar"
-                className="p-2 text-slate-400 hover:text-red-600 hover:bg-slate-100 rounded-lg transition"
+                className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-zinc-100 rounded-md transition"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>

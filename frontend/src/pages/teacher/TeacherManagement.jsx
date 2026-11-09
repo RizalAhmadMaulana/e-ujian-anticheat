@@ -240,30 +240,31 @@ export default function TeacherManagement() {
         </div>
       )}
 
-      {/* Header Halaman & 3 Tombol Aksi (Persis Gaya Data Kelas) */}
+      {/* Header Halaman & 3 Tombol Aksi */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center shadow-xs">
-              <GraduationCap className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-lg bg-zinc-100 border border-zinc-200 text-zinc-800 flex items-center justify-center shadow-2xs">
+              <GraduationCap className="w-4 h-4" />
             </div>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
               Data Guru Pengawas
             </h1>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+          <p className="text-xs sm:text-sm text-zinc-500 mt-1 leading-relaxed">
             Kelola data dewan guru pengawas asesmen (Akun otomatis: Username & Password = NIP).
           </p>
         </div>
 
-        {/* 3 Tombol Aksi Lengkap & Berwarna */}
-        <div className="flex items-center gap-2.5 flex-wrap self-start sm:self-auto">
+        {/* 3 Tombol Aksi */}
+        <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
           <button
-            onClick={handleOpenAdd}
-            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shadow-md shadow-indigo-600/30 active:scale-95"
+            onClick={handleDownloadTemplate}
+            disabled={isDownloadingTemplate}
+            className="px-3.5 py-2 bg-white hover:bg-zinc-50 text-zinc-700 border border-zinc-200 rounded-lg text-xs font-medium transition flex items-center gap-1.5 shadow-2xs hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-50"
           >
-            <Plus className="w-4 h-4" />
-            <span>Tambah Guru</span>
+            <Download className="w-3.5 h-3.5 text-zinc-500" />
+            <span>{isDownloadingTemplate ? 'Mengunduh...' : 'Template Excel'}</span>
           </button>
 
           <button
@@ -273,32 +274,31 @@ export default function TeacherManagement() {
               setImportResult(null);
               setIsImportModalOpen(true);
             }}
-            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shadow-md shadow-emerald-600/30 active:scale-95"
+            className="px-3.5 py-2 bg-white hover:bg-zinc-50 text-zinc-700 border border-zinc-200 rounded-lg text-xs font-medium transition flex items-center gap-1.5 shadow-2xs hover:-translate-y-0.5 active:scale-[0.98]"
           >
-            <FileSpreadsheet className="w-4 h-4" />
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
             <span>Import Excel</span>
           </button>
 
           <button
-            onClick={handleDownloadTemplate}
-            disabled={isDownloadingTemplate}
-            className="px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 hover:border-slate-300 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 shadow-sm disabled:opacity-50 active:scale-95"
+            onClick={handleOpenAdd}
+            className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shadow-xs hover:-translate-y-0.5 active:scale-[0.98]"
           >
-            <Download className="w-4 h-4 text-slate-500" />
-            <span>{isDownloadingTemplate ? 'Mengunduh...' : 'Template Excel'}</span>
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            <span>Tambah Guru</span>
           </button>
         </div>
       </div>
 
-      {/* Bar Pencarian, Show Entries, & Refresh (Persis Gaya Data Kelas) */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* Bar Pencarian, Show Entries, & Refresh */}
+      <div className="bg-white rounded-xl p-4 border border-zinc-200/90 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         {/* Sisi Kiri: Show Entries */}
-        <div className="flex items-center gap-2 text-xs text-slate-600 font-bold">
+        <div className="flex items-center gap-2 text-xs text-zinc-500 font-medium">
           <span>Show</span>
           <select
             value={entriesPerPage}
             onChange={(e) => setEntriesPerPage(Number(e.target.value))}
-            className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer"
+            className="px-2 py-1 bg-white border border-zinc-200 rounded-lg text-xs font-medium text-zinc-800 focus:outline-none focus:border-zinc-400 cursor-pointer"
           >
             <option value={10}>10</option>
             <option value={25}>25</option>
@@ -310,18 +310,18 @@ export default function TeacherManagement() {
         {/* Sisi Kanan: Search Bar & Counter */}
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <div className="relative flex-1 sm:w-64">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Cari Nama atau NIP..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none transition"
+              className="w-full pl-8 pr-7 py-1.5 bg-zinc-50 border border-zinc-200 rounded-lg text-xs focus:border-zinc-400 focus:outline-none transition"
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -329,82 +329,82 @@ export default function TeacherManagement() {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <span className="text-xs text-slate-500 font-medium hidden md:inline">
-              Total: <strong className="text-slate-800">{teachers.length}</strong> Guru
+            <span className="text-xs text-zinc-500 font-medium hidden md:inline">
+              Total: <strong className="text-zinc-900 font-mono font-semibold">{teachers.length}</strong> Guru
             </span>
             <button
               onClick={fetchTeachers}
               disabled={isLoading}
-              className="p-2 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 transition"
+              className="p-1.5 rounded-lg bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-600 transition shadow-2xs hover:-translate-y-0.5 active:scale-[0.98]"
               title="Muat Ulang"
             >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-indigo-600' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-zinc-900' : ''}`} />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Tabel Data Guru (Persis Gaya Data Kelas dengan Sentuhan Warna) */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      {/* Tabel Data Guru */}
+      <div className="bg-white rounded-xl border border-zinc-200/90 shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-700">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider text-[11px]">
+          <table className="w-full text-left text-xs text-zinc-700">
+            <thead className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 font-semibold uppercase tracking-wider text-[10px]">
               <tr>
-                <th className="py-3.5 px-4 w-14 text-center">NO</th>
-                <th className="py-3.5 px-4">Nama Lengkap Guru</th>
-                <th className="py-3.5 px-4">NIP (Username)</th>
-                <th className="py-3.5 px-4">Email</th>
-                <th className="py-3.5 px-4 text-center w-36">Aksi</th>
+                <th className="py-3 px-4 w-12 text-center">NO</th>
+                <th className="py-3 px-4">Nama Lengkap Guru</th>
+                <th className="py-3 px-4">NIP (Username)</th>
+                <th className="py-3 px-4">Email</th>
+                <th className="py-3 px-4 text-center w-36">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-zinc-100">
               {teachers.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="py-12 text-center text-slate-400 text-xs">
+                  <td colSpan="5" className="py-12 text-center text-zinc-400 text-xs">
                     {isLoading ? 'Memuat data guru...' : 'Belum ada data guru yang terdaftar.'}
                   </td>
                 </tr>
               ) : (
                 currentItems.map((teacher, index) => (
-                  <tr key={teacher.id} className="hover:bg-slate-50/80 transition">
-                    <td className="py-3 px-4 text-center font-bold text-slate-500">
+                  <tr key={teacher.id} className="hover:bg-zinc-50/80 transition">
+                    <td className="py-2.5 px-4 text-center font-mono text-zinc-500">
                       {indexOfFirstItem + index + 1}
                     </td>
-                    <td className="py-3 px-4 font-bold text-slate-900 text-sm">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 text-white font-black text-xs flex items-center justify-center shrink-0 shadow-sm">
+                    <td className="py-2.5 px-4 font-semibold text-zinc-900 text-sm">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded bg-zinc-800 text-white font-mono text-[10px] flex items-center justify-center shrink-0">
                           {getInitials(teacher.full_name)}
                         </div>
                         <div>
-                          <div className="text-slate-900 font-bold">{teacher.full_name}</div>
-                          <div className="text-[11px] text-slate-400 font-normal">Guru Pengawas Asesmen</div>
+                          <div className="text-zinc-900 font-medium">{teacher.full_name}</div>
+                          <div className="text-[10px] text-zinc-400 font-normal">Guru Pengawas Asesmen</div>
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 px-4">
-                      <span className="font-mono px-2.5 py-1 rounded-md bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-[11px]">
+                    <td className="py-2.5 px-4">
+                      <span className="font-mono px-2 py-0.5 rounded bg-zinc-100 border border-zinc-200 text-zinc-700 text-[11px]">
                         {teacher.nip || teacher.username}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-slate-600 font-medium">
+                    <td className="py-2.5 px-4 text-zinc-500 font-mono text-[11px]">
                       {teacher.email || '-'}
                     </td>
-                    <td className="py-3 px-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
+                    <td className="py-2.5 px-4 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
                         <button
                           onClick={() => handleOpenEdit(teacher)}
-                          className="p-1.5 px-2.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition font-bold text-xs flex items-center gap-1 shadow-2xs"
+                          className="p-1 px-2.5 rounded-md bg-white text-zinc-700 hover:bg-zinc-50 border border-zinc-200 transition text-xs font-medium flex items-center gap-1 shadow-2xs hover:-translate-y-0.5 active:scale-[0.98]"
                           title="Edit Guru"
                         >
-                          <Edit3 className="w-3.5 h-3.5" />
+                          <Edit3 className="w-3 h-3 text-zinc-500" />
                           <span>Edit</span>
                         </button>
                         <button
                           onClick={() => handleOpenDelete(teacher)}
-                          className="p-1.5 px-2.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 transition font-bold text-xs flex items-center gap-1 shadow-2xs"
+                          className="p-1 px-2.5 rounded-md text-zinc-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition text-xs font-medium flex items-center gap-1 active:scale-[0.98]"
                           title="Hapus Guru"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-3 h-3" />
                           <span>Hapus</span>
                         </button>
                       </div>
@@ -417,18 +417,18 @@ export default function TeacherManagement() {
         </div>
 
         {/* Card Footer: Info Entri & Paginasi */}
-        <div className="p-4 bg-slate-50/50 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500 font-medium">
+        <div className="p-3.5 bg-zinc-50/50 border-t border-zinc-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-zinc-500 font-medium">
           <div>
-            Menampilkan <strong className="text-slate-800">{teachers.length > 0 ? indexOfFirstItem + 1 : 0}</strong> sampai{' '}
-            <strong className="text-slate-800">{Math.min(indexOfLastItem, teachers.length)}</strong> dari{' '}
-            <strong className="text-slate-800">{teachers.length}</strong> guru
+            Menampilkan <span className="font-mono text-zinc-800">{teachers.length > 0 ? indexOfFirstItem + 1 : 0}</span> sampai{' '}
+            <span className="font-mono text-zinc-800">{Math.min(indexOfLastItem, teachers.length)}</span> dari{' '}
+            <span className="font-mono text-zinc-800">{teachers.length}</span> guru
           </div>
 
           <div className="flex items-center gap-1">
             <button
               onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
               disabled={currentPage === 1}
-              className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs disabled:opacity-40 transition"
+              className="px-2.5 py-1 rounded border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 font-medium text-xs disabled:opacity-40 transition"
             >
               Prev
             </button>
@@ -437,10 +437,10 @@ export default function TeacherManagement() {
               <button
                 key={page}
                 onClick={() => setCurrentPage(page)}
-                className={`w-7 h-7 rounded-lg font-bold text-xs transition flex items-center justify-center ${
+                className={`w-6 h-6 rounded text-xs font-mono font-medium transition flex items-center justify-center ${
                   currentPage === page
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                    ? 'bg-zinc-900 text-white'
+                    : 'bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-50'
                 }`}
               >
                 {page}
@@ -450,7 +450,7 @@ export default function TeacherManagement() {
             <button
               onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
               disabled={currentPage === totalPages || totalPages === 0}
-              className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs disabled:opacity-40 transition"
+              className="px-2.5 py-1 rounded border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 font-medium text-xs disabled:opacity-40 transition"
             >
               Next
             </button>

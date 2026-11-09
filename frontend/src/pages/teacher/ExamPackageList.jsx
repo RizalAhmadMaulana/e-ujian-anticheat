@@ -773,71 +773,71 @@ export default function ExamPackageList() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
       {/* ======================================================== */}
-      {/* 1. HEADER HALAMAN BANK SOAL & AKSI (BERSIH & RESPONSIF)  */}
+      {/* 1. HEADER HALAMAN BANK SOAL & AKSI (CLEAN & TASTEFUL)    */}
       {/* ======================================================== */}
-      <div className="bg-white rounded-3xl p-5 sm:p-6 border-2 border-slate-200 shadow-sm space-y-4">
+      <div className="bg-white rounded-xl p-5 sm:p-6 border border-zinc-200/90 shadow-2xs space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="p-2 rounded-xl bg-indigo-50 text-indigo-700">
-                <FolderKanban className="w-5 h-5" />
+              <span className="p-1.5 rounded-lg bg-zinc-100 text-zinc-800 border border-zinc-200/80">
+                <FolderKanban className="w-4 h-4" />
               </span>
-              <h1 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">
+              <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight">
                 Bank Soal & Paket Ujian
               </h1>
             </div>
-            <p className="text-xs sm:text-sm text-slate-500 max-w-2xl">
+            <p className="text-xs sm:text-sm text-zinc-500 max-w-2xl leading-relaxed">
               Kelola lembar asesmen mandiri berstandar Kurikulum Merdeka (AKM/ANBK 6 tipe soal), editor rumus matematika KaTeX, fasilitas impor massal Word & Excel, serta integrasi Google Form.
             </p>
           </div>
 
           {/* Action Buttons Toolbar */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
-            {/* Tombol Utama Tambah Paket Baru */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
+            {/* Tombol Unduh Template Excel */}
             <button
-              onClick={handleOpenAdd}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-2xl text-xs sm:text-sm font-black shadow-md shadow-indigo-600/25 transition order-1 sm:order-3"
+              type="button"
+              onClick={handleDownloadExcelTemplate}
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-white hover:bg-zinc-50 text-zinc-700 border border-zinc-200 rounded-lg text-xs font-medium hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-150 shadow-2xs"
+              title="Unduh format template Excel resmi untuk impor soal"
             >
-              <Plus className="w-4 h-4 stroke-[3]" />
-              <span>Tambah Paket Baru</span>
+              <Download className="w-3.5 h-3.5 text-zinc-500" />
+              <span className="hidden sm:inline">Template Excel</span>
+              <span className="sm:hidden">Unduh Template</span>
             </button>
 
             {/* Tombol Impor Soal Massal */}
             <button
               type="button"
               onClick={() => handleOpenImportModal(null)}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border-2 border-blue-200 rounded-2xl text-xs sm:text-sm font-bold transition order-2"
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-white hover:bg-zinc-50 text-zinc-700 border border-zinc-200 rounded-lg text-xs font-medium hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-150 shadow-2xs"
               title="Import butir soal dari berkas Word (.docx) atau Excel (.xlsx)"
             >
-              <UploadCloud className="w-4 h-4 text-blue-600" />
+              <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
               <span>Import Soal (.docx / .xlsx)</span>
             </button>
 
-            {/* Tombol Unduh Template Excel */}
+            {/* Tombol Utama Tambah Paket Baru */}
             <button
-              type="button"
-              onClick={handleDownloadExcelTemplate}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-2 border-emerald-200 rounded-2xl text-xs sm:text-sm font-bold transition order-3 sm:order-1"
-              title="Unduh format template Excel resmi untuk impor soal"
+              onClick={handleOpenAdd}
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg text-xs font-semibold hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-150 shadow-xs"
             >
-              <Download className="w-4 h-4 text-emerald-600" />
-              <span className="hidden sm:inline">Template Excel</span>
-              <span className="sm:hidden">Unduh Template</span>
+              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>Tambah Paket Baru</span>
             </button>
           </div>
         </div>
 
         {/* Filter Bar & Search Box */}
-        <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="pt-3 border-t border-zinc-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           {/* Tab Filter Tipe Paket */}
-          <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl overflow-x-auto">
+          <div className="inline-flex items-center gap-1 p-1 bg-zinc-100 rounded-lg border border-zinc-200/60 overflow-x-auto">
             <button
               type="button"
               onClick={() => setTypeFilter('ALL')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shrink-0 ${
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition shrink-0 ${
                 typeFilter === 'ALL'
-                  ? 'bg-white text-slate-800 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white text-zinc-900 shadow-2xs font-semibold'
+                  : 'text-zinc-600 hover:text-zinc-900'
               }`}
             >
               Semua Paket ({examPackages.length})
@@ -845,44 +845,44 @@ export default function ExamPackageList() {
             <button
               type="button"
               onClick={() => setTypeFilter('NATIVE_QUESTIONS')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shrink-0 flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition shrink-0 flex items-center gap-1.5 ${
                 typeFilter === 'NATIVE_QUESTIONS'
-                  ? 'bg-white text-emerald-800 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white text-emerald-800 shadow-2xs font-semibold'
+                  : 'text-zinc-600 hover:text-zinc-900'
               }`}
             >
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
               Soal Mandiri (AKM)
             </button>
             <button
               type="button"
               onClick={() => setTypeFilter('EXTERNAL_LINK')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shrink-0 flex items-center gap-1.5 ${
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition shrink-0 flex items-center gap-1.5 ${
                 typeFilter === 'EXTERNAL_LINK'
-                  ? 'bg-white text-purple-800 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white text-blue-800 shadow-2xs font-semibold'
+                  : 'text-zinc-600 hover:text-zinc-900'
               }`}
             >
-              <span className="w-2 h-2 rounded-full bg-purple-500" />
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
               Google Form / Teams
             </button>
           </div>
 
           {/* Search Box Input */}
           <div className="relative w-full sm:w-72">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+            <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-2.5" />
             <input
               type="text"
               placeholder="Cari judul atau mapel..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-slate-50 hover:bg-white border border-slate-200 focus:border-indigo-500 focus:bg-white rounded-xl text-xs font-semibold focus:outline-none transition shadow-2xs"
+              className="w-full pl-9 pr-3 py-2 bg-zinc-50 hover:bg-white border border-zinc-200 focus:border-zinc-400 focus:bg-white rounded-lg text-xs font-medium focus:outline-none transition"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                className="absolute right-2.5 top-2.5 text-zinc-400 hover:text-zinc-600"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -895,14 +895,14 @@ export default function ExamPackageList() {
       {/* 2. GRID KARTU PAKET UJIAN                                */}
       {/* ======================================================== */}
       {filteredPackages.length === 0 ? (
-        <div className="py-14 sm:py-20 text-center bg-white rounded-3xl border-2 border-dashed border-slate-200 shadow-xs p-6 space-y-3">
-          <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center mx-auto">
-            <FolderKanban className="w-7 h-7" />
+        <div className="py-14 sm:py-20 text-center bg-white rounded-xl border border-dashed border-zinc-300 p-6 space-y-3">
+          <div className="w-12 h-12 rounded-lg bg-zinc-100 text-zinc-600 border border-zinc-200 flex items-center justify-center mx-auto">
+            <FolderKanban className="w-6 h-6" />
           </div>
-          <h3 className="font-black text-slate-800 text-base sm:text-lg">
+          <h3 className="font-semibold text-zinc-900 text-base">
             {searchQuery ? 'Tidak Ada Paket yang Cocok' : 'Belum Ada Paket Soal'}
           </h3>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto">
+          <p className="text-xs text-zinc-500 max-w-sm mx-auto leading-relaxed">
             {searchQuery
               ? `Pencarian "${searchQuery}" tidak menemukan paket soal. Coba gunakan kata kunci lain.`
               : 'Mulai dengan membuat paket soal mandiri baru atau import massal dari berkas Word/Excel.'}
@@ -910,20 +910,20 @@ export default function ExamPackageList() {
           <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
             <button
               onClick={() => handleOpenImportModal(null)}
-              className="px-4 py-2 bg-blue-50 text-blue-800 border border-blue-200 font-bold text-xs rounded-xl hover:bg-blue-100 transition flex items-center gap-1.5"
+              className="px-3.5 py-2 bg-white text-zinc-700 border border-zinc-200 font-medium text-xs rounded-lg hover:bg-zinc-50 transition flex items-center gap-1.5 shadow-2xs"
             >
-              <UploadCloud className="w-4 h-4" /> Import Word / Excel
+              <UploadCloud className="w-3.5 h-3.5 text-blue-600" /> Import Word / Excel
             </button>
             <button
               onClick={handleOpenAdd}
-              className="px-5 py-2 bg-indigo-600 text-white font-bold text-xs rounded-xl hover:bg-indigo-700 transition flex items-center gap-1.5 shadow-sm"
+              className="px-4 py-2 bg-zinc-900 text-white font-semibold text-xs rounded-lg hover:bg-zinc-800 transition flex items-center gap-1.5 shadow-xs"
             >
-              <Plus className="w-4 h-4" /> Tambah Paket Baru
+              <Plus className="w-3.5 h-3.5" /> Tambah Paket Baru
             </button>
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filteredPackages.map((pkg) => {
             const pkgTitle = pkg.title;
             const pkgSubject = pkg.subjectName || pkg.subject_name || '-';
@@ -937,65 +937,65 @@ export default function ExamPackageList() {
             return (
               <div
                 key={pkg.id}
-                className="bg-white rounded-3xl p-5 sm:p-6 border-2 border-slate-300 hover:border-indigo-600 shadow-md hover:shadow-2xl hover:shadow-indigo-500/20 hover:ring-4 hover:ring-indigo-500/15 hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between space-y-4 group relative"
+                className="bg-white rounded-xl p-5 border border-zinc-200/90 shadow-2xs hover:border-zinc-300 hover:shadow-xs hover:-translate-y-0.5 transition-all duration-150 flex flex-col justify-between space-y-4 group relative"
               >
                 <div>
                   {/* Top Badges */}
-                  <div className="flex items-center justify-between gap-2 mb-3">
+                  <div className="flex items-center justify-between gap-2 mb-2.5">
                     <span
-                      className={`text-[11px] font-black px-3 py-1 rounded-xl flex items-center gap-1.5 border-2 shadow-xs transition-colors ${
+                      className={`text-[11px] font-medium px-2 py-0.5 rounded border flex items-center gap-1.5 ${
                         pkgExamType === 'NATIVE_QUESTIONS'
-                          ? 'bg-emerald-100 text-emerald-950 border-emerald-400 group-hover:bg-emerald-200 group-hover:border-emerald-500'
-                          : 'bg-purple-100 text-purple-950 border-purple-400 group-hover:bg-purple-200 group-hover:border-purple-500'
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          : 'bg-blue-50 text-blue-800 border-blue-200'
                       }`}
                     >
                       {pkgExamType === 'NATIVE_QUESTIONS' ? (
                         <>
-                          <BookOpen className="w-3.5 h-3.5 text-emerald-700" />
-                          <span>Soal Mandiri (AKM Ready)</span>
+                          <BookOpen className="w-3 h-3 text-emerald-700" />
+                          <span>Soal Mandiri (AKM)</span>
                         </>
                       ) : (
                         <>
-                          <ExternalLink className="w-3.5 h-3.5 text-purple-700" />
+                          <ExternalLink className="w-3 h-3 text-blue-700" />
                           <span>Google Form</span>
                         </>
                       )}
                     </span>
                     {pkgClass && (
-                      <span className="text-[11px] font-black px-3 py-1 rounded-xl bg-slate-100 text-slate-800 border-2 border-slate-300 uppercase tracking-wider shadow-xs">
+                      <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-zinc-100 text-zinc-700 border border-zinc-200 uppercase">
                         {pkgClass}
                       </span>
                     )}
                   </div>
 
                   {/* Judul & Mapel */}
-                  <h3 className="font-black text-slate-900 text-base sm:text-lg leading-snug mb-1 group-hover:text-indigo-600 transition-colors">
+                  <h3 className="font-semibold text-zinc-900 text-base leading-snug mb-1 group-hover:text-blue-600 transition-colors">
                     {pkgTitle}
                   </h3>
-                  <div className="text-xs sm:text-sm text-slate-600 font-bold mb-3">
-                    Mata Pelajaran: <span className="text-indigo-700 font-black">{pkgSubject}</span>
+                  <div className="text-xs text-zinc-500 font-medium mb-3">
+                    Mata Pelajaran: <span className="text-zinc-800 font-semibold">{pkgSubject}</span>
                   </div>
 
                   {/* Informasi Konten Soal */}
                   {pkgExamType === 'NATIVE_QUESTIONS' ? (
-                    <div className="p-4 rounded-2xl bg-slate-50/90 border-2 border-slate-200 group-hover:border-slate-300 text-xs text-slate-700 space-y-2 mb-2 shadow-xs transition-colors">
-                      <div className="flex items-center justify-between font-black">
-                        <span className="text-slate-600">Jumlah Butir Soal:</span>
-                        <span className="text-emerald-900 font-black bg-emerald-100 border-2 border-emerald-300 px-2.5 py-0.5 rounded-lg text-xs shadow-2xs">
+                    <div className="p-3.5 rounded-lg bg-zinc-50/80 border border-zinc-200/80 text-xs text-zinc-700 space-y-1.5 mb-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-zinc-500 font-medium">Jumlah Butir:</span>
+                        <span className="text-zinc-900 font-mono font-semibold tabular-nums bg-white border border-zinc-200 px-2 py-0.5 rounded text-xs">
                           {questionCount} Soal
                         </span>
                       </div>
-                      <div className="text-[11px] text-slate-500 leading-relaxed font-semibold">
+                      <div className="text-[11px] text-zinc-500 leading-relaxed">
                         Mendukung Pilgan Kompleks, Isian Singkat, Benar/Salah, Menjodohkan & Rumus KaTeX.
                       </div>
                     </div>
                   ) : (
-                    <div className="p-4 rounded-2xl bg-purple-50/80 border-2 border-purple-200 group-hover:border-purple-300 text-xs text-purple-950 space-y-2 mb-2 shadow-xs transition-colors">
-                      <div className="font-black flex items-center gap-1.5 text-purple-900 text-xs">
-                        <ExternalLink className="w-3.5 h-3.5 text-purple-700" />
+                    <div className="p-3.5 rounded-lg bg-blue-50/50 border border-blue-200/70 text-xs text-blue-950 space-y-1.5 mb-2">
+                      <div className="font-medium flex items-center gap-1.5 text-blue-900 text-[11px]">
+                        <ExternalLink className="w-3 h-3 text-blue-700" />
                         <span>Link Terproteksi (Secure Iframe):</span>
                       </div>
-                      <div className="font-mono text-xs text-purple-950 truncate bg-white p-2.5 rounded-xl border-2 border-purple-200 font-bold shadow-2xs">
+                      <div className="font-mono text-[11px] text-blue-950 truncate bg-white p-2 rounded border border-blue-200">
                         {pkgUrl || '-'}
                       </div>
                     </div>
@@ -1003,16 +1003,16 @@ export default function ExamPackageList() {
                 </div>
 
                 {/* Footer Kartu & Tombol Aksi */}
-                <div className="pt-3.5 border-t-2 border-slate-100 flex items-center justify-between gap-2 flex-wrap">
-                  <span className="text-xs font-bold text-slate-400">
-                    Dibuat: {formattedDate}
+                <div className="pt-3 border-t border-zinc-100 flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-[11px] text-zinc-400 font-mono">
+                    {formattedDate}
                   </span>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     {pkgExamType === 'NATIVE_QUESTIONS' && (
                       <button
                         onClick={() => handleOpenImportModal(pkg.id)}
-                        className="px-3 py-1.5 text-xs font-black text-blue-800 bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 hover:border-blue-300 rounded-xl transition-all flex items-center gap-1.5 shadow-xs active:scale-95"
+                        className="px-2.5 py-1 text-xs font-medium text-zinc-700 bg-white hover:bg-zinc-50 border border-zinc-200 rounded-lg transition-all flex items-center gap-1 shadow-2xs hover:-translate-y-0.5 active:scale-[0.98]"
                         title="Import butir soal tambahan ke paket ini"
                       >
                         <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
@@ -1022,28 +1022,28 @@ export default function ExamPackageList() {
                     {pkgExamType === 'EXTERNAL_LINK' && (
                       <button
                         onClick={() => handleOpenPreview(pkgUrl)}
-                        className="px-3 py-1.5 text-xs font-black text-purple-800 bg-purple-50 hover:bg-purple-100 border-2 border-purple-200 hover:border-purple-300 rounded-xl transition-all flex items-center gap-1.5 shadow-xs active:scale-95"
+                        className="px-2.5 py-1 text-xs font-medium text-zinc-700 bg-white hover:bg-zinc-50 border border-zinc-200 rounded-lg transition-all flex items-center gap-1 shadow-2xs hover:-translate-y-0.5 active:scale-[0.98]"
                       >
-                        <Eye className="w-3.5 h-3.5 text-purple-600" />
+                        <Eye className="w-3.5 h-3.5 text-blue-600" />
                         <span>Preview</span>
                       </button>
                     )}
 
                     <button
                       onClick={() => handleOpenEdit(pkg)}
-                      className="px-3 py-1.5 text-xs font-black text-amber-800 bg-amber-50 hover:bg-amber-100 border-2 border-amber-200 hover:border-amber-300 rounded-xl transition-all flex items-center gap-1.5 shadow-xs active:scale-95"
+                      className="px-2.5 py-1 text-xs font-medium text-zinc-700 bg-white hover:bg-zinc-50 border border-zinc-200 rounded-lg transition-all flex items-center gap-1 shadow-2xs hover:-translate-y-0.5 active:scale-[0.98]"
                       title="Edit Data Paket Soal"
                     >
-                      <Edit3 className="w-3.5 h-3.5 text-amber-600" />
+                      <Edit3 className="w-3.5 h-3.5 text-zinc-600" />
                       <span>Edit</span>
                     </button>
 
                     <button
                       onClick={() => handleDeletePackage(pkg.id, pkgTitle)}
-                      className="p-1.5 text-rose-600 bg-rose-50 hover:bg-rose-100 border-2 border-rose-200 hover:border-rose-300 rounded-xl transition-all shadow-xs active:scale-95"
+                      className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 rounded-lg transition-all active:scale-[0.98]"
                       title="Hapus Paket Soal"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
@@ -1063,7 +1063,7 @@ export default function ExamPackageList() {
         maxWidth="max-w-xl"
       >
         <form onSubmit={handleExecuteImport} className="space-y-4">
-          <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200 text-blue-900 text-xs leading-relaxed flex items-start gap-2.5">
+          <div className="p-3.5 rounded-lg bg-blue-50/80 border border-blue-200/80 text-blue-900 text-xs leading-relaxed flex items-start gap-2.5">
             <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
             <div>
               Fitur ini mengekstrak nomor soal, narasi soal, rumus matematika KaTeX ($...$), pilihan jawaban A-E, dan penanda kunci jawaban secara otomatis ke dalam paket ujian.
@@ -1072,39 +1072,39 @@ export default function ExamPackageList() {
 
           {/* Pemilihan Format Berkas */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+            <label className="block text-xs font-semibold text-zinc-700 mb-1.5">
               Pilih Format Berkas:
             </label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2.5">
               <button
                 type="button"
                 onClick={() => setImportFormat('EXCEL')}
-                className={`p-3.5 rounded-2xl border-2 text-left flex items-center gap-3 transition ${
+                className={`p-3 rounded-lg border text-left flex items-center gap-3 transition ${
                   importFormat === 'EXCEL'
-                    ? 'border-emerald-600 bg-emerald-50 text-emerald-900 font-bold shadow-xs'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                    ? 'border-zinc-900 bg-zinc-50 text-zinc-950 font-semibold shadow-2xs ring-1 ring-zinc-900'
+                    : 'border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300'
                 }`}
               >
-                <FileSpreadsheet className="w-6 h-6 text-emerald-600 shrink-0" />
+                <FileSpreadsheet className="w-5 h-5 text-emerald-600 shrink-0" />
                 <div>
-                  <div className="text-xs font-bold">Microsoft Excel (.xlsx)</div>
-                  <div className="text-[10px] text-slate-500 font-normal">Format kolom terstruktur</div>
+                  <div className="text-xs font-semibold">Microsoft Excel (.xlsx)</div>
+                  <div className="text-[11px] text-zinc-500 font-normal">Format kolom terstruktur</div>
                 </div>
               </button>
 
               <button
                 type="button"
                 onClick={() => setImportFormat('DOCX')}
-                className={`p-3.5 rounded-2xl border-2 text-left flex items-center gap-3 transition ${
+                className={`p-3 rounded-lg border text-left flex items-center gap-3 transition ${
                   importFormat === 'DOCX'
-                    ? 'border-blue-600 bg-blue-50 text-blue-900 font-bold shadow-xs'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                    ? 'border-zinc-900 bg-zinc-50 text-zinc-950 font-semibold shadow-2xs ring-1 ring-zinc-900'
+                    : 'border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300'
                 }`}
               >
-                <FileText className="w-6 h-6 text-blue-600 shrink-0" />
+                <FileText className="w-5 h-5 text-blue-600 shrink-0" />
                 <div>
-                  <div className="text-xs font-bold">Microsoft Word (.docx)</div>
-                  <div className="text-[10px] text-slate-500 font-normal">Format nomor standar</div>
+                  <div className="text-xs font-semibold">Microsoft Word (.docx)</div>
+                  <div className="text-[11px] text-zinc-500 font-normal">Format nomor standar</div>
                 </div>
               </button>
             </div>
@@ -1112,13 +1112,13 @@ export default function ExamPackageList() {
 
           {/* Target Paket Ujian */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
+            <label className="block text-xs font-semibold text-zinc-700 mb-1">
               Target Penyimpanan:
             </label>
             <select
               value={importTargetPkgId}
               onChange={(e) => setImportTargetPkgId(e.target.value)}
-              className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold"
+              className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-xs bg-white focus:outline-none focus:border-zinc-400 font-medium"
             >
               <option value="">+ Buat Paket Ujian Baru dari Berkas Ini</option>
               {examPackages
@@ -1134,7 +1134,7 @@ export default function ExamPackageList() {
           {!importTargetPkgId && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-zinc-700 mb-1">
                   Judul Paket Baru:
                 </label>
                 <input
@@ -1142,11 +1142,11 @@ export default function ExamPackageList() {
                   value={importTitle}
                   onChange={(e) => setImportTitle(e.target.value)}
                   placeholder="Contoh: Asesmen Sumatif IPA"
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                  className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-xs focus:outline-none focus:border-zinc-400 font-medium"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                <label className="block text-xs font-semibold text-zinc-700 mb-1">
                   Mata Pelajaran:
                 </label>
                 <input
@@ -1154,7 +1154,7 @@ export default function ExamPackageList() {
                   value={importSubject}
                   onChange={(e) => setImportSubject(e.target.value)}
                   placeholder="Contoh: Ilmu Pengetahuan Alam"
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium"
+                  className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-xs focus:outline-none focus:border-zinc-400 font-medium"
                 />
               </div>
             </div>
@@ -1162,7 +1162,7 @@ export default function ExamPackageList() {
 
           {/* Upload Input */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">
+            <label className="block text-xs font-semibold text-zinc-700 mb-1">
               Pilih Berkas {importFormat === 'DOCX' ? 'Word (.docx)' : 'Excel (.xlsx)'}:
             </label>
             <input
@@ -1170,17 +1170,17 @@ export default function ExamPackageList() {
               required
               accept={importFormat === 'DOCX' ? '.docx' : '.xlsx,.xlsm'}
               onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-              className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer border border-slate-300 rounded-2xl p-1.5 bg-white"
+              className="w-full text-xs text-zinc-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-zinc-100 file:text-zinc-800 hover:file:bg-zinc-200 cursor-pointer border border-zinc-200 rounded-lg p-1.5 bg-white"
             />
           </div>
 
           {importFormat === 'EXCEL' && (
-            <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs">
-              <span className="text-slate-600 font-medium">Belum memiliki format template Excel?</span>
+            <div className="flex items-center justify-between p-3 rounded-lg bg-zinc-50 border border-zinc-200/80 text-xs">
+              <span className="text-zinc-600 font-medium">Belum memiliki format template Excel?</span>
               <button
                 type="button"
                 onClick={handleDownloadExcelTemplate}
-                className="text-emerald-700 hover:text-emerald-800 font-bold underline flex items-center gap-1"
+                className="text-emerald-700 hover:text-emerald-800 font-semibold underline flex items-center gap-1"
               >
                 <Download className="w-3.5 h-3.5" /> Unduh Template
               </button>
@@ -1188,29 +1188,29 @@ export default function ExamPackageList() {
           )}
 
           {importMessage && (
-            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold">
+            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
               {importMessage}
             </div>
           )}
 
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-zinc-100">
             <button
               type="button"
               onClick={() => setIsImportModalOpen(false)}
-              className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50"
+              className="px-3.5 py-2 border border-zinc-200 rounded-lg text-xs font-medium text-zinc-700 hover:bg-zinc-50"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={isImporting}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-md transition flex items-center gap-1.5"
+              className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-xs transition flex items-center gap-1.5 hover:-translate-y-0.5 active:scale-[0.98]"
             >
               {isImporting ? (
                 <span>Mengekstrak Soal...</span>
               ) : (
                 <>
-                  <UploadCloud className="w-4 h-4" />
+                  <UploadCloud className="w-3.5 h-3.5" />
                   <span>Mulai Import Soal</span>
                 </>
               )}
@@ -1220,7 +1220,7 @@ export default function ExamPackageList() {
       </Modal>
 
       {/* ======================================================== */}
-      {/* 4. MODAL BUAT / EDIT PAKET UJIAN BARU (REDESAIN TOTAL)   */}
+      {/* 4. MODAL BUAT / EDIT PAKET UJIAN BARU (TASTE-SKILL SPEC) */}
       {/* ======================================================== */}
       <Modal
         isOpen={isAddModalOpen}
@@ -1228,36 +1228,36 @@ export default function ExamPackageList() {
         title={isEditing ? 'Edit Data Paket Ujian' : 'Buat Paket Ujian Baru (Hybrid Mode)'}
         maxWidth="max-w-5xl"
       >
-        <form onSubmit={handleSavePackage} className="space-y-6">
+        <form onSubmit={handleSavePackage} className="space-y-5">
           {/* SECTION A: SUMBER SOAL & IDENTITAS PAKET */}
-          <div className="bg-slate-50/90 rounded-3xl p-4 sm:p-5 border-2 border-slate-200 space-y-4">
+          <div className="bg-zinc-50/70 rounded-xl p-4 sm:p-5 border border-zinc-200/90 space-y-4">
             {/* Pilihan Sumber Soal */}
             <div>
-              <label className="block text-xs font-black uppercase text-slate-700 tracking-wider mb-2">
+              <label className="block text-[11px] font-semibold uppercase text-zinc-500 tracking-wider mb-2">
                 1. Pilih Sumber Soal Ujian:
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <button
                   type="button"
                   onClick={() => setExamType('NATIVE_QUESTIONS')}
-                  className={`p-3.5 rounded-2xl border-2 text-left transition flex items-start gap-3 ${
+                  className={`p-3.5 rounded-xl border text-left transition flex items-start gap-3 ${
                     examType === 'NATIVE_QUESTIONS'
-                      ? 'border-indigo-600 bg-white text-indigo-950 shadow-md ring-2 ring-indigo-500/20'
-                      : 'border-slate-200 bg-white/70 text-slate-600 hover:border-slate-300 hover:bg-white'
+                      ? 'border-zinc-900 bg-white text-zinc-950 shadow-xs ring-1 ring-zinc-900'
+                      : 'border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300'
                   }`}
                 >
                   <div
-                    className={`p-2 rounded-xl shrink-0 ${
+                    className={`p-2 rounded-lg shrink-0 ${
                       examType === 'NATIVE_QUESTIONS'
-                        ? 'bg-indigo-600 text-white shadow-xs'
-                        : 'bg-slate-100 text-slate-500'
+                        ? 'bg-zinc-900 text-white'
+                        : 'bg-zinc-100 text-zinc-500'
                     }`}
                   >
-                    <BookOpen className="w-5 h-5" />
+                    <BookOpen className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="font-black text-xs sm:text-sm">Soal Mandiri (Standar AKM)</div>
-                    <div className="text-[11px] text-slate-500 mt-0.5 font-medium leading-relaxed">
+                    <div className="font-semibold text-xs sm:text-sm text-zinc-900">Soal Mandiri (Standar AKM)</div>
+                    <div className="text-[11px] text-zinc-500 mt-0.5 leading-relaxed">
                       6 ragam soal (Pilgan, Kompleks, Isian, Benar/Salah, Menjodohkan, Esai) & rumus KaTeX
                     </div>
                   </div>
@@ -1266,24 +1266,24 @@ export default function ExamPackageList() {
                 <button
                   type="button"
                   onClick={() => setExamType('EXTERNAL_LINK')}
-                  className={`p-3.5 rounded-2xl border-2 text-left transition flex items-start gap-3 ${
+                  className={`p-3.5 rounded-xl border text-left transition flex items-start gap-3 ${
                     examType === 'EXTERNAL_LINK'
-                      ? 'border-purple-600 bg-white text-purple-950 shadow-md ring-2 ring-purple-500/20'
-                      : 'border-slate-200 bg-white/70 text-slate-600 hover:border-slate-300 hover:bg-white'
+                      ? 'border-zinc-900 bg-white text-zinc-950 shadow-xs ring-1 ring-zinc-900'
+                      : 'border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300'
                   }`}
                 >
                   <div
-                    className={`p-2 rounded-xl shrink-0 ${
+                    className={`p-2 rounded-lg shrink-0 ${
                       examType === 'EXTERNAL_LINK'
-                        ? 'bg-purple-600 text-white shadow-xs'
-                        : 'bg-slate-100 text-slate-500'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-zinc-100 text-zinc-500'
                     }`}
                   >
-                    <ExternalLink className="w-5 h-5" />
+                    <ExternalLink className="w-4 h-4" />
                   </div>
                   <div>
-                    <div className="font-black text-xs sm:text-sm">Google Form / MS Teams</div>
-                    <div className="text-[11px] text-slate-500 mt-0.5 font-medium leading-relaxed">
+                    <div className="font-semibold text-xs sm:text-sm text-zinc-900">Google Form / MS Teams</div>
+                    <div className="text-[11px] text-zinc-500 mt-0.5 leading-relaxed">
                       Sematkan tautan form eksternal dalam bingkai terproteksi anti-curang
                     </div>
                   </div>
@@ -1293,12 +1293,12 @@ export default function ExamPackageList() {
 
             {/* Input Identitas Paket */}
             <div>
-              <label className="block text-xs font-black uppercase text-slate-700 tracking-wider mb-2">
+              <label className="block text-[11px] font-semibold uppercase text-zinc-500 tracking-wider mb-2">
                 2. Informasi Paket Asesmen:
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
                 <div className="sm:col-span-6">
-                  <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                  <label className="block text-[11px] font-medium text-zinc-600 mb-1">
                     Judul Paket Ujian *
                   </label>
                   <input
@@ -1307,12 +1307,12 @@ export default function ExamPackageList() {
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Contoh: Asesmen Sumatif Tengah Semester"
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                    className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-xs sm:text-sm font-medium focus:outline-none focus:border-zinc-400"
                   />
                 </div>
 
                 <div className="sm:col-span-3">
-                  <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                  <label className="block text-[11px] font-medium text-zinc-600 mb-1">
                     Mata Pelajaran *
                   </label>
                   <input
@@ -1321,18 +1321,18 @@ export default function ExamPackageList() {
                     value={subjectName}
                     onChange={(e) => setSubjectName(e.target.value)}
                     placeholder="Contoh: Ilmu Pengetahuan Alam"
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                    className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-xs sm:text-sm font-medium focus:outline-none focus:border-zinc-400"
                   />
                 </div>
 
                 <div className="sm:col-span-3">
-                  <label className="block text-[11px] font-bold text-slate-600 mb-1">
+                  <label className="block text-[11px] font-medium text-zinc-600 mb-1">
                     Kelas Peserta *
                   </label>
                   <select
                     value={targetClassroom}
                     onChange={(e) => setTargetClassroom(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-xs sm:text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                    className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-xs sm:text-sm font-medium focus:outline-none focus:border-zinc-400"
                   >
                     {classroomsList.length > 0 ? (
                       classroomsList.map((c) => (
@@ -1351,18 +1351,18 @@ export default function ExamPackageList() {
 
           {/* SECTION B1: FORMULIR LINK GOOGLE FORM / TEAMS */}
           {examType === 'EXTERNAL_LINK' && (
-            <div className="p-5 rounded-3xl bg-purple-50/70 border-2 border-purple-200 space-y-4">
+            <div className="p-4 sm:p-5 rounded-xl bg-blue-50/40 border border-blue-200/80 space-y-3.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-black uppercase text-purple-900 tracking-wider">
+                <span className="text-xs font-semibold uppercase text-blue-950 tracking-wider">
                   Pengaturan Formulir Online
                 </span>
-                <span className="text-[11px] font-bold text-purple-700 bg-purple-100 px-2.5 py-0.5 rounded-lg border border-purple-300">
+                <span className="text-[11px] font-medium text-blue-700 bg-blue-100/80 px-2 py-0.5 rounded border border-blue-300/70">
                   Secure Iframe Protected
                 </span>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                <label className="block text-xs font-medium text-zinc-700 mb-1.5">
                   Tempelkan URL Google Form atau Microsoft Forms:
                 </label>
                 <input
@@ -1371,23 +1371,23 @@ export default function ExamPackageList() {
                   value={rawExternalUrl}
                   onChange={(e) => setRawExternalUrl(e.target.value)}
                   placeholder="https://docs.google.com/forms/d/e/.../viewform"
-                  className="w-full px-3.5 py-2.5 border border-purple-300 rounded-xl text-xs sm:text-sm font-mono focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white shadow-2xs"
+                  className="w-full px-3 py-2 border border-blue-200 rounded-lg text-xs sm:text-sm font-mono focus:outline-none focus:border-blue-500 bg-white"
                 />
               </div>
 
               {rawExternalUrl && (
-                <div className="p-3.5 rounded-2xl bg-white border border-purple-200 text-xs space-y-2.5 shadow-xs">
-                  <div className="text-[11px] text-slate-500 font-bold">
+                <div className="p-3 rounded-lg bg-white border border-blue-200 text-xs space-y-2">
+                  <div className="text-[11px] text-zinc-500 font-medium">
                     Hasil Konversi Sematan Otomatis (Embedded Mode):
                   </div>
-                  <div className="font-mono text-purple-900 text-xs truncate bg-purple-50 p-2.5 rounded-xl border border-purple-200 font-bold">
+                  <div className="font-mono text-blue-900 text-xs truncate bg-blue-50/60 p-2 rounded border border-blue-100">
                     {formattedEmbedUrl}
                   </div>
                   <div className="flex justify-end pt-1">
                     <button
                       type="button"
                       onClick={() => handleOpenPreview(formattedEmbedUrl)}
-                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-black transition flex items-center gap-1.5 shadow-sm"
+                      className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shadow-2xs hover:-translate-y-0.5 active:scale-[0.98]"
                     >
                       <Eye className="w-3.5 h-3.5" /> Uji Tampilan Formulir
                     </button>
@@ -1401,91 +1401,91 @@ export default function ExamPackageList() {
           {examType === 'NATIVE_QUESTIONS' && (
             <div className="space-y-4">
               {/* Header Bar Pertanyaan & Toolbar Tambah Soal Responsif */}
-              <div className="bg-white rounded-2xl p-4 border-2 border-slate-200 shadow-xs space-y-3">
+              <div className="bg-white rounded-xl p-4 border border-zinc-200/90 shadow-2xs space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5 flex-wrap">
-                    <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                    <span className="text-xs font-semibold text-zinc-900 uppercase tracking-wider">
                       Daftar Butir Soal ({questions.length} Butir)
                     </span>
                     <div
-                      className={`px-3 py-1 rounded-xl text-xs font-black border flex items-center gap-1.5 shadow-2xs ${
+                      className={`px-2.5 py-0.5 rounded text-xs font-mono font-semibold border flex items-center gap-1.5 ${
                         totalPoints === 100
                           ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                          : 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                          : 'bg-zinc-100 text-zinc-800 border-zinc-200'
                       }`}
                     >
                       <Sparkles className="w-3.5 h-3.5" />
-                      <span>Total Nilai: {totalPoints} Poin</span>
+                      <span>Total: {totalPoints} Poin</span>
                       {totalPoints === 100 && (
-                        <span className="text-[10px] text-emerald-600 font-bold ml-0.5">✓ 100 Standar</span>
+                        <span className="text-[10px] text-emerald-600 font-semibold ml-0.5">✓ 100 Standar</span>
                       )}
                     </div>
                   </div>
 
-                  {/* Dropdown Tambah Soal Cepat (Sangat Rapi & Anti-Penuh di Mobile) */}
+                  {/* Dropdown Tambah Soal Cepat */}
                   <div className="relative">
                     <button
                       type="button"
                       onClick={() => setIsTypeDropdownOpen((prev) => !prev)}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black shadow-md shadow-indigo-600/20 transition"
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg text-xs font-semibold shadow-xs transition hover:-translate-y-0.5 active:scale-[0.98]"
                     >
-                      <Plus className="w-4 h-4 stroke-[3]" />
+                      <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                       <span>Tambah Butir Soal</span>
                       <ChevronDown className="w-3.5 h-3.5" />
                     </button>
 
                     {isTypeDropdownOpen && (
-                      <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border-2 border-slate-200 p-2 z-50 animate-in fade-in zoom-in-95">
-                        <div className="px-2 py-1 text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                      <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-zinc-200 p-1.5 z-50">
+                        <div className="px-2 py-1 text-[10px] font-semibold uppercase text-zinc-400 tracking-wider">
                           Pilih Ragam Format Soal:
                         </div>
-                        <div className="space-y-1">
+                        <div className="space-y-0.5">
                           <button
                             type="button"
                             onClick={() => handleAddQuestion('MULTIPLE_CHOICE')}
-                            className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition flex items-center gap-2"
+                            className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium text-zinc-700 hover:bg-zinc-100 transition flex items-center gap-2"
                           >
-                            <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                            <span className="w-2 h-2 rounded-full bg-zinc-900" />
                             <span>1. Pilihan Ganda (1 Benar)</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => handleAddQuestion('MULTIPLE_CHOICE_COMPLEX')}
-                            className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition flex items-center gap-2"
+                            className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium text-zinc-700 hover:bg-zinc-100 transition flex items-center gap-2"
                           >
-                            <CheckSquare className="w-3.5 h-3.5 text-blue-500" />
+                            <CheckSquare className="w-3.5 h-3.5 text-blue-600" />
                             <span>2. Pilgan Kompleks (Multi-Centang)</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => handleAddQuestion('SHORT_ANSWER')}
-                            className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition flex items-center gap-2"
+                            className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium text-zinc-700 hover:bg-zinc-100 transition flex items-center gap-2"
                           >
-                            <ListOrdered className="w-3.5 h-3.5 text-teal-500" />
+                            <ListOrdered className="w-3.5 h-3.5 text-teal-600" />
                             <span>3. Isian Singkat (Exact Match)</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => handleAddQuestion('TRUE_FALSE_MATRIX')}
-                            className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-amber-50 hover:text-amber-700 transition flex items-center gap-2"
+                            className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium text-zinc-700 hover:bg-zinc-100 transition flex items-center gap-2"
                           >
-                            <Grid className="w-3.5 h-3.5 text-amber-500" />
+                            <Grid className="w-3.5 h-3.5 text-amber-600" />
                             <span>4. Tabel Benar / Salah</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => handleAddQuestion('MATCHING_PAIR')}
-                            className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-purple-50 hover:text-purple-700 transition flex items-center gap-2"
+                            className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium text-zinc-700 hover:bg-zinc-100 transition flex items-center gap-2"
                           >
-                            <GitCompare className="w-3.5 h-3.5 text-purple-500" />
+                            <GitCompare className="w-3.5 h-3.5 text-blue-600" />
                             <span>5. Menjodohkan Pasangan</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => handleAddQuestion('ESSAY')}
-                            className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 transition flex items-center gap-2"
+                            className="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium text-zinc-700 hover:bg-zinc-100 transition flex items-center gap-2"
                           >
-                            <Plus className="w-3.5 h-3.5 text-slate-500" />
+                            <Plus className="w-3.5 h-3.5 text-zinc-500" />
                             <span>6. Uraian / Esai Terstruktur</span>
                           </button>
                         </div>
@@ -1494,50 +1494,50 @@ export default function ExamPackageList() {
                   </div>
                 </div>
 
-                {/* Quick Add Pills Bar (Scrollable di Mobile) */}
+                {/* Quick Add Pills Bar */}
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-                  <span className="text-[11px] font-bold text-slate-400 shrink-0 mr-1 hidden sm:inline">
-                    Pintasan Tambah:
+                  <span className="text-[11px] font-medium text-zinc-400 shrink-0 mr-1 hidden sm:inline">
+                    Pintasan:
                   </span>
                   <button
                     type="button"
                     onClick={() => handleAddQuestion('MULTIPLE_CHOICE')}
-                    className="px-2.5 py-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg font-bold text-[11px] text-slate-600 transition shrink-0"
+                    className="px-2.5 py-1 bg-zinc-100 hover:bg-zinc-200 rounded-md font-medium text-[11px] text-zinc-700 transition shrink-0"
                   >
                     + Pilgan
                   </button>
                   <button
                     type="button"
                     onClick={() => handleAddQuestion('MULTIPLE_CHOICE_COMPLEX')}
-                    className="px-2.5 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-700 rounded-lg font-bold text-[11px] text-slate-600 transition shrink-0"
+                    className="px-2.5 py-1 bg-zinc-100 hover:bg-zinc-200 rounded-md font-medium text-[11px] text-zinc-700 transition shrink-0"
                   >
                     + Kompleks
                   </button>
                   <button
                     type="button"
                     onClick={() => handleAddQuestion('SHORT_ANSWER')}
-                    className="px-2.5 py-1 bg-slate-100 hover:bg-teal-50 hover:text-teal-700 rounded-lg font-bold text-[11px] text-slate-600 transition shrink-0"
+                    className="px-2.5 py-1 bg-zinc-100 hover:bg-zinc-200 rounded-md font-medium text-[11px] text-zinc-700 transition shrink-0"
                   >
                     + Isian Singkat
                   </button>
                   <button
                     type="button"
                     onClick={() => handleAddQuestion('TRUE_FALSE_MATRIX')}
-                    className="px-2.5 py-1 bg-slate-100 hover:bg-amber-50 hover:text-amber-700 rounded-lg font-bold text-[11px] text-slate-600 transition shrink-0"
+                    className="px-2.5 py-1 bg-zinc-100 hover:bg-zinc-200 rounded-md font-medium text-[11px] text-zinc-700 transition shrink-0"
                   >
                     + Benar/Salah
                   </button>
                   <button
                     type="button"
                     onClick={() => handleAddQuestion('MATCHING_PAIR')}
-                    className="px-2.5 py-1 bg-slate-100 hover:bg-purple-50 hover:text-purple-700 rounded-lg font-bold text-[11px] text-slate-600 transition shrink-0"
+                    className="px-2.5 py-1 bg-zinc-100 hover:bg-zinc-200 rounded-md font-medium text-[11px] text-zinc-700 transition shrink-0"
                   >
                     + Menjodohkan
                   </button>
                   <button
                     type="button"
                     onClick={() => handleAddQuestion('ESSAY')}
-                    className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg font-bold text-[11px] text-slate-600 transition shrink-0"
+                    className="px-2.5 py-1 bg-zinc-100 hover:bg-zinc-200 rounded-md font-medium text-[11px] text-zinc-700 transition shrink-0"
                   >
                     + Esai
                   </button>
@@ -1550,15 +1550,15 @@ export default function ExamPackageList() {
                   return (
                     <div
                       key={q.id}
-                      className="p-4 sm:p-5 rounded-3xl border-2 border-slate-200 bg-white hover:border-indigo-300 shadow-xs transition space-y-4"
+                      className="p-4 sm:p-5 rounded-xl border border-zinc-200/90 bg-white hover:border-zinc-300 shadow-2xs transition space-y-3.5"
                     >
                       {/* Bar Atas Kartu Soal */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-slate-100">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-zinc-100">
                         <div className="flex items-center gap-2">
-                          <span className="w-7 h-7 rounded-xl bg-indigo-600 text-white font-black text-xs flex items-center justify-center shadow-xs shrink-0">
+                          <span className="w-6 h-6 rounded-md bg-zinc-900 text-white font-mono font-semibold text-xs flex items-center justify-center shrink-0">
                             {idx + 1}
                           </span>
-                          <span className="text-xs font-black text-slate-800">
+                          <span className="text-xs font-semibold text-zinc-900">
                             {typeLabels[q.questionType] || q.questionType}
                           </span>
                         </div>
@@ -1575,10 +1575,10 @@ export default function ExamPackageList() {
                                 setActiveFormulaTarget({ qIdx: idx, field: 'questionText' });
                               }
                             }}
-                            className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition flex items-center gap-1 border ${
+                            className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition flex items-center gap-1 border ${
                               activeFormulaTarget?.qIdx === idx && activeFormulaTarget?.field === 'questionText'
-                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-indigo-50 hover:text-indigo-600'
+                                ? 'bg-zinc-900 text-white border-zinc-900'
+                                : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50'
                             }`}
                           >
                             <Sigma className="w-3.5 h-3.5" />
@@ -1586,15 +1586,15 @@ export default function ExamPackageList() {
                           </button>
 
                           {/* Input Poin */}
-                          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-50 border border-slate-200 text-xs">
-                            <span className="text-slate-500 font-bold">Poin:</span>
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-zinc-50 border border-zinc-200 text-xs">
+                            <span className="text-zinc-500 font-medium">Poin:</span>
                             <input
                               type="number"
                               min="0"
                               max="100"
                               value={q.points}
                               onChange={(e) => handlePointsChange(idx, e.target.value)}
-                              className="w-12 px-1 py-0.5 border border-slate-300 rounded-lg text-center font-black text-indigo-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
+                              className="w-12 px-1 py-0.5 border border-zinc-300 rounded text-center font-mono font-semibold text-zinc-900 focus:outline-none focus:border-zinc-400 bg-white"
                             />
                           </div>
 
@@ -1603,20 +1603,20 @@ export default function ExamPackageList() {
                             <button
                               type="button"
                               onClick={() => handleDuplicateQuestion(idx)}
-                              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition"
+                              className="p-1.5 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 rounded-md transition"
                               title="Duplikat Soal"
                             >
-                              <Copy className="w-4 h-4" />
+                              <Copy className="w-3.5 h-3.5" />
                             </button>
 
                             {/* Hapus */}
                             <button
                               type="button"
                               onClick={() => handleRemoveQuestion(idx)}
-                              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition"
+                              className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition"
                               title="Hapus Soal"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </div>
@@ -1624,7 +1624,7 @@ export default function ExamPackageList() {
 
                       {/* Formula Toolbar Inline */}
                       {activeFormulaTarget?.qIdx === idx && (
-                        <div className="p-3 rounded-2xl bg-indigo-50/70 border border-indigo-200 shadow-inner">
+                        <div className="p-3 rounded-lg bg-zinc-50 border border-zinc-200">
                           <FormulaToolbar onInsertFormula={handleInsertFormula} />
                         </div>
                       )}
@@ -1638,11 +1638,11 @@ export default function ExamPackageList() {
                             value={q.questionText}
                             onChange={(e) => handleQuestionTextChange(idx, e.target.value)}
                             placeholder="Tuliskan teks pertanyaan soal di sini... (Mendukung rumus KaTeX diapit tanda $...$)"
-                            className="w-full px-3.5 py-2.5 pr-11 border border-slate-300 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white leading-relaxed placeholder:text-slate-400"
+                            className="w-full px-3 py-2 pr-10 border border-zinc-200 rounded-lg text-xs sm:text-sm focus:outline-none focus:border-zinc-400 bg-white leading-relaxed placeholder:text-zinc-400"
                           />
 
                           <label
-                            className="absolute right-3 top-3 p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl cursor-pointer transition"
+                            className="absolute right-2.5 top-2.5 p-1 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 rounded-md cursor-pointer transition"
                             title="Sisipkan Gambar pada Soal"
                           >
                             <input
@@ -1661,8 +1661,8 @@ export default function ExamPackageList() {
 
                         {/* KaTeX Live Math Preview */}
                         {q.questionText && q.questionText.includes('$') && (
-                          <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-800">
-                            <span className="text-[10px] font-bold text-indigo-600 block mb-1">
+                          <div className="p-3 rounded-lg bg-zinc-50 border border-zinc-200 text-xs text-zinc-800">
+                            <span className="text-[10px] font-semibold text-zinc-500 block mb-1">
                               Pratinjau Tipografi Rumus (KaTeX):
                             </span>
                             <MathText text={q.questionText} />
@@ -1671,18 +1671,18 @@ export default function ExamPackageList() {
 
                         {/* Pratinjau Gambar Soal */}
                         {q.imageUrl && (
-                          <div className="relative inline-block border border-indigo-100 rounded-2xl p-2 bg-indigo-50/30">
+                          <div className="relative inline-block border border-zinc-200 rounded-lg p-2 bg-zinc-50">
                             <img
                               src={resolveImageUrl(q.imageUrl)}
                               alt="Gambar Soal"
-                              className="max-h-48 rounded-xl object-contain border border-slate-200 bg-white shadow-xs"
+                              className="max-h-48 rounded-md object-contain border border-zinc-200 bg-white"
                             />
                             <div className="flex items-center justify-between gap-2 pt-1.5 px-1">
-                              <span className="text-[10px] text-slate-500 font-mono">Gambar Terlampir</span>
+                              <span className="text-[10px] text-zinc-500 font-mono">Gambar Terlampir</span>
                               <button
                                 type="button"
                                 onClick={() => handleRemoveQuestionImage(idx)}
-                                className="text-[11px] font-bold text-red-600 hover:text-red-700 hover:underline flex items-center gap-1"
+                                className="text-[11px] font-medium text-rose-600 hover:underline flex items-center gap-1"
                               >
                                 <X className="w-3.5 h-3.5" /> Hapus Gambar
                               </button>
@@ -1693,10 +1693,10 @@ export default function ExamPackageList() {
 
                       {/* SUB-FORM 1: PILIHAN GANDA BIASA (1 Benar) */}
                       {q.questionType === 'MULTIPLE_CHOICE' && (
-                        <div className="space-y-2.5 pt-1">
-                          <div className="text-[11px] font-bold text-slate-500 flex items-center justify-between flex-wrap gap-1">
-                            <span>Pilihan Jawaban (Klik lingkaran untuk memilih 1 kunci jawaban benar):</span>
-                            <span className="text-emerald-700 font-black">Kunci: Opsi {q.correctOption}</span>
+                        <div className="space-y-2 pt-1">
+                          <div className="text-[11px] font-medium text-zinc-500 flex items-center justify-between flex-wrap gap-1">
+                            <span>Pilihan Jawaban (Klik lingkaran opsi untuk memilih 1 kunci jawaban benar):</span>
+                            <span className="text-emerald-700 font-semibold font-mono">Kunci: Opsi {q.correctOption}</span>
                           </div>
 
                           <div className="space-y-2">
@@ -1705,22 +1705,22 @@ export default function ExamPackageList() {
                               return (
                                 <div
                                   key={opt.id || opt.label}
-                                  className="p-2.5 rounded-2xl bg-slate-50/70 border border-slate-200 flex flex-col sm:flex-row sm:items-center gap-2 group hover:border-slate-300 transition"
+                                  className="p-2.5 rounded-lg bg-zinc-50/70 border border-zinc-200 flex flex-col sm:flex-row sm:items-center gap-2 group hover:border-zinc-300 transition"
                                 >
                                   <div className="flex items-center gap-2 shrink-0">
                                     <button
                                       type="button"
                                       onClick={() => handleCorrectOptionChange(idx, opt.label)}
-                                      className={`w-7 h-7 rounded-xl border-2 flex items-center justify-center transition shrink-0 ${
+                                      className={`w-6 h-6 rounded-md border flex items-center justify-center transition shrink-0 text-xs font-mono font-semibold ${
                                         isCorrect
-                                          ? 'border-emerald-500 bg-emerald-500 text-white shadow-xs font-black'
-                                          : 'border-slate-300 hover:border-indigo-400 bg-white text-slate-600'
+                                          ? 'border-emerald-600 bg-emerald-600 text-white'
+                                          : 'border-zinc-300 hover:border-zinc-400 bg-white text-zinc-600'
                                       }`}
                                       title={isCorrect ? 'Kunci Jawaban Benar' : 'Klik untuk jadikan Kunci Jawaban'}
                                     >
-                                      {isCorrect ? <Check className="w-4 h-4 stroke-[3]" /> : opt.label}
+                                      {isCorrect ? <Check className="w-3.5 h-3.5 stroke-[2.5]" /> : opt.label}
                                     </button>
-                                    <span className="sm:hidden font-black text-xs text-slate-700">
+                                    <span className="sm:hidden font-medium text-xs text-zinc-700">
                                       Pilihan {opt.label}
                                     </span>
                                   </div>
@@ -1732,10 +1732,10 @@ export default function ExamPackageList() {
                                       value={opt.text}
                                       onChange={(e) => handleOptionTextChange(idx, optIdx, e.target.value)}
                                       placeholder={`Teks pilihan ${opt.label}... (Mendukung rumus $...$)`}
-                                      className="w-full pl-3 pr-10 py-2 border border-slate-300 rounded-xl text-xs sm:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs"
+                                      className="w-full pl-3 pr-8 py-1.5 border border-zinc-200 rounded-md text-xs sm:text-sm bg-white focus:outline-none focus:border-zinc-400"
                                     />
                                     <label
-                                      className="absolute right-2 text-slate-400 hover:text-indigo-600 cursor-pointer p-1"
+                                      className="absolute right-2 text-zinc-400 hover:text-zinc-600 cursor-pointer p-0.5"
                                       title="Sisipkan Gambar pada Opsi ini"
                                     >
                                       <input
@@ -1757,7 +1757,7 @@ export default function ExamPackageList() {
                                       <button
                                         type="button"
                                         onClick={() => handleRemoveOptionImage(idx, optIdx)}
-                                        className="text-[10px] text-red-600 hover:underline px-2"
+                                        className="text-[10px] text-rose-600 hover:underline px-1.5"
                                       >
                                         Hapus Gbr
                                       </button>
@@ -1765,7 +1765,7 @@ export default function ExamPackageList() {
                                     <button
                                       type="button"
                                       onClick={() => handleRemoveOption(idx, optIdx)}
-                                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition"
+                                      className="p-1 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded transition"
                                       title="Hapus Opsi ini"
                                     >
                                       <Trash2 className="w-3.5 h-3.5" />
@@ -1779,7 +1779,7 @@ export default function ExamPackageList() {
                           <button
                             type="button"
                             onClick={() => handleAddOption(idx)}
-                            className="mt-1 px-4 py-1.5 text-xs font-bold text-indigo-700 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 rounded-xl border border-dashed border-indigo-300 transition flex items-center gap-1.5"
+                            className="mt-1 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:text-zinc-900 bg-white hover:bg-zinc-50 rounded-lg border border-dashed border-zinc-300 transition flex items-center gap-1.5"
                           >
                             <Plus className="w-3.5 h-3.5" /> Tambahkan Opsi Pilihan ({String.fromCharCode(65 + q.options.length)})
                           </button>
@@ -1788,10 +1788,10 @@ export default function ExamPackageList() {
 
                       {/* SUB-FORM 2: PILIHAN GANDA KOMPLEKS (Multi-Centang) */}
                       {q.questionType === 'MULTIPLE_CHOICE_COMPLEX' && (
-                        <div className="space-y-2.5 pt-1">
-                          <div className="text-[11px] font-bold text-slate-500 flex items-center justify-between flex-wrap gap-1">
-                            <span>Pilihan Jawaban (Centang kotak hijau untuk seluruh kunci jawaban yang benar):</span>
-                            <span className="text-blue-700 font-black">
+                        <div className="space-y-2 pt-1">
+                          <div className="text-[11px] font-medium text-zinc-500 flex items-center justify-between flex-wrap gap-1">
+                            <span>Pilihan Jawaban (Centang opsi untuk seluruh kunci jawaban yang benar):</span>
+                            <span className="text-blue-700 font-semibold font-mono">
                               Kunci: {q.correctOptions?.join(', ') || '-'}
                             </span>
                           </div>
@@ -1802,22 +1802,22 @@ export default function ExamPackageList() {
                               return (
                                 <div
                                   key={opt.id || opt.label}
-                                  className="p-2.5 rounded-2xl bg-slate-50/70 border border-slate-200 flex flex-col sm:flex-row sm:items-center gap-2 group hover:border-slate-300 transition"
+                                  className="p-2.5 rounded-lg bg-zinc-50/70 border border-zinc-200 flex flex-col sm:flex-row sm:items-center gap-2 group hover:border-zinc-300 transition"
                                 >
                                   <div className="flex items-center gap-2 shrink-0">
                                     <button
                                       type="button"
                                       onClick={() => handleToggleComplexOption(idx, opt.label)}
-                                      className={`w-7 h-7 rounded-xl border-2 flex items-center justify-center transition shrink-0 ${
+                                      className={`w-6 h-6 rounded-md border flex items-center justify-center transition shrink-0 text-xs font-mono font-semibold ${
                                         isChecked
-                                          ? 'border-blue-600 bg-blue-600 text-white shadow-xs font-black'
-                                          : 'border-slate-300 hover:border-blue-400 bg-white text-slate-600'
+                                          ? 'border-blue-600 bg-blue-600 text-white'
+                                          : 'border-zinc-300 hover:border-zinc-400 bg-white text-zinc-600'
                                       }`}
                                       title={isChecked ? 'Hapus dari Kunci Jawaban' : 'Jadikan Kunci Jawaban'}
                                     >
-                                      {isChecked ? <Check className="w-4 h-4 stroke-[3]" /> : opt.label}
+                                      {isChecked ? <Check className="w-3.5 h-3.5 stroke-[2.5]" /> : opt.label}
                                     </button>
-                                    <span className="sm:hidden font-black text-xs text-slate-700">
+                                    <span className="sm:hidden font-medium text-xs text-zinc-700">
                                       Pilihan {opt.label}
                                     </span>
                                   </div>
@@ -1829,10 +1829,10 @@ export default function ExamPackageList() {
                                       value={opt.text}
                                       onChange={(e) => handleOptionTextChange(idx, optIdx, e.target.value)}
                                       placeholder={`Teks pilihan ${opt.label}...`}
-                                      className="w-full pl-3 pr-10 py-2 border border-slate-300 rounded-xl text-xs sm:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
+                                      className="w-full pl-3 pr-8 py-1.5 border border-zinc-200 rounded-md text-xs sm:text-sm bg-white focus:outline-none focus:border-zinc-400"
                                     />
                                     <label
-                                      className="absolute right-2 text-slate-400 hover:text-blue-600 cursor-pointer p-1"
+                                      className="absolute right-2 text-zinc-400 hover:text-zinc-600 cursor-pointer p-0.5"
                                       title="Sisipkan Gambar pada Opsi ini"
                                     >
                                       <input
@@ -1853,7 +1853,7 @@ export default function ExamPackageList() {
                                     <button
                                       type="button"
                                       onClick={() => handleRemoveOption(idx, optIdx)}
-                                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition"
+                                      className="p-1 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded transition"
                                       title="Hapus Opsi ini"
                                     >
                                       <Trash2 className="w-3.5 h-3.5" />
@@ -1867,7 +1867,7 @@ export default function ExamPackageList() {
                           <button
                             type="button"
                             onClick={() => handleAddOption(idx)}
-                            className="mt-1 px-4 py-1.5 text-xs font-bold text-blue-700 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-xl border border-dashed border-blue-300 transition flex items-center gap-1.5"
+                            className="mt-1 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:text-zinc-900 bg-white hover:bg-zinc-50 rounded-lg border border-dashed border-zinc-300 transition flex items-center gap-1.5"
                           >
                             <Plus className="w-3.5 h-3.5" /> Tambahkan Opsi Pilihan ({String.fromCharCode(65 + q.options.length)})
                           </button>
@@ -1876,8 +1876,8 @@ export default function ExamPackageList() {
 
                       {/* SUB-FORM 3: ISIAN SINGKAT (Exact Match) */}
                       {q.questionType === 'SHORT_ANSWER' && (
-                        <div className="space-y-2 pt-1 bg-teal-50/50 p-4 rounded-2xl border border-teal-200">
-                          <label className="block text-xs font-bold text-teal-900">
+                        <div className="space-y-2 pt-1 bg-zinc-50 p-3.5 rounded-lg border border-zinc-200">
+                          <label className="block text-xs font-semibold text-zinc-900">
                             Kunci Jawaban Tepat (Toleransi Kata Kunci):
                           </label>
                           <input
@@ -1886,9 +1886,9 @@ export default function ExamPackageList() {
                             value={q.exactKeys || ''}
                             onChange={(e) => handleExactKeysChange(idx, e.target.value)}
                             placeholder="Contoh: Fotosintesis / fotosintesa / anabolisme"
-                            className="w-full px-3.5 py-2.5 border border-teal-300 rounded-xl text-xs sm:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold"
+                            className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-xs sm:text-sm bg-white focus:outline-none focus:border-zinc-400 font-medium"
                           />
-                          <p className="text-[11px] text-teal-800 font-medium">
+                          <p className="text-[11px] text-zinc-500">
                             Gunakan garis miring (<strong>/</strong>) untuk memberikan beberapa variasi jawaban benar alternatif. Sistem otomatis mengabaikan huruf besar/kecil (case-insensitive) dan spasi berlebih.
                           </p>
                         </div>
@@ -1896,8 +1896,8 @@ export default function ExamPackageList() {
 
                       {/* SUB-FORM 4: TABEL BENAR / SALAH (Matrix) */}
                       {q.questionType === 'TRUE_FALSE_MATRIX' && (
-                        <div className="space-y-3 pt-1">
-                          <div className="text-[11px] font-bold text-slate-500">
+                        <div className="space-y-2.5 pt-1">
+                          <div className="text-[11px] font-medium text-zinc-500">
                             Daftar Pernyataan & Kunci Kebenaran:
                           </div>
 
@@ -1905,9 +1905,9 @@ export default function ExamPackageList() {
                             {(q.matrixRows || []).map((row, rIdx) => (
                               <div
                                 key={rIdx}
-                                className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center gap-3"
+                                className="p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 flex flex-col sm:flex-row sm:items-center gap-2.5"
                               >
-                                <span className="w-6 h-6 rounded-lg bg-amber-100 text-amber-800 font-black text-xs flex items-center justify-center shrink-0">
+                                <span className="w-5 h-5 rounded bg-zinc-200 text-zinc-800 font-mono font-semibold text-xs flex items-center justify-center shrink-0">
                                   {rIdx + 1}
                                 </span>
 
@@ -1917,11 +1917,11 @@ export default function ExamPackageList() {
                                   value={row.statement}
                                   onChange={(e) => handleMatrixStatementChange(idx, rIdx, e.target.value)}
                                   placeholder={`Pernyataan ${rIdx + 1}...`}
-                                  className="flex-1 w-full px-3 py-2 border border-slate-300 rounded-xl text-xs sm:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                  className="flex-1 w-full px-3 py-1.5 border border-zinc-200 rounded-md text-xs sm:text-sm bg-white focus:outline-none focus:border-zinc-400"
                                 />
 
-                                <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
-                                  <div className="flex items-center gap-2 bg-white px-2.5 py-1 rounded-xl border border-slate-200 text-xs font-bold">
+                                <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
+                                  <div className="flex items-center gap-2 bg-white px-2 py-1 rounded-md border border-zinc-200 text-xs font-medium">
                                     <label className="flex items-center gap-1 cursor-pointer text-emerald-700">
                                       <input
                                         type="radio"
@@ -1932,7 +1932,7 @@ export default function ExamPackageList() {
                                       />
                                       Benar
                                     </label>
-                                    <span className="text-slate-300">|</span>
+                                    <span className="text-zinc-300">|</span>
                                     <label className="flex items-center gap-1 cursor-pointer text-rose-700">
                                       <input
                                         type="radio"
@@ -1948,9 +1948,9 @@ export default function ExamPackageList() {
                                   <button
                                     type="button"
                                     onClick={() => handleRemoveMatrixRow(idx, rIdx)}
-                                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition"
+                                    className="p-1 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded transition"
                                   >
-                                    <Trash2 className="w-4 h-4" />
+                                    <Trash2 className="w-3.5 h-3.5" />
                                   </button>
                                 </div>
                               </div>
@@ -1960,7 +1960,7 @@ export default function ExamPackageList() {
                           <button
                             type="button"
                             onClick={() => handleAddMatrixRow(idx)}
-                            className="px-4 py-1.5 text-xs font-bold text-amber-800 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 rounded-xl border border-dashed border-amber-300 transition flex items-center gap-1.5"
+                            className="px-3 py-1.5 text-xs font-medium text-zinc-700 hover:text-zinc-900 bg-white hover:bg-zinc-50 rounded-lg border border-dashed border-zinc-300 transition flex items-center gap-1.5"
                           >
                             <Plus className="w-3.5 h-3.5" /> Tambah Baris Pernyataan
                           </button>
@@ -1969,8 +1969,8 @@ export default function ExamPackageList() {
 
                       {/* SUB-FORM 5: MENJODOHKAN (Matching Pair) */}
                       {q.questionType === 'MATCHING_PAIR' && (
-                        <div className="space-y-3 pt-1">
-                          <div className="text-[11px] font-bold text-slate-500">
+                        <div className="space-y-2.5 pt-1">
+                          <div className="text-[11px] font-medium text-zinc-500">
                             Pasangan Premis Kiri & Jawaban Kanan:
                           </div>
 
@@ -1978,9 +1978,9 @@ export default function ExamPackageList() {
                             {(q.matchingPairs || []).map((pair, pIdx) => (
                               <div
                                 key={pIdx}
-                                className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center gap-2.5"
+                                className="p-2.5 rounded-lg bg-zinc-50 border border-zinc-200 flex flex-col sm:flex-row sm:items-center gap-2"
                               >
-                                <span className="w-6 h-6 rounded-lg bg-purple-100 text-purple-800 font-black text-xs flex items-center justify-center shrink-0">
+                                <span className="w-5 h-5 rounded bg-zinc-200 text-zinc-800 font-mono font-semibold text-xs flex items-center justify-center shrink-0">
                                   {pIdx + 1}
                                 </span>
 
@@ -1991,11 +1991,11 @@ export default function ExamPackageList() {
                                     value={pair.left}
                                     onChange={(e) => handleMatchingPairChange(idx, pIdx, 'left', e.target.value)}
                                     placeholder={`Pernyataan Kiri ${pIdx + 1}...`}
-                                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs sm:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    className="w-full px-3 py-1.5 border border-zinc-200 rounded-md text-xs sm:text-sm bg-white focus:outline-none focus:border-zinc-400"
                                   />
                                 </div>
 
-                                <ArrowRight className="w-4 h-4 text-purple-500 hidden sm:block shrink-0" />
+                                <ArrowRight className="w-3.5 h-3.5 text-zinc-400 hidden sm:block shrink-0" />
 
                                 <div className="flex-1 w-full">
                                   <input
@@ -2004,16 +2004,16 @@ export default function ExamPackageList() {
                                     value={pair.right}
                                     onChange={(e) => handleMatchingPairChange(idx, pIdx, 'right', e.target.value)}
                                     placeholder={`Pasangan Kanan ${pIdx + 1}...`}
-                                    className="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs sm:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    className="w-full px-3 py-1.5 border border-zinc-200 rounded-md text-xs sm:text-sm bg-white focus:outline-none focus:border-zinc-400"
                                   />
                                 </div>
 
                                 <button
                                   type="button"
                                   onClick={() => handleRemoveMatchingPair(idx, pIdx)}
-                                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl self-end sm:self-auto transition"
+                                  className="p-1 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 rounded self-end sm:self-auto transition"
                                 >
-                                  <Trash2 className="w-4 h-4" />
+                                  <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                               </div>
                             ))}
@@ -2022,7 +2022,7 @@ export default function ExamPackageList() {
                           <button
                             type="button"
                             onClick={() => handleAddMatchingPair(idx)}
-                            className="px-4 py-1.5 text-xs font-bold text-purple-800 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 rounded-xl border border-dashed border-purple-300 transition flex items-center gap-1.5"
+                            className="px-3 py-1.5 text-xs font-medium text-zinc-700 hover:text-zinc-900 bg-white hover:bg-zinc-50 rounded-lg border border-dashed border-zinc-300 transition flex items-center gap-1.5"
                           >
                             <Plus className="w-3.5 h-3.5" /> Tambah Pasangan Menjodohkan
                           </button>
@@ -2031,10 +2031,10 @@ export default function ExamPackageList() {
 
                       {/* SUB-FORM 6: ESAI */}
                       {q.questionType === 'ESSAY' && (
-                        <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1">
-                          <span className="font-bold text-slate-800">Format Soal Uraian / Esai:</span>
+                        <div className="p-3 rounded-lg bg-zinc-50 border border-zinc-200 text-xs text-zinc-600 space-y-1">
+                          <span className="font-semibold text-zinc-900">Format Soal Uraian / Esai:</span>
                           <p>
-                            Siswa akan diberikan area pengetikan jawaban terbuka di lembar pengerjaan ujian. Nilai esai dapat dievaluasi secara mandiri oleh guru setelah asesmen selesai.
+                            Siswa akan diberikan area pengetikan jawaban terbuka di lembar pengerjaan ujian. Nilai esai dapat dievaluasi secara mandiri oleh guru di halaman Koreksi Esai setelah asesmen selesai.
                           </p>
                         </div>
                       )}
@@ -2044,32 +2044,32 @@ export default function ExamPackageList() {
               </div>
 
               {/* Bottom Add Bar */}
-              <div className="pt-2 flex justify-center">
+              <div className="pt-1 flex justify-center">
                 <button
                   type="button"
                   onClick={() => handleAddQuestion('MULTIPLE_CHOICE')}
-                  className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-2xl font-bold text-xs flex items-center gap-2 transition border border-slate-300 shadow-2xs"
+                  className="px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-lg font-medium text-xs flex items-center gap-1.5 transition border border-zinc-200 hover:-translate-y-0.5 active:scale-[0.98]"
                 >
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-3.5 h-3.5" />
                   <span>Tambah Butir Soal Nomor {questions.length + 1}</span>
                 </button>
               </div>
             </div>
           )}
 
-          {/* SECTION C: STICKY FOOTER ACTIONS (SELALU TERLIHAT DI SEMUA PERANGKAT) */}
-          <div className="sticky bottom-0 -mx-6 -mb-6 px-6 py-4 bg-white/95 backdrop-blur-md border-t-2 border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-lg rounded-b-2xl">
+          {/* SECTION C: STICKY FOOTER ACTIONS (TASTE-SKILL PAIR) */}
+          <div className="sticky bottom-0 -mx-6 -mb-6 px-6 py-3.5 bg-white/95 backdrop-blur-md border-t border-zinc-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-b-xl">
             <div className="flex items-center gap-2 text-xs">
-              <span className="text-slate-500 font-semibold">Ringkasan Paket:</span>
-              <span className="font-black text-slate-800 bg-slate-100 px-2.5 py-1 rounded-lg">
+              <span className="text-zinc-500 font-medium">Ringkasan:</span>
+              <span className="font-mono font-medium text-zinc-800 bg-zinc-100 border border-zinc-200 px-2 py-0.5 rounded">
                 {examType === 'NATIVE_QUESTIONS' ? `${questions.length} Butir Soal` : 'Google Form'}
               </span>
               {examType === 'NATIVE_QUESTIONS' && (
                 <span
-                  className={`font-black px-2.5 py-1 rounded-lg ${
+                  className={`font-mono font-semibold px-2 py-0.5 rounded border ${
                     totalPoints === 100
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : 'bg-indigo-100 text-indigo-800'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                      : 'bg-zinc-100 text-zinc-800 border-zinc-200'
                   }`}
                 >
                   {totalPoints} Poin
@@ -2077,19 +2077,19 @@ export default function ExamPackageList() {
               )}
             </div>
 
-            <div className="flex items-center justify-end gap-2.5">
+            <div className="flex items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setIsAddModalOpen(false)}
-                className="px-4 py-2.5 border-2 border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition"
+                className="px-3.5 py-2 border border-zinc-200 rounded-lg text-xs font-medium text-zinc-700 hover:bg-zinc-50 transition hover:-translate-y-0.5 active:scale-[0.98]"
               >
                 Batal
               </button>
               <button
                 type="submit"
-                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl text-xs font-black shadow-md shadow-indigo-600/30 transition flex items-center gap-1.5"
+                className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 active:scale-[0.98] text-white rounded-lg text-xs font-semibold shadow-xs transition flex items-center gap-1.5 hover:-translate-y-0.5"
               >
-                <Check className="w-4 h-4 stroke-[3]" />
+                <Check className="w-3.5 h-3.5 stroke-[2.5]" />
                 <span>{isEditing ? 'Simpan Perubahan Paket' : 'Simpan Paket Ujian'}</span>
               </button>
             </div>
@@ -2107,14 +2107,14 @@ export default function ExamPackageList() {
         maxWidth="max-w-4xl"
       >
         <div className="space-y-3">
-          <div className="p-3.5 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="p-3 rounded-lg bg-zinc-50 border border-zinc-200 text-zinc-800 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <span>Tampilan pratinjau seperti yang akan dilihat siswa di arena ujian:</span>
-            <span className="font-mono text-[11px] truncate max-w-sm bg-white px-2 py-1 rounded-lg border border-indigo-200">
+            <span className="font-mono text-[11px] truncate max-w-sm bg-white px-2 py-0.5 rounded border border-zinc-200">
               {previewUrl}
             </span>
           </div>
 
-          <div className="w-full h-96 sm:h-[480px] border-2 border-slate-300 rounded-2xl overflow-hidden bg-slate-100 relative shadow-inner">
+          <div className="w-full h-96 sm:h-[480px] border border-zinc-200 rounded-lg overflow-hidden bg-zinc-100 relative shadow-inner">
             <iframe
               src={previewUrl}
               title="Pratinjau Soal Formulir"
@@ -2123,10 +2123,10 @@ export default function ExamPackageList() {
             />
           </div>
 
-          <div className="flex justify-end pt-2">
+          <div className="flex justify-end pt-1">
             <button
               onClick={() => setIsPreviewModalOpen(false)}
-              className="px-5 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold hover:bg-slate-700 transition"
+              className="px-4 py-2 bg-zinc-900 text-white rounded-lg text-xs font-semibold hover:bg-zinc-800 transition hover:-translate-y-0.5 active:scale-[0.98]"
             >
               Tutup Pratinjau
             </button>
