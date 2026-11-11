@@ -41,7 +41,7 @@ export default function ExamSessionSetup() {
   const [endTime, setEndTime] = useState('09:30');
   const [durationMinutes, setDurationMinutes] = useState(60);
   const [entryPassword, setEntryPassword] = useState('MASUK' + Math.floor(100 + Math.random() * 900));
-  const [exitPassword, setExitPassword] = useState('KELUAR' + Math.floor(100 + Math.random() * 900));
+  const [exitPassword, setExitPassword] = useState('');
   const [supervisorPin, setSupervisorPin] = useState('PIN-' + Math.floor(1000 + Math.random() * 9000));
   const [shuffleQuestions, setShuffleQuestions] = useState(false);
   const [shuffleOptions, setShuffleOptions] = useState(false);
@@ -131,15 +131,6 @@ export default function ExamSessionSetup() {
     setEntryPassword(res);
   };
 
-  const handleGenerateExitPassword = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let res = 'KLR-';
-    for (let i = 0; i < 4; i++) {
-      res += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    setExitPassword(res);
-  };
-
   const handleGenerateSupervisorPin = () => {
     const chars = '0123456789';
     let res = 'PIN-';
@@ -165,7 +156,7 @@ export default function ExamSessionSetup() {
     setEndTime('09:30');
     setDurationMinutes(60);
     handleGenerateEntryPassword();
-    handleGenerateExitPassword();
+    setExitPassword('');
     handleGenerateSupervisorPin();
     setShuffleQuestions(false);
     setShuffleOptions(false);
@@ -246,8 +237,8 @@ export default function ExamSessionSetup() {
       return;
     }
 
-    if (!entryPassword.trim() || !exitPassword.trim()) {
-      alert('Password Masuk dan Password Keluar wajib diisi!');
+    if (!entryPassword.trim()) {
+      alert('Password Masuk (Token Masuk) wajib diisi!');
       return;
     }
 
@@ -261,7 +252,7 @@ export default function ExamSessionSetup() {
         start_time: startDateTime,
         end_time: endDateTime,
         entry_password: entryPassword.toUpperCase(),
-        exit_password: exitPassword.toUpperCase(),
+        exit_password: (exitPassword || '').toUpperCase(),
         supervisor_pin: (supervisorPin || 'PIN-1234').toUpperCase(),
         shuffle_questions: Boolean(shuffleQuestions),
         shuffle_options: Boolean(shuffleOptions),
@@ -377,7 +368,6 @@ export default function ExamSessionSetup() {
 
           const isGForm = session.examType === 'EXTERNAL_LINK' || session.exam_type === 'EXTERNAL_LINK';
           const entryVal = session.entryPassword || session.entry_password || '-';
-          const exitVal = session.exitPassword || session.exit_password || '-';
           const pinVal = session.supervisorPin || session.supervisor_pin || 'PIN-1234';
 
           return (
@@ -474,8 +464,8 @@ export default function ExamSessionSetup() {
                 </div>
               </div>
 
-              {/* Baris 3: TRIO TOKEN TILES (Password Masuk, Password Keluar, PIN Pengawas) */}
-              <div className="grid grid-cols-3 gap-2 sm:gap-3 pt-1">
+              {/* Baris 3: DUO TOKEN TILES (Password Masuk & PIN Pengawas Ruangan) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 pt-1">
                 {/* 1. Box Password Masuk */}
                 <button
                   type="button"
@@ -489,7 +479,7 @@ export default function ExamSessionSetup() {
                 >
                   <div className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-zinc-500 flex items-center justify-center gap-1 mb-0.5">
                     <KeyRound className="w-3 h-3 text-zinc-500 shrink-0" />
-                    <span className="truncate">Masuk</span>
+                    <span className="truncate">Token Masuk Siswa</span>
                   </div>
                   <div className="font-mono font-bold text-sm sm:text-base text-zinc-900 tracking-wider truncate py-0.5">
                     {entryVal}
@@ -501,44 +491,13 @@ export default function ExamSessionSetup() {
                       </span>
                     ) : (
                       <span className="text-zinc-500 group-hover:text-zinc-800 flex items-center justify-center gap-1">
-                        <Copy className="w-2.5 h-2.5" /> Salin
+                        <Copy className="w-2.5 h-2.5" /> Salin Token
                       </span>
                     )}
                   </div>
                 </button>
 
-                {/* 2. Box Password Keluar */}
-                <button
-                  type="button"
-                  onClick={() => handleCopyToken(exitVal, 'exit', session.id)}
-                  className={`p-3 rounded-lg border text-center transition-all duration-150 group relative cursor-pointer active:scale-[0.98] select-none hover:-translate-y-0.5 ${
-                    copiedKey === `${session.id}-exit`
-                      ? 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-300'
-                      : 'bg-rose-50/50 hover:bg-rose-100/60 border-rose-200'
-                  }`}
-                  title="Klik untuk menyalin Password Keluar ke keyboard"
-                >
-                  <div className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-rose-700 flex items-center justify-center gap-1 mb-0.5">
-                    <Lock className="w-3 h-3 text-rose-600 shrink-0" />
-                    <span className="truncate">Keluar</span>
-                  </div>
-                  <div className="font-mono font-bold text-sm sm:text-base text-rose-950 tracking-wider truncate py-0.5">
-                    {exitVal}
-                  </div>
-                  <div className="text-[10px] font-medium mt-0.5">
-                    {copiedKey === `${session.id}-exit` ? (
-                      <span className="text-emerald-700 flex items-center justify-center gap-0.5 animate-pulse">
-                        <Check className="w-3 h-3" /> Tersalin!
-                      </span>
-                    ) : (
-                      <span className="text-rose-600 group-hover:text-rose-800 flex items-center justify-center gap-1">
-                        <Copy className="w-2.5 h-2.5" /> Salin
-                      </span>
-                    )}
-                  </div>
-                </button>
-
-                {/* 3. Box PIN Pengawas Ruangan */}
+                {/* 2. Box PIN Pengawas Ruangan */}
                 <button
                   type="button"
                   onClick={() => handleCopyToken(pinVal, 'supervisor', session.id)}
@@ -551,7 +510,7 @@ export default function ExamSessionSetup() {
                 >
                   <div className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-amber-700 flex items-center justify-center gap-1 mb-0.5">
                     <ShieldCheck className="w-3 h-3 text-amber-600 shrink-0" />
-                    <span className="truncate">PIN Guru</span>
+                    <span className="truncate">PIN Buka Kunci Pengawas</span>
                   </div>
                   <div className="font-mono font-bold text-sm sm:text-base text-amber-950 tracking-wider truncate py-0.5">
                     {pinVal}
@@ -563,7 +522,7 @@ export default function ExamSessionSetup() {
                       </span>
                     ) : (
                       <span className="text-amber-700 group-hover:text-amber-900 flex items-center justify-center gap-1">
-                        <Copy className="w-2.5 h-2.5" /> Salin
+                        <Copy className="w-2.5 h-2.5" /> Salin PIN
                       </span>
                     )}
                   </div>
@@ -736,12 +695,12 @@ export default function ExamSessionSetup() {
             </div>
           </div>
 
-          {/* Konfigurasi Password Masuk, Password Keluar & PIN Pengawas */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+          {/* Konfigurasi Password Masuk & PIN Pengawas */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
             <div className="p-3 rounded-lg bg-zinc-50 border border-zinc-200 space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-semibold text-zinc-800 uppercase tracking-wider flex items-center gap-1">
-                  <KeyRound className="w-3 h-3 text-zinc-500" /> Password Masuk
+                  <KeyRound className="w-3 h-3 text-zinc-500" /> Password Masuk (Token)
                 </label>
                 <button
                   type="button"
@@ -758,36 +717,13 @@ export default function ExamSessionSetup() {
                 onChange={(e) => setEntryPassword(e.target.value.toUpperCase())}
                 className="w-full px-2.5 py-1.5 border border-zinc-200 rounded-md text-xs font-mono font-bold tracking-wider text-zinc-900 bg-white uppercase text-center"
               />
-              <span className="text-[10px] text-zinc-400 block">Diberikan ke siswa untuk memulai</span>
-            </div>
-
-            <div className="p-3 rounded-lg bg-rose-50/50 border border-rose-200 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-semibold text-rose-900 uppercase tracking-wider flex items-center gap-1">
-                  <Lock className="w-3 h-3 text-rose-600" /> Password Keluar
-                </label>
-                <button
-                  type="button"
-                  onClick={handleGenerateExitPassword}
-                  className="text-[10px] text-rose-600 hover:text-rose-800 font-medium flex items-center gap-0.5"
-                >
-                  <Shuffle className="w-2.5 h-2.5" /> Acak
-                </button>
-              </div>
-              <input
-                type="text"
-                required
-                value={exitPassword}
-                onChange={(e) => setExitPassword(e.target.value.toUpperCase())}
-                className="w-full px-2.5 py-1.5 border border-rose-200 rounded-md text-xs font-mono font-bold tracking-wider text-rose-950 bg-white uppercase text-center"
-              />
-              <span className="text-[10px] text-zinc-400 block">Diberikan setelah jawaban dikirim</span>
+              <span className="text-[10px] text-zinc-400 block">Diberikan ke siswa untuk memulai ujian</span>
             </div>
 
             <div className="p-3 rounded-lg bg-amber-50/50 border border-amber-200 space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-semibold text-amber-900 uppercase tracking-wider flex items-center gap-1">
-                  <ShieldCheck className="w-3 h-3 text-amber-600" /> PIN Pengawas
+                  <ShieldCheck className="w-3 h-3 text-amber-600" /> PIN Pengawas Ruangan
                 </label>
                 <button
                   type="button"
@@ -803,6 +739,10 @@ export default function ExamSessionSetup() {
                 value={supervisorPin}
                 onChange={(e) => setSupervisorPin(e.target.value.toUpperCase())}
                 className="w-full px-2.5 py-1.5 border border-amber-200 rounded-md text-xs font-mono font-bold tracking-wider text-amber-950 bg-white uppercase text-center"
+              />
+              <span className="text-[10px] text-zinc-400 block">Dipegang guru untuk membuka layar siswa yang terkunci</span>
+            </div>
+          </div>
               />
               <span className="text-[10px] text-zinc-400 block">Dipegang guru untuk buka kunci lokal</span>
             </div>

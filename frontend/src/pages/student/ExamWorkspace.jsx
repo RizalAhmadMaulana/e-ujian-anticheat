@@ -4,7 +4,7 @@ import { useExamStore } from '../../store/useExamStore';
 import { useExamSecurity } from '../../hooks/useExamSecurity';
 import { useProctorSocket } from '../../hooks/useProctorSocket';
 import { playExitSuccessAlarm } from '../../utils/soundEffects';
-import { submitExamAnswersApi, verifyExitPasswordApi } from '../../api/examApi';
+import { submitExamAnswersApi, finishExamAttemptApi } from '../../api/examApi';
 import { proctoringApi } from '../../api/proctoringApi';
 import { resolveImageUrl } from '../../utils/imageUrlFormatter';
 import Modal from '../../components/common/Modal';
@@ -14,8 +14,6 @@ import {
   ShieldAlert, 
   Lock, 
   Clock, 
-  KeyRound, 
-  Send, 
   AlertTriangle, 
   CheckCircle, 
   RefreshCw, 
@@ -51,9 +49,8 @@ export default function ExamWorkspace() {
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [doubtQuestions, setDoubtQuestions] = useState({}); // { [qId]: boolean }
-  const [isExitBarOpen, setIsExitBarOpen] = useState(false);
-  const [exitPasswordInput, setExitPasswordInput] = useState('');
-  const [exitErrorMsg, setExitErrorMsg] = useState('');
+  const [showExitConfirmModal, setShowExitConfirmModal] = useState(false);
+  const [isSubmittingExam, setIsSubmittingExam] = useState(false);
   const [iframeKey, setIframeKey] = useState(1);
   const [screenshotToast, setScreenshotToast] = useState('');
   const [unlockSuccessToast, setUnlockSuccessToast] = useState('');
@@ -270,42 +267,41 @@ export default function ExamWorkspace() {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  // Verifikasi Password Keluar Resmi
-  const handleConfirmExit = async (e) => {
-    e.preventDefault();
-    setExitErrorMsg('');
+  // Konfirmasi Selesai & Keluar Ujian (Tanpa Password Keluar)
+  const handleFinishAndExitExam = async () => {
+    setIsSubmittingExam(true);
 
     try {
       if (activeAttempt.sessionId && activeAttempt.sessionId.length > 10) {
-        await verifyExitPasswordApi(activeAttempt.sessionId, exitPasswordInput);
         if (selectedPackage?.examType === 'NATIVE_QUESTIONS') {
           await submitExamAnswersApi(activeAttempt.sessionId, activeAttempt.studentAnswers);
         }
+        await finishExamAttemptApi(activeAttempt.sessionId, activeAttempt.studentAnswers);
       }
     } catch (err) {
-      console.warn('Backend exit password check fallback ke local store:', err);
+      console.warn('Backend finish attempt error fallback ke local store:', err);
     }
 
-    const res = verifyExitPassword(exitPasswordInput);
-    if (res.success) {
-      // 1. Mainkan bunyi notifikasi alarm besar ExamBrowser (~2.5 detik)
-      playExitSuccessAlarm();
+    // 1. Update status di store lokal
+    useExamStore.getState().finishExam();
 
-      // 2. Lepaskan mode fullscreen
-      if (document.exitFullscreen && document.fullscreenElement) {
-        document.exitFullscreen().catch(() => {});
-      }
+    // 2. Mainkan bunyi notifikasi alarm besar ExamBrowser (~2.5 detik)
+    playExitSuccessAlarm();
 
-      setIsExitBarOpen(false);
-      alert('Selamat! Ujian Anda telah selesai dan seluruh rekaman tersimpan di E-Jurnal Guru.');
-      if (activeAttempt.isSimulation) {
-        useExamStore.getState().loginAsTeacher();
-        navigate('/teacher/dashboard');
-      } else {
-        navigate('/student/lobby');
-      }
+    // 3. Lepaskan mode fullscreen
+    if (document.exitFullscreen && document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
+
+    setShowExitConfirmModal(false);
+    setIsSubmittingExam(false);
+
+    alert('Selamat! Ujian Anda telah selesai dan seluruh rekaman jawaban tersimpan aman di E-Jurnal Guru.');
+    if (activeAttempt.isSimulation) {
+      useExamStore.getState().loginAsTeacher();
+      navigate('/teacher/dashboard');
     } else {
-      setExitErrorMsg(res.message || 'Password Keluar salah! Tanyakan kepada pengawas.');
+      navigate('/student/lobby');
     }
   };
 
@@ -538,13 +534,14 @@ export default function ExamWorkspace() {
             <span>{formatTime(activeAttempt.remainingSeconds)}</span>
           </div>
 
-          {/* Tombol Password untuk Keluar */}
+          {/* Tombol Konfirmasi Selesai & Keluar Ujian */}
           <button
-            onClick={() => setIsExitBarOpen(!isExitBarOpen)}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-rose-600 hover:bg-rose-500 text-white text-xs font-medium shadow-2xs transition active:scale-[0.98]"
+            onClick={() => setShowExitConfirmModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-2xs transition active:scale-[0.98]"
+            title="Selesaikan pengerjaan dan keluar dari ujian"
           >
-            <Lock className="w-3.5 h-3.5" />
-            <span>Password untuk Keluar</span>
+            <CheckCircle className="w-3.5 h-3.5" />
+            <span>Selesai Ujian</span>
           </button>
         </div>
       </header>
@@ -595,67 +592,6 @@ export default function ExamWorkspace() {
               <Check className="w-3.5 h-3.5" />
             </button>
           </div>
-        </div>
-      )}
-
-      {/* ======================================================== */}
-      {/* SLIDE-DOWN EXIT PASSWORD BAR DI BAGIAN ATAS */}
-      {/* ======================================================== */}
-      {isExitBarOpen && (
-        <div className="bg-zinc-900/95 border-b border-rose-500/50 p-3.5 z-30 shadow-xl animate-fade-in backdrop-blur-md">
-          <div className="max-w-2xl mx-auto flex flex-col sm:flex-row items-center gap-3">
-            <div className="flex items-center gap-2 text-xs font-medium text-zinc-200 shrink-0">
-              <KeyRound className="w-4 h-4 text-rose-400" />
-              <span>Masukkan Password dari Panitia untuk Keluar:</span>
-            </div>
-
-            <div className="flex-1 w-full flex items-center gap-2">
-              <input
-                type="text"
-                autoFocus
-                readOnly
-                onFocus={(e) => e.target.removeAttribute('readonly')}
-                autoComplete="one-time-code"
-                autoCorrect="off"
-                autoCapitalize="characters"
-                spellCheck="false"
-                role="presentation"
-                data-lpignore="true"
-                data-form-type="other"
-                value={exitPasswordInput}
-                onChange={(e) => setExitPasswordInput(e.target.value.toUpperCase())}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleConfirmExit(e);
-                  }
-                }}
-                placeholder="CONTOH: KELUAR123"
-                className="flex-1 px-3 py-1.5 bg-zinc-950 border border-zinc-700 rounded-lg text-xs sm:text-sm font-mono font-medium tracking-widest text-white uppercase focus:outline-none focus:border-rose-500 text-center"
-              />
-              <button
-                type="button"
-                onClick={handleConfirmExit}
-                className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-semibold shadow-2xs transition shrink-0 flex items-center gap-1.5 active:scale-[0.98]"
-              >
-                <Send className="w-3.5 h-3.5" />
-                <span>Konfirmasi</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsExitBarOpen(false)}
-                className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white rounded-lg text-xs transition font-medium"
-              >
-                Batal
-              </button>
-            </div>
-          </div>
-
-          {exitErrorMsg && (
-            <div className="max-w-2xl mx-auto mt-2 text-center text-xs font-medium text-rose-400">
-              {exitErrorMsg}
-            </div>
-          )}
         </div>
       )}
 
@@ -1094,7 +1030,7 @@ export default function ExamWorkspace() {
 
                 {currentQuestionIndex === questions.length - 1 ? (
                   <button
-                    onClick={() => setIsExitBarOpen(true)}
+                    onClick={() => setShowExitConfirmModal(true)}
                     className="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-2xs transition flex items-center gap-1.5 active:scale-[0.98]"
                   >
                     <Check className="w-4 h-4" /> Selesai & Kirim Ujian
@@ -1147,8 +1083,7 @@ export default function ExamWorkspace() {
                     (Array.isArray(ans)
                       ? ans.length > 0
                       : typeof ans === 'object'
-                      ? Object.values(ans).some((v) => v !== undefined && v !== null && v !== '')
-                      : true);
+                      ? Object.values(ans).some((v) => v !== undefined && v !== null && v !== '');
                   const isDoubt = Boolean(doubtQuestions[q.id]);
 
                   return (
@@ -1194,6 +1129,158 @@ export default function ExamWorkspace() {
           </div>
         )}
       </main>
+
+      {/* ======================================================== */}
+      {/* MODAL KONFIRMASI SELESAI & KELUAR UJIAN                  */}
+      {/* ======================================================== */}
+      {showExitConfirmModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in select-none">
+          <div className="bg-zinc-900 border border-zinc-700/80 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative space-y-5">
+            {/* Header Modal */}
+            <div className="flex items-start gap-4">
+              <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base sm:text-lg font-bold text-zinc-100 tracking-tight">
+                  Konfirmasi Selesai Ujian
+                </h3>
+                <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                  Pastikan seluruh jawaban Anda sudah terisi dengan benar sebelum mengirim lembar ujian.
+                </p>
+              </div>
+            </div>
+
+            {/* Ringkasan Pengerjaan untuk Soal Mandiri */}
+            {selectedPackage?.examType === 'NATIVE_QUESTIONS' ? (
+              <div className="bg-zinc-950/80 border border-zinc-800 rounded-xl p-4 space-y-3">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                  Status Lembar Jawaban:
+                </div>
+                {(() => {
+                  const checkAnswered = (ans) => {
+                    if (ans === undefined || ans === null || ans === '') return false;
+                    if (Array.isArray(ans)) return ans.length > 0;
+                    if (typeof ans === 'object') {
+                      const values = Object.values(ans);
+                      return values.length > 0 && values.some((v) => v !== undefined && v !== null && v !== '');
+                    }
+                    return true;
+                  };
+                  const answeredCount = questions.filter((q) => checkAnswered(activeAttempt.studentAnswers?.[q.id])).length;
+                  const doubtCount = Object.values(doubtQuestions).filter(Boolean).length;
+                  const unansweredCount = Math.max(0, questions.length - answeredCount);
+
+                  return (
+                    <div className="grid grid-cols-3 gap-2.5 text-center">
+                      <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-lg p-3">
+                        <div className="text-lg sm:text-xl font-bold font-mono text-emerald-400">
+                          {answeredCount}
+                        </div>
+                        <div className="text-[10px] text-emerald-300 font-medium mt-0.5">Sudah Terjawab</div>
+                      </div>
+                      <div className="bg-amber-950/40 border border-amber-500/30 rounded-lg p-3">
+                        <div className="text-lg sm:text-xl font-bold font-mono text-amber-400">
+                          {doubtCount}
+                        </div>
+                        <div className="text-[10px] text-amber-300 font-medium mt-0.5">Ragu-ragu</div>
+                      </div>
+                      <div className={`rounded-lg p-3 border ${
+                        unansweredCount > 0 
+                          ? 'bg-rose-950/40 border-rose-500/30' 
+                          : 'bg-zinc-900 border-zinc-800'
+                      }`}>
+                        <div className={`text-lg sm:text-xl font-bold font-mono ${
+                          unansweredCount > 0 ? 'text-rose-400' : 'text-zinc-400'
+                        }`}>
+                          {unansweredCount}
+                        </div>
+                        <div className={`text-[10px] font-medium mt-0.5 ${
+                          unansweredCount > 0 ? 'text-rose-300' : 'text-zinc-400'
+                        }`}>
+                          Belum Diisi
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {(() => {
+                  const checkAnswered = (ans) => {
+                    if (ans === undefined || ans === null || ans === '') return false;
+                    if (Array.isArray(ans)) return ans.length > 0;
+                    if (typeof ans === 'object') {
+                      const values = Object.values(ans);
+                      return values.length > 0 && values.some((v) => v !== undefined && v !== null && v !== '');
+                    }
+                    return true;
+                  };
+                  const unanswered = questions.filter((q) => !checkAnswered(activeAttempt.studentAnswers?.[q.id])).length;
+                  if (unanswered > 0) {
+                    return (
+                      <div className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 px-3 py-2 rounded-lg flex items-center gap-2">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+                        <span>Masih ada <strong>{unanswered} soal</strong> yang belum dijawab!</span>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="text-xs text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 rounded-lg flex items-center gap-2">
+                      <CheckCircle className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
+                      <span>Hebat! Seluruh butir soal telah berhasil Anda jawab.</span>
+                    </div>
+                  );
+                })()}
+              </div>
+            ) : (
+              <div className="bg-zinc-950/80 border border-zinc-800 rounded-xl p-4 text-xs text-zinc-300 space-y-1.5 leading-relaxed">
+                <div className="font-semibold text-zinc-100 flex items-center gap-1.5">
+                  <CheckSquare className="w-3.5 h-3.5 text-zinc-400" />
+                  <span>Ujian Berbasis Formulir Online</span>
+                </div>
+                <p>
+                  Pastikan Anda sudah menekan tombol <strong>"Kirim" / "Submit"</strong> di dalam formulir Google Form / Microsoft Teams sebelum mengakhiri sesi pengerjaan ini.
+                </p>
+              </div>
+            )}
+
+            {/* Peringatan Konfirmasi Akhir */}
+            <div className="text-xs text-zinc-400 bg-zinc-950/60 border border-zinc-800/80 p-3 rounded-lg leading-relaxed">
+              Setelah dikonfirmasi, mode layar penuh otomatis dilepaskan, sesi pengerjaan ditutup, dan seluruh hasil asesmen langsung disimpan di portal pengawas guru.
+            </div>
+
+            {/* Tombol Aksi */}
+            <div className="flex items-center justify-end gap-2.5 pt-1">
+              <button
+                type="button"
+                disabled={isSubmittingExam}
+                onClick={() => setShowExitConfirmModal(false)}
+                className="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium transition active:scale-[0.98] disabled:opacity-50"
+              >
+                Lanjut Mengerjakan
+              </button>
+              <button
+                type="button"
+                disabled={isSubmittingExam}
+                onClick={handleFinishAndExitExam}
+                className="px-5 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-2xs transition active:scale-[0.98] flex items-center gap-2 disabled:opacity-50"
+              >
+                {isSubmittingExam ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Menyimpan & Mengirim...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    <span>Ya, Selesaikan Ujian</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

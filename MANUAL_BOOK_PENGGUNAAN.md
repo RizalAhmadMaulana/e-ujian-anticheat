@@ -35,9 +35,10 @@ Platform ini mengintegrasikan perlindungan berlapis di sisi klien (*client-side 
    - Pengawas memantau status seluruh peserta secara langsung melalui koneksi WebSocket port 8001.
    - Dilengkapi tombol **Remote Unlock 1-Klik** untuk membuka kembali layar siswa yang terblokir langsung dari meja guru tanpa memuat ulang (*refresh*) halaman siswa.
 
-4. **🔐 Keamanan Gerbang Ganda (Dual-Password Gatekeeper):**
+4. **🔐 Keamanan Token Terpadu (Token Masuk & PIN Pengawas):**
    - **Password Masuk (Token Masuk):** Memverifikasi siswa sebelum masuk ke arena ujian. Dilengkapi tombol **One-Click Copy ke keyboard** pada kartu sesi pengawas.
-   - **Password Keluar:** Mengunci siswa di dalam ruang ujian sampai seluruh soal selesai dikerjakan, diakhiri dengan **alarm audio notifikasi keluar ujian berdurasi ~2.5 detik**.
+   - **PIN Pengawas Ruangan:** PIN darurat bagi pengawas untuk membuka kembali layar siswa yang terkena pembekuan penalti secara mandiri.
+   *(Catatan: Sistem tidak lagi memerlukan Password Keluar manual; siswa menyelesaikan ujian lewat dialog konfirmasi aman yang otomatis memicu alarm keluar resmi).*
 
 5. **🏫 Pengaturan Identitas Sekolah Dinamis (School Settings):**
    - Nama instansi/madrasah, sub-header kop surat dinas, alamat, kontak, nama kepala sekolah, NIP, serta kota titimangsa dapat diubah secara bebas oleh guru melalui antarmuka web, lengkap dengan **Live Preview Kop Surat**.
@@ -282,9 +283,6 @@ Ruang ujian harus dibuka terlebih dahulu agar siswa dapat mulai mengerjakan sesu
      - Centang **"Acak Urutan Pilihan (A-E)"**: Posisi pilihan ganda (A, B, C, D) diacak posisinya antar-siswa untuk mematikan potensi menyontek *"nomor 5 jawabannya B"*. Penilaian otomatis backend tetap 100% akurat dan kebal pengacakan.
   7. Atur **Password Masuk (Token Masuk)**:
      - Dibuat otomatis atau klik acak (contoh: `MSK-2JM4`). Berikan token ini kepada siswa saat ujian dimulai.
-  7. Atur **Password Keluar**:
-     - Dibuat otomatis atau klik acak (contoh: `KLR-BUR8`).
-     - **PENTING:** *Jangan berikan Password Keluar kepada siswa sebelum waktu ujian selesai atau sebelum siswa telah menyelesaikan seluruh pekerjaannya.*
   8. Atur **PIN Pengawas Ruangan**:
      - Dibuat otomatis atau klik acak (contoh: `PIN-9378`).
      - **Fungsi:** Dipegang khusus oleh guru pengawas untuk membuka kunci layar siswa yang terblokir secara mandiri langsung di gawai siswa.
@@ -296,8 +294,7 @@ Ruang ujian harus dibuka terlebih dahulu agar siswa dapat mulai mengerjakan sesu
   - ⚪ **Telah Berakhir:** Batas waktu pengerjaan telah lewat (sesi otomatis terkunci).
 
 - **Fitur Salin Password Instan (One-Click Copy ke Keyboard):**
-  - **Salin Password Masuk:** Cukup **klik langsung kotak Password Masuk** (berwarna biru/indigo) pada kartu sesi. Token ujian otomatis langsung tersalin ke clipboard/keyboard perangkat Anda (muncul indikator hijau *"Tersalin!"* dan notifikasi pop-up). Anda tinggal langsung menempelkannya (`Ctrl+V` atau *Paste*) ke grup WA kelas atau catatan pengawas.
-  - **Salin Password Keluar:** Cukup **klik langsung kotak Password Keluar** (berwarna merah muda) pada kartu sesi. Password keluar otomatis langsung tersalin ke clipboard/keyboard.
+  - **Salin Password Masuk:** Cukup **klik langsung kotak Token Masuk** pada kartu sesi. Token ujian otomatis langsung tersalin ke clipboard/keyboard perangkat Anda (muncul indikator hijau *"Tersalin!"* dan notifikasi pop-up). Anda tinggal langsung menempelkannya (`Ctrl+V` atau *Paste*) ke grup WA kelas atau catatan pengawas.
   - **Salin PIN Pengawas:** Cukup **klik langsung kotak PIN Pengawas** (berwarna oranye/amber) pada kartu sesi untuk menyalin PIN pembuka kunci darurat.
   - **Edit & Hapus Sesi:** Gunakan tombol **"Edit"** untuk mengubah durasi atau waktu ujian, dan tombol **"Hapus"** untuk menghapus sesi yang sudah tidak digunakan.
 
@@ -311,7 +308,7 @@ Halaman ini adalah pusat komando guru saat ujian berlangsung untuk mengawasi kej
 - **Arti Kartu Status Siswa:**
   - 🟢 **Kartu Hijau ("Fokus Mengerjakan"):** Siswa sedang tertib mengerjakan ujian dalam mode layar penuh terkunci.
   - 🔴 **Kartu Merah Berkedip ("Layar Terkunci - Pelanggaran"):** Siswa terdeteksi melakukan kecurangan (mencoba berpindah tab, meminimalkan browser, membuka aplikasi lain, keluar fullscreen, atau mencoba screenshot). Layar siswa di HP/laptopnya saat ini **dibekukan total** dengan sirine peringatan darurat.
-  - 🔵 **Kartu Biru ("Selesai Terkirim"):** Siswa telah menyelesaikan ujian menggunakan Password Keluar dan nilai telah tersimpan.
+  - 🔵 **Kartu Biru ("Selesai Terkirim"):** Siswa telah menyelesaikan ujian dan lembar jawaban serta nilai telah tersimpan.
 - **Membuka Kunci Layar Siswa (Unlock):**
   - Jika siswa yang terkunci telah ditegur oleh pengawas, klik tombol hijau **"Buka Kunci Layar"** pada kartu siswa tersebut di layar monitor guru.
   - Seketika itu juga layar siswa akan terbuka kembali secara otomatis tanpa perlu memuat ulang (*refresh*) halaman siswa.
@@ -507,7 +504,7 @@ Di arena ujian ini, siswa berada dalam pengawasan ketat berteknologi tinggi:
 - **Bagian Atas (Security Bar):**
   - Indikator merah berkedip `REC • Terproteksi`.
   - Countdown Timer waktu sisa pengerjaan ujian.
-  - Tombol gembok merah **"Password untuk Keluar"**.
+  - Tombol konfirmasi merah **"Selesai Ujian"**.
 - **Jika Soal Mandiri (Native):**
   - Lembar soal menampilkan nomor soal, bobot poin, teks soal, dan opsi A sampai E.
   - Klik pada lingkaran huruf untuk memilih jawaban (tombol berubah menjadi biru aktif).
@@ -548,18 +545,19 @@ Sistem menerapkan protokol **Zero-Tolerance Lockdown**. Jika siswa melakukan sal
 
 ---
 
-### 4.7. Prosedur Selesai Ujian & Verifikasi Password Keluar
-1. Setelah siswa selesai menjawab seluruh soal (atau menekan tombol *Kirim / Submit* pada Google Form):
-2. Siswa angkat tangan memberitahu bahwa telah selesai.
-3. Klik tombol merah **"Password untuk Keluar"** di bilah kanan atas layar ujian.
-4. Muncul bilah geser input **"Masukkan Password Keluar Ujian"**.
-5. Masukkan Password Keluar yang diverifikasi oleh Guru Pengawas (contoh: `KLR-8H2P` atau `KELUAR123`).
-6. Klik **"KIRIM & KELUAR RESMI"**.
-7. Sistem akan:
+### 4.7. Prosedur Selesai Ujian & Konfirmasi Pengiriman Lembar Jawaban
+1. Setelah siswa selesai menjawab seluruh butir soal (atau menekan tombol *Kirim / Submit* pada Google Form):
+2. Siswa dapat mengklik tombol **"Selesai Ujian"** di Security Bar atas atau tombol **"Selesai & Kirim Ujian"** pada butir soal terakhir.
+3. Muncul **Modal Konfirmasi Selesai Ujian** yang menampilkan ringkasan pengerjaan:
+   - Jumlah butir soal **Sudah Terjawab** (hijau).
+   - Jumlah butir soal yang ditandai **Ragu-ragu** (kuning).
+   - Jumlah butir soal yang **Belum Diisi** (merah), disertai peringatan jika masih ada butir soal yang belum dikerjakan.
+4. Siswa mengklik tombol konfirmasi **"Ya, Selesaikan Ujian"**.
+5. Sistem akan:
+   - Menyimpan seluruh jawaban dan mengakhiri status pengerjaan siswa.
    - Membunyikan **alarm notifikasi keluar ujian yang besar dan khas (~2.5 detik)**.
-   - Melepaskan mode penguncian layar penuh secara otomatis.
-   - Menyimpan seluruh nilai dan durasi ke sistem E-Jurnal Guru.
-   - Mengarahkan siswa kembali ke beranda dengan aman.
+   - Melepaskan mode penguncian layar penuh (*exit fullscreen*) secara otomatis.
+   - Mengarahkan siswa kembali ke beranda asesmen dengan aman tanpa memerlukan password keluar manual yang membebani siswa.
 
 ---
 

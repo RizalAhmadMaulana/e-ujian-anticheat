@@ -44,7 +44,7 @@
    - [Layar 3: Portal Mata Pelajaran & Masuk Mode Fullscreen](#layar-3-portal-mata-pelajaran--masuk-mode-fullscreen)
    - [Layar 4: Arena Ujian Terkunci (Pengerjaan Soal Mandiri / Google Form)](#layar-4-arena-ujian-terkunci-pengerjaan-soal-mandiri--google-form)
    - [Penanganan Layar Terkunci Akibat Pelanggaran Sensor](#penanganan-layar-terkunci-akibat-pelanggaran-sensor)
-   - [Penyelesaian Ujian & Verifikasi Password Keluar (Alarm Resmi)](#penyelesaian-ujian--verifikasi-password-keluar-alarm-resmi)
+   - [Penyelesaian Ujian & Konfirmasi Selesai Ujian (Alarm Resmi)](#penyelesaian-ujian--konfirmasi-selesai-ujian-alarm-resmi)
 7. [📁 Struktur Folder Proyek](#-struktur-folder-proyek)
 8. [❓ Tanya Jawab & Troubleshooting Lapangan (FAQ)](#-tanya-jawab--troubleshooting-lapangan-faq)
 
@@ -91,9 +91,10 @@ Asesmen daring konvensional kerap menghadapi tantangan integritas: siswa mudah m
    - Indikator status dinamis: 🟢 **Fokus Mengerjakan**, 🔴 **Layar Terkunci (Pelanggaran)**, dan 🔵 **Selesai Terkirim**.
    - **Remote 1-Click Unlock:** Guru dapat membuka kunci layar siswa yang terblokir langsung dari layar laptop pengawas.
 
-4. **🔐 Sistem Gerbang Ganda (Dual-Token Security):**
-   - **Password Masuk (Token Masuk):** Token unik untuk membuka akses soal. Dilengkapi fitur **One-Click Copy ke keyboard** pada kartu sesi pengawas.
-   - **Password Keluar:** Token khusus yang dipegang pengawas dan hanya diberikan setelah siswa menyelesaikan seluruh soal, memicu **alarm keluar resmi berdurasi ~2.5 detik**.
+4. **🔐 Sistem Token Keamanan Terpadu (Duo-Token Security):**
+   - **Password Masuk (Token Masuk):** Token unik untuk membuka akses pengerjaan soal per mata pelajaran. Dilengkapi fitur **One-Click Copy ke keyboard** pada kartu sesi pengawas.
+   - **PIN Pengawas Ruangan:** PIN darurat bagi guru pengawas untuk membuka kembali layar siswa yang terblokir penalti secara mandiri.
+   *(Catatan: Sistem tidak lagi memerlukan Password Keluar; siswa cukup menekan tombol konfirmasi selesai ujian yang aman dan ramah pengguna).*
 
 5. **🏫 Pengaturan Identitas Sekolah Dinamis:**
    - Nama sekolah, instansi kop surat, alamat, email, telepon, nama kepala sekolah, NIP, serta titimangsa kota dapat disesuaikan langsung lewat antarmuka web dengan **Live Pratinjau Kop Surat**.
@@ -334,10 +335,10 @@ Setelah masuk melalui portal login terpadu (`/login`) menggunakan **NIP** dan ka
      - Toggle **"Acak Urutan Butir Soal"**: Nomor soal siswa A berbeda urutannya dengan siswa B.
      - Toggle **"Acak Urutan Pilihan (A-E)"**: Posisi pilihan diacak sehingga mematikan potensi menyontek nomor & opsi.
      - Sistem auto-grading backend terintegrasi evaluasi ID opsi kebal terhadap pengacakan posisi pilihan.
-  5. Sistem otomatis menghasilkan **Trio Token Keamanan**:
-     - 🔑 **Password Masuk** (contoh: `MSK-2JM4`): Token gerbang gatekeeper pengerjaan soal.
-     - 🔒 **Password Keluar** (contoh: `KLR-BUR8`): Token penutup ujian resmi bersirene.
-     - 🛡️ **PIN Pengawas** (contoh: `PIN-9378`): PIN darurat untuk membuka layar merah siswa yang terkunci secara mandiri.
+  5. Sistem otomatis menghasilkan **Duo Token Keamanan**:
+     - 🔑 **Token Masuk (Password Masuk)** (contoh: `MSK-2JM4`): Token gerbang gatekeeper untuk memulai ujian.
+     - 🛡️ **PIN Pengawas Ruangan** (contoh: `PIN-9378`): PIN darurat bagi guru untuk membuka layar merah siswa jika terkunci.
+     *(Tanpa password keluar: siswa dapat langsung mengonfirmasi selesai ujian saat telah selesai).*
   5. **Status Sinkronisasi Jadwal Real-Time pada Kartu Sesi:**
      - 🟢 **Sedang Berjalan:** Sesi aktif dalam rentang tanggal dan jam saat ini.
      - 🟡 **Belum Dimulai:** Jadwal mulai ujian belum tercapai.
@@ -441,7 +442,7 @@ Setelah masuk melalui portal login terpadu (`/login`) menggunakan **NIP** dan ka
 - **📡 Indikator Kualitas Jaringan Real-Time:**
   - Security Bar atas menampilkan latensi ping siswa (Stabil hijau <150ms, Sedang kuning 150-400ms, Terputus merah).
   - Mengirim heartbeat berkala ke Live Proctoring guru untuk monitoring stabilitas sinyal kelas.
-- **Security Bar Atas:** Menampilkan indikator `REC • Terproteksi`, sisa waktu pengerjaan, dan tombol gembok *Password untuk Keluar*.
+- **Security Bar Atas:** Menampilkan indikator `REC • Terproteksi`, sisa waktu pengerjaan, dan tombol konfirmasi *Selesai Ujian*.
 - **Soal Mandiri:** Pilih opsi jawaban (lingkaran A–E), manfaatkan tombol kuning *Ragu-ragu*, dan pantau navigasi nomor soal di bilah kanan.
 - **Soal Google Form:** Kerjakan formulir langsung di dalam bingkai aman (*Secure Iframe*). Berkat teknologi *Iframe Focus Guard*, siswa dapat mengklik pilihan form dengan leluasa tanpa memicu deteksi kecurangan.
 
@@ -464,12 +465,11 @@ Jika siswa mencoba:
   2. **Remote Guru:** Guru menekan tombol hijau **"Buka Kunci Layar Siswa"** di menu Live Proctoring. Layar siswa otomatis terbuka seketika via WebSocket Daphne Channels.
   3. Sistem memberikan **5-Second Grace Period** (masa imunitas 5 detik) agar browser dapat masuk kembali ke fullscreen dengan stabil tanpa memicu alarm palsu.
 
-### Penyelesaian Ujian & Verifikasi Password Keluar (Alarm Resmi)
-1. Setelah menyelesaikan seluruh soal atau mengirimkan formulir Google Form, siswa angkat tangan.
-2. Klik tombol merah **"Password untuk Keluar"** di sudut kanan atas lembar ujian.
-3. Masukkan **Password Keluar** yang diverifikasi oleh Guru Pengawas (contoh: `KLR-BLCN`).
-4. Klik **"KIRIM & KELUAR RESMI"**.
-5. Sistem membunyikan **alarm keluar resmi yang besar (~2.5 detik)**, melepaskan mode layar penuh, menyimpan nilai ke sistem E-Jurnal, dan mengarahkan siswa kembali ke beranda dengan aman.
+### Penyelesaian Ujian & Konfirmasi Selesai Ujian (Alarm Resmi)
+1. Setelah menyelesaikan seluruh butir soal atau mengirimkan formulir Google Form, siswa dapat langsung mengklik tombol **"Selesai Ujian"** di Security Bar atas atau tombol **"Selesai & Kirim Ujian"** di butir soal terakhir.
+2. Sistem memunculkan **Modal Konfirmasi Selesai Ujian** yang menampilkan rincian progres pengerjaan (jumlah butir soal terjawab, ragu-ragu, dan belum diisi) serta peringatan jika masih ada butir soal yang kosong.
+3. Siswa mengklik tombol konfirmasi **"Ya, Selesaikan Ujian"**.
+4. Sistem secara otomatis menyimpan seluruh rekaman jawaban ke server E-Jurnal, membunyikan **alarm selesai resmi (~2.5 detik)**, melepaskan mode layar penuh (*exit fullscreen*), dan mengarahkan siswa kembali ke beranda dengan aman. Tidak diperlukan password keluar manual.
 
 ---
 

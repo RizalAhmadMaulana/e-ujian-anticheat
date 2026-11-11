@@ -176,6 +176,7 @@ class ExamSessionSerializer(serializers.ModelSerializer):
     subject_name = serializers.CharField(source='package.subject_name', read_only=True)
     exam_type = serializers.CharField(source='package.exam_type', read_only=True)
     classroom_name = serializers.CharField(source='classroom.name', read_only=True)
+    exit_password = serializers.CharField(required=False, allow_blank=True, default='')
 
     class Meta:
         model = ExamSession
@@ -200,6 +201,9 @@ class ExamSessionSerializer(serializers.ModelSerializer):
             'created_at'
         ]
         read_only_fields = ['id', 'created_at']
+        extra_kwargs = {
+            'exit_password': {'required': False, 'allow_blank': True}
+        }
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

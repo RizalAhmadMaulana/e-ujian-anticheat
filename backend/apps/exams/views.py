@@ -245,10 +245,42 @@ class SubmitExamAnswersView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+class FinishExamSessionView(APIView):
+    """
+    POST /api/exams/sessions/<uuid:session_id>/finish/
+    Mengakhiri sesi ujian siswa tanpa memerlukan Password Keluar.
+    Menyimpan jawaban akhir (opsional), menghitung skor otomatis, dan mengubah status ke SUBMITTED.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, session_id):
+        session = get_object_or_404(ExamSession, id=session_id)
+        student = request.user
+        attempt = get_object_or_404(StudentAttempt, session=session, student=student)
+
+        # Jika ada jawaban yang disertakan pada payload
+        answers = request.data.get('answers') or request.data.get('answers_json')
+        if answers:
+            calculate_auto_grading_score(attempt, answers)
+
+        now = timezone.now()
+        attempt.status = StudentAttempt.AttemptStatus.SUBMITTED
+        attempt.finished_at = now
+        attempt.save(update_fields=['status', 'finished_at'])
+
+        return Response({
+            "success": True,
+            "message": "Sesi ujian Anda telah resmi diakhiri dan seluruh rekaman jawaban telah tersimpan.",
+            "finished_at": now.isoformat(),
+            "status": attempt.status,
+            "score": float(attempt.total_score) if attempt.total_score is not None else None,
+        }, status=status.HTTP_200_OK)
+
+
 class VerifyExitPasswordView(APIView):
     """
     POST /api/exams/sessions/<uuid:session_id>/verify-exit/
-    Siswa memasukkan Password Keluar: jika valid, ubah status ke SUBMITTED dan catat waktu selesai
+    Siswa mengakhiri ujian (mendukung konfirmasi langsung tanpa password atau verifikasi password opsional)
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -259,13 +291,8 @@ class VerifyExitPasswordView(APIView):
 
         input_password = request.data.get('exit_password', '').strip().upper()
 
-        if not input_password:
-            return Response(
-                {"success": False, "message": "Password Keluar wajib diisi!"}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        if input_password == session.exit_password.strip().upper():
+        # Jika tidak ada password keluar pada sesi, atau input kosong (konfirmasi langsung), atau password cocok:
+        if not session.exit_password or not input_password or input_password == session.exit_password.strip().upper():
             now = timezone.now()
             attempt.status = StudentAttempt.AttemptStatus.SUBMITTED
             attempt.finished_at = now
@@ -273,14 +300,14 @@ class VerifyExitPasswordView(APIView):
 
             return Response({
                 "success": True,
-                "message": "Password Keluar Terverifikasi! Sesi ujian Anda telah resmi diakhiri.",
+                "message": "Sesi ujian Anda telah resmi diakhiri dan jawaban telah tersimpan di E-Jurnal Guru.",
                 "finished_at": now.isoformat(),
                 "status": attempt.status,
                 "score": float(attempt.total_score) if attempt.total_score is not None else None,
             }, status=status.HTTP_200_OK)
 
         return Response(
-            {"success": False, "message": "Password Keluar salah! Minta password keluar kepada pengawas ujian."}, 
+            {"success": False, "message": "Password Keluar tidak cocok."}, 
             status=status.HTTP_400_BAD_REQUEST
         )
 

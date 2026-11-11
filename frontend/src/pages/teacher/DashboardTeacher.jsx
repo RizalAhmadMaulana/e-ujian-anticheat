@@ -266,7 +266,7 @@ export default function DashboardTeacher() {
                         </span>
                         <span className="text-zinc-300">•</span>
                         <span>
-                          Password Keluar: <strong className="text-zinc-900 font-mono font-bold">{exitPw}</strong>
+                          PIN Pengawas: <strong className="text-zinc-900 font-mono font-bold">{session.supervisor_pin || session.supervisorPin || 'PIN-1234'}</strong>
                         </span>
                       </div>
                     </div>

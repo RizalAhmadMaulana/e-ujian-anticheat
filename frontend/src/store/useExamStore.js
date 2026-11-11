@@ -367,53 +367,53 @@ export const useExamStore = create((set, get) => ({
     });
   },
 
-  verifyExitPassword: (inputPassword) => {
-    const { activeAttempt, examSessions, currentUser } = get();
-    const currentSession = examSessions.find((s) => s.id === activeAttempt.sessionId) || examSessions[0];
+  finishExam: () => {
+    const { activeAttempt, currentUser } = get();
+    const now = new Date().toLocaleTimeString('id-ID');
 
-    if (inputPassword && inputPassword.trim().toUpperCase() === currentSession.exitPassword.toUpperCase()) {
-      const now = new Date().toLocaleTimeString('id-ID');
-
-      set((state) => {
-        // Kalkulasi skor otomatis untuk soal mandiri pilihan ganda
-        let calculatedScore = null;
-        if (state.activeAttempt.selectedPackage?.examType === 'NATIVE_QUESTIONS') {
-          let score = 0;
-          state.activeAttempt.selectedPackage.questions.forEach((q) => {
-            if (q.questionType === 'MULTIPLE_CHOICE') {
-              if (state.activeAttempt.studentAnswers[q.id] === q.correctOption) {
-                score += q.points;
-              }
+    set((state) => {
+      // Kalkulasi skor otomatis untuk soal mandiri pilihan ganda
+      let calculatedScore = null;
+      if (state.activeAttempt.selectedPackage?.examType === 'NATIVE_QUESTIONS') {
+        let score = 0;
+        (state.activeAttempt.selectedPackage.questions || []).forEach((q) => {
+          if (q.questionType === 'MULTIPLE_CHOICE') {
+            if (state.activeAttempt.studentAnswers[q.id] === q.correctOption) {
+              score += q.points;
             }
-          });
-          calculatedScore = score;
-        }
-
-        const updatedProctoring = state.proctoringStudents.map((s) => {
-          if (s.studentId === currentUser?.id) {
-            return {
-              ...s,
-              status: 'SUBMITTED',
-              finishedAt: now,
-              score: calculatedScore !== null ? calculatedScore : 90,
-            };
           }
-          return s;
         });
+        calculatedScore = score;
+      }
 
-        return {
-          activeAttempt: {
-            ...state.activeAttempt,
-            isLocked: false,
-            examSubmittedAt: now,
-          },
-          proctoringStudents: updatedProctoring,
-        };
+      const updatedProctoring = state.proctoringStudents.map((s) => {
+        if (s.studentId === currentUser?.id) {
+          return {
+            ...s,
+            status: 'SUBMITTED',
+            finishedAt: now,
+            score: calculatedScore !== null ? calculatedScore : 90,
+          };
+        }
+        return s;
       });
 
-      return { success: true };
-    }
-    return { success: false, message: 'Password Keluar salah! Minta password kepada guru pengawas.' };
+      return {
+        activeAttempt: {
+          ...state.activeAttempt,
+          isLocked: false,
+          examSubmittedAt: now,
+        },
+        proctoringStudents: updatedProctoring,
+      };
+    });
+
+    return { success: true };
+  },
+
+  verifyExitPassword: (_inputPassword) => {
+    // Kompatibilitas mundur: keluar langsung tanpa memerlukan kata sandi
+    return get().finishExam();
   },
 
   // ==========================================
