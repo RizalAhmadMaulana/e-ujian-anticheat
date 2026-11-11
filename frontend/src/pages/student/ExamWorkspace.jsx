@@ -81,6 +81,17 @@ export default function ExamWorkspace() {
     return map[type] || type || 'Pelanggaran Keamanan';
   };
 
+  // Helper pemeriksa apakah butir soal sudah dijawab siswa
+  const isQuestionAnswered = (ans) => {
+    if (ans === undefined || ans === null || ans === '') return false;
+    if (Array.isArray(ans)) return ans.length > 0;
+    if (typeof ans === 'object') {
+      const values = Object.values(ans);
+      return values.length > 0 && values.some((v) => v !== undefined && v !== null && v !== '');
+    }
+    return true;
+  };
+
   const selectedPackage = activeAttempt.selectedPackage;
 
   // 0. Enforce Orientasi Layar (PORTRAIT / LANDSCAPE) saat komponen dimuat
@@ -1053,16 +1064,7 @@ export default function ExamWorkspace() {
                   Daftar Nomor Soal
                 </h3>
                 {(() => {
-                  const checkAnswered = (ans) => {
-                    if (ans === undefined || ans === null || ans === '') return false;
-                    if (Array.isArray(ans)) return ans.length > 0;
-                    if (typeof ans === 'object') {
-                      const values = Object.values(ans);
-                      return values.length > 0 && values.some((v) => v !== undefined && v !== null && v !== '');
-                    }
-                    return true;
-                  };
-                  const answeredCount = questions.filter((q) => checkAnswered(activeAttempt.studentAnswers[q.id])).length;
+                  const answeredCount = questions.filter((q) => isQuestionAnswered(activeAttempt.studentAnswers[q.id])).length;
                   return (
                     <span className="text-[11px] font-medium text-zinc-400 font-mono">
                       {answeredCount}/{questions.length} Terjawab
@@ -1076,14 +1078,7 @@ export default function ExamWorkspace() {
                 {questions.map((q, i) => {
                   const isCurrent = currentQuestionIndex === i;
                   const ans = activeAttempt.studentAnswers[q.id];
-                  const isAnswered =
-                    ans !== undefined &&
-                    ans !== null &&
-                    ans !== '' &&
-                    (Array.isArray(ans)
-                      ? ans.length > 0
-                      : typeof ans === 'object'
-                      ? Object.values(ans).some((v) => v !== undefined && v !== null && v !== '');
+                  const isAnswered = isQuestionAnswered(ans);
                   const isDoubt = Boolean(doubtQuestions[q.id]);
 
                   return (
@@ -1158,16 +1153,7 @@ export default function ExamWorkspace() {
                   Status Lembar Jawaban:
                 </div>
                 {(() => {
-                  const checkAnswered = (ans) => {
-                    if (ans === undefined || ans === null || ans === '') return false;
-                    if (Array.isArray(ans)) return ans.length > 0;
-                    if (typeof ans === 'object') {
-                      const values = Object.values(ans);
-                      return values.length > 0 && values.some((v) => v !== undefined && v !== null && v !== '');
-                    }
-                    return true;
-                  };
-                  const answeredCount = questions.filter((q) => checkAnswered(activeAttempt.studentAnswers?.[q.id])).length;
+                  const answeredCount = questions.filter((q) => isQuestionAnswered(activeAttempt.studentAnswers?.[q.id])).length;
                   const doubtCount = Object.values(doubtQuestions).filter(Boolean).length;
                   const unansweredCount = Math.max(0, questions.length - answeredCount);
 
@@ -1206,16 +1192,7 @@ export default function ExamWorkspace() {
                 })()}
 
                 {(() => {
-                  const checkAnswered = (ans) => {
-                    if (ans === undefined || ans === null || ans === '') return false;
-                    if (Array.isArray(ans)) return ans.length > 0;
-                    if (typeof ans === 'object') {
-                      const values = Object.values(ans);
-                      return values.length > 0 && values.some((v) => v !== undefined && v !== null && v !== '');
-                    }
-                    return true;
-                  };
-                  const unanswered = questions.filter((q) => !checkAnswered(activeAttempt.studentAnswers?.[q.id])).length;
+                  const unanswered = questions.filter((q) => !isQuestionAnswered(activeAttempt.studentAnswers?.[q.id])).length;
                   if (unanswered > 0) {
                     return (
                       <div className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 px-3 py-2 rounded-lg flex items-center gap-2">
