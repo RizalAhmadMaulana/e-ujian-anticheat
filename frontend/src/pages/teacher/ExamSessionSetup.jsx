@@ -743,10 +743,6 @@ export default function ExamSessionSetup() {
               <span className="text-[10px] text-zinc-400 block">Dipegang guru untuk membuka layar siswa yang terkunci</span>
             </div>
           </div>
-              />
-              <span className="text-[10px] text-zinc-400 block">Dipegang guru untuk buka kunci lokal</span>
-            </div>
-          </div>
 
           {/* Pengacakan Soal & Opsi Jawaban (Standar Ujian Anti-Contek) */}
           <div className="p-3.5 rounded-lg bg-zinc-50 border border-zinc-200 space-y-2">
