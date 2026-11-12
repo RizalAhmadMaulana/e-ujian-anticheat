@@ -52,12 +52,16 @@ export const useProctorSocket = (sessionId, callbacks = {}) => {
               break;
 
             case 'STUDENT_UNLOCKED':
-              // Otomatis ubah state isLocked di useExamStore menjadi false jika attempt cocok
+              // Otomatis ubah state isLocked di useExamStore menjadi false jika penerima adalah SISWA yang bersangkutan
               const currentStore = useExamStore.getState();
-              const studentAttemptId = currentStore.activeAttempt.attemptId;
-              if (!studentAttemptId || studentAttemptId === data.attempt_id) {
+              const studentAttemptId = currentStore.activeAttempt?.attemptId;
+              const isStudent = currentStore.currentUser?.role === 'STUDENT';
+
+              // HANYA jalankan pemulihan kunci & fullscreen jika yang menerima adalah SISWA dengan attempt yang cocok
+              // Guru pengawas tidak boleh di-fullscreen-kan!
+              if (isStudent && studentAttemptId && studentAttemptId === data.attempt_id) {
                 currentStore.unlockStudent(currentStore.currentUser?.id);
-                // Pastikan fullscreen di-re-request jika terlepas
+                // Pastikan fullscreen di-re-request jika terlepas (khusus siswa)
                 if (typeof document !== 'undefined' && document.documentElement.requestFullscreen && !document.fullscreenElement) {
                   document.documentElement.requestFullscreen().catch(() => {});
                 }

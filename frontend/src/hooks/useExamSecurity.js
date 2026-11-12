@@ -17,7 +17,9 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
 
   const isSubmittedRef = useRef(Boolean(activeAttempt.examSubmittedAt));
   const isLockedRef = useRef(activeAttempt.isLocked);
-  const gracePeriodUntilRef = useRef(0);
+  // Berikan masa tenggang awal 6 detik saat siswa baru masuk ke arena ujian
+  // Menjamin inisialisasi fullscreen, orientasi, dan rendering awal tidak memicu false lock
+  const gracePeriodUntilRef = useRef(Date.now() + 6000);
   const prevIsLockedRef = useRef(activeAttempt.isLocked);
 
   useEffect(() => {
@@ -64,15 +66,24 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       );
     };
 
-    // Helper: Eksekusi Efek Pengaburan Total Layar Instan (0 Millisecond)
-    // Menjamin tangkapan layar OS di Android (3 jari / tombol volume-power) hanya menangkap layar hitam total
+    // Helper: Eksekusi Efek Pengaburan Total Layar Instan (Khusus Tangkapan Layar Fisik)
     const triggerInstantBlackout = () => {
       try {
-        document.documentElement.style.filter = 'blur(60px) brightness(0.01)';
-        document.body.style.backgroundColor = '#000000';
         const shield = document.getElementById('instant-anti-screenshot-shield');
         if (shield) {
           shield.style.display = 'flex';
+        }
+      } catch (_) {}
+    };
+
+    // Helper: Bersihkan Efek Pengaburan Total agar Layar Siswa & Form Buka Kunci Selalu Terlihat Jelas
+    const clearInstantBlackout = () => {
+      try {
+        document.documentElement.style.filter = '';
+        document.body.style.backgroundColor = '';
+        const shield = document.getElementById('instant-anti-screenshot-shield');
+        if (shield) {
+          shield.style.display = 'none';
         }
       } catch (_) {}
     };
@@ -100,54 +111,74 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     // ========================================================
     // SENSOR 2: ANTI-TAB SWITCH & MINIMIZE (visibilitychange)
     // ========================================================
+    let visibilityTimeout = null;
     const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Pulihkan tampilan normal seketika saat siswa kembali ke layar peramban
+        // Menjamin layar tidak pernah blank hitam dan form PIN pengawas dapat diisi dengan lancar
+        clearInstantBlackout();
+        if (visibilityTimeout) {
+          clearTimeout(visibilityTimeout);
+          visibilityTimeout = null;
+        }
+        return;
+      }
+
       if (document.visibilityState === 'hidden' || document.hidden) {
-        const mobile = isMobileDevice();
-        if (mobile) {
-          triggerInstantBlackout();
-        }
-        if (!isSubmittedRef.current && !isLockedRef.current) {
-          if (Date.now() < gracePeriodUntilRef.current) return;
-          handleViolation(
-            mobile ? 'SCREENSHOT_HARDWARE_BUTTON' : 'TAB_SWITCH',
-            mobile
-              ? 'Siswa terdeteksi keluar dari layar ujian atau menekan tombol Power/Screenshot di HP'
-              : 'Siswa terdeteksi berpindah tab peramban atau meminimalkan browser ujian'
-          );
-        }
+        if (isSubmittedRef.current || isLockedRef.current) return;
+        if (Date.now() < gracePeriodUntilRef.current) return;
+
+        // Berikan toleransi debounce 800ms agar transisi sistem Android tidak memicu false lock
+        visibilityTimeout = setTimeout(() => {
+          if (document.visibilityState === 'hidden' && !isSubmittedRef.current && !isLockedRef.current) {
+            handleViolation(
+              isMobileDevice() ? 'SCREENSHOT_HARDWARE_BUTTON' : 'TAB_SWITCH',
+              isMobileDevice()
+                ? 'Siswa terdeteksi keluar dari layar ujian atau menekan tombol Power/Screenshot di HP'
+                : 'Siswa terdeteksi berpindah tab peramban atau meminimalkan browser ujian'
+            );
+          }
+        }, 800);
       }
     };
 
     // ========================================================
-    // SENSOR 3: ANTI-APP SWITCH & LOSS OF FOCUS (window.onblur)
+    // SENSOR 3: ANTI-APP SWITCH & LOSS OF FOCUS (window.onblur / onfocus)
+    // Diberi toleransi terukur (1200ms) agar tidak terlalu reaktif/sensitif
+    // terhadap sentuhan iframe formulir atau kemunculan keyboard virtual HP
     // ========================================================
+    let blurTimeout = null;
     const handleWindowBlur = () => {
-      setTimeout(() => {
+      if (blurTimeout) clearTimeout(blurTimeout);
+      blurTimeout = setTimeout(() => {
         if (isSubmittedRef.current || isLockedRef.current) return;
         if (Date.now() < gracePeriodUntilRef.current) return;
 
-        // Jika dokumen benar-benar kehilangan fokus dari sistem operasi
-        if (!document.hasFocus()) {
-          const mobile = isMobileDevice();
-          if (mobile) {
-            triggerInstantBlackout();
-          }
-          handleViolation(
-            'APP_SWITCH',
-            mobile
-              ? 'Siswa terdeteksi beralih aplikasi, membuka floating window, atau menarik bilah status di HP'
-              : 'Siswa terdeteksi beralih ke aplikasi lain di luar peramban ujian (Alt+Tab / Taskbar)'
-          );
+        // Periksa jika fokus berada di dalam iframe internal (Google Form / MS Forms)
+        const activeEl = document.activeElement;
+        const isFocusInsideIframe = activeEl && (activeEl.tagName === 'IFRAME' || activeEl.closest('iframe'));
+        if (isFocusInsideIframe) {
           return;
         }
 
-        // Periksa jika fokus berada di dalam iframe internal saja (bukan window/tab lain)
-        const activeEl = document.activeElement;
-        const isFocusInsideIframe = activeEl && (activeEl.tagName === 'IFRAME' || activeEl.closest('iframe'));
-        if (isFocusInsideIframe && document.hasFocus()) {
-          return;
+        // Jika dokumen benar-benar kehilangan fokus dari sistem operasi secara persisten (>1200ms)
+        if (!document.hasFocus() || document.visibilityState === 'hidden') {
+          handleViolation(
+            'APP_SWITCH',
+            isMobileDevice()
+              ? 'Siswa terdeteksi beralih aplikasi, membuka floating window, atau menarik bilah status di HP'
+              : 'Siswa terdeteksi beralih ke aplikasi lain di luar peramban ujian (Alt+Tab / Taskbar)'
+          );
         }
-      }, 100);
+      }, 1200);
+    };
+
+    const handleWindowFocus = () => {
+      if (blurTimeout) {
+        clearTimeout(blurTimeout);
+        blurTimeout = null;
+      }
+      clearInstantBlackout();
     };
 
     // ========================================================
@@ -197,11 +228,6 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     const handleContextMenu = (e) => {
       e.preventDefault();
       e.stopPropagation();
-      try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText('');
-        }
-      } catch (_) {}
 
       if (isSubmittedRef.current || isLockedRef.current) return false;
       if (Date.now() < gracePeriodUntilRef.current) return false;
@@ -239,11 +265,6 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
           e.clipboardData.setData('text/html', '');
         } catch (_) {}
       }
-      try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText('');
-        }
-      } catch (_) {}
 
       if (isSubmittedRef.current || isLockedRef.current) return false;
       if (Date.now() < gracePeriodUntilRef.current) return false;
@@ -507,7 +528,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
 
     const handlePopState = () => {
       window.history.pushState(null, null, window.location.href);
-      alert('Ujian sedang berlangsung! Gunakan menu Password Keluar di bar atas untuk mengakhiri sesi.');
+      alert('Ujian sedang berlangsung! Gunakan tombol Selesai Ujian di bar atas untuk mengakhiri sesi.');
     };
 
     const handleBeforeUnload = (e) => {
@@ -519,26 +540,14 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     };
 
     // ========================================================
-    // SENSOR 10: HEARTBEAT REAL-TIME LOSS OF FOCUS & DEVTOOLS RESIZE
-    // Interval 150ms memeriksa ketiadaan fokus sistem operasi
+    // SENSOR 10: DEVTOOLS RESIZE MONITOR
+    // Memeriksa pembukaan DevTools via resize threshold saat layar penuh
     // ========================================================
     const heartbeatInterval = setInterval(() => {
       if (isSubmittedRef.current || isLockedRef.current) return;
       if (Date.now() < gracePeriodUntilRef.current) return;
 
-      // 1. Deteksi ketiadaan fokus dari OS
-      if (!document.hasFocus()) {
-        const mobile = isMobileDevice();
-        handleViolation(
-          'APP_SWITCH',
-          mobile
-            ? 'Siswa terdeteksi beralih aplikasi, membuka floating window, atau menarik bilah status di HP'
-            : 'Siswa terdeteksi beralih ke aplikasi lain di luar peramban ujian (Alt+Tab / Taskbar)'
-        );
-        return;
-      }
-
-      // 2. Deteksi pembukaan DevTools via resize threshold saat layar penuh
+      // Deteksi pembukaan DevTools via resize threshold saat layar penuh
       const isFullscreen = Boolean(
         document.fullscreenElement ||
         document.webkitFullscreenElement ||
@@ -555,21 +564,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
           );
         }
       }
-    }, 150);
-
-    // ========================================================
-    // SENSOR 11: PEMBERSIHAN OTOMATIS CLIPBOARD (PURGE DAEMON)
-    // Setiap 100ms mengosongkan buffer clipboard saat siswa di arena ujian
-    // Menjamin teks yang disalin dari manapun (termasuk iframe Google Form) langsung musnah
-    // ========================================================
-    const clipboardPurgeInterval = setInterval(() => {
-      if (isSubmittedRef.current || isLockedRef.current) return;
-      try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText('');
-        }
-      } catch (_) {}
-    }, 100);
+    }, 500);
 
     // ========================================================
     // REGISTRASI LISTENER DENGAN CAPTURE MODE (PRIORITAS TERTINGGI)
@@ -581,6 +576,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('blur', handleWindowBlur);
+    window.addEventListener('focus', handleWindowFocus);
 
     // Touch events untuk screenshot HP
     window.addEventListener('touchstart', handleTouchStart, { capture: true, passive: false });
@@ -623,7 +619,6 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
 
     return () => {
       clearInterval(heartbeatInterval);
-      clearInterval(clipboardPurgeInterval);
 
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
@@ -632,6 +627,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
 
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('blur', handleWindowBlur);
+      window.removeEventListener('focus', handleWindowFocus);
 
       window.removeEventListener('touchstart', handleTouchStart, { capture: true });
       document.removeEventListener('touchstart', handleTouchStart, { capture: true });

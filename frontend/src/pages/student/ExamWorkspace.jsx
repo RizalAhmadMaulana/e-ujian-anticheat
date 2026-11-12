@@ -115,6 +115,18 @@ export default function ExamWorkspace() {
     return () => window.removeEventListener('resize', enforceOrientation);
   }, [activeAttempt.screenOrientation]);
 
+  // Ketika layar terkunci (isLocked = true), bersihkan efek blackout/blur agar layar PIN pengawas 100% terlihat
+  useEffect(() => {
+    if (activeAttempt.isLocked) {
+      document.documentElement.style.filter = '';
+      document.documentElement.style.backdropFilter = '';
+      document.body.style.filter = '';
+      document.body.style.backgroundColor = '';
+      const shield = document.getElementById('instant-anti-screenshot-shield');
+      if (shield) shield.style.display = 'none';
+    }
+  }, [activeAttempt.isLocked]);
+
   // Masuk Kembali ke Mode Fullscreen & Kunci Orientasi
   const handleReEnterFullscreen = async () => {
     try {
@@ -430,24 +442,26 @@ export default function ExamWorkspace() {
       {/* 0. INSTANT ANTI-SCREENSHOT BLACKOUT SHIELD (Z-INDEX 9999) */}
       {/* Mengaburkan layar seketika dalam 0ms saat gesture 3 jari / tombol fisik terdeteksi */}
       {/* ======================================================== */}
-      <div
-        id="instant-anti-screenshot-shield"
-        style={{ display: 'none' }}
-        className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-3xl flex flex-col items-center justify-center text-center p-6 select-none"
-      >
-        <div className="w-16 h-16 rounded-xl bg-rose-600/20 border border-rose-500/40 flex items-center justify-center text-rose-500 mb-4 animate-ping">
-          <ShieldAlert className="w-8 h-8" />
+      {!activeAttempt.isLocked && (
+        <div
+          id="instant-anti-screenshot-shield"
+          style={{ display: 'none' }}
+          className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-3xl flex flex-col items-center justify-center text-center p-6 select-none"
+        >
+          <div className="w-16 h-16 rounded-xl bg-rose-600/20 border border-rose-500/40 flex items-center justify-center text-rose-500 mb-4 animate-ping">
+            <ShieldAlert className="w-8 h-8" />
+          </div>
+          <h1 className="text-xl sm:text-2xl font-bold text-rose-400 uppercase tracking-widest mb-2">
+            TANGKAPAN LAYAR TERDETEKSI & DIBLOKIR!
+          </h1>
+          <p className="text-zinc-300 text-xs sm:text-sm max-w-md mb-6 leading-relaxed">
+            Sistem mendeteksi upaya pengambilan tangkapan layar (gesture usap 3 jari atau tombol volume & power di HP). Layar ujian otomatis dikaburkan dan akses Anda dibekukan!
+          </p>
+          <div className="text-xs text-rose-400 font-medium bg-rose-950/80 border border-rose-500/30 px-3.5 py-1.5 rounded-lg">
+            Pelanggaran telah dicatat secara otomatis di E-Jurnal Guru
+          </div>
         </div>
-        <h1 className="text-xl sm:text-2xl font-bold text-rose-400 uppercase tracking-widest mb-2">
-          TANGKAPAN LAYAR TERDETEKSI & DIBLOKIR!
-        </h1>
-        <p className="text-zinc-300 text-xs sm:text-sm max-w-md mb-6 leading-relaxed">
-          Sistem mendeteksi upaya pengambilan tangkapan layar (gesture usap 3 jari atau tombol volume & power di HP). Layar ujian otomatis dikaburkan dan akses Anda dibekukan!
-        </p>
-        <div className="text-xs text-rose-400 font-medium bg-rose-950/80 border border-rose-500/30 px-3.5 py-1.5 rounded-lg">
-          Pelanggaran telah dicatat secara otomatis di E-Jurnal Guru
-        </div>
-      </div>
+      )}
 
       {/* ======================================================== */}
       {/* TOAST ANTI-SCREENSHOT NOTIFICATION */}
@@ -476,21 +490,23 @@ export default function ExamWorkspace() {
       {/* ======================================================== */}
       {/* 1. TOP SECURITY BAR (KAPSUL HITAM PENGAMAN DI ATAS LAYAR) */}
       {/* ======================================================== */}
-      <header className="bg-zinc-950/90 border-b border-zinc-800/80 px-3 sm:px-6 py-2.5 flex items-center justify-between z-30 sticky top-0 backdrop-blur-md">
+      <header className="bg-zinc-950/90 border-b border-zinc-800/80 px-2 sm:px-4 lg:px-6 py-1.5 sm:py-2.5 flex items-center justify-between z-30 sticky top-0 backdrop-blur-md gap-1 sm:gap-2">
         {/* Status Monitoring & Judul */}
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-semibold tracking-wider uppercase">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+          <div className="flex items-center gap-1.5 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-semibold tracking-wider uppercase shrink-0">
             <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
-            <span>REC • Terproteksi</span>
+            <span className="sm:hidden">REC</span>
+            <span className="hidden sm:inline">REC • Terproteksi</span>
           </div>
 
           {activeAttempt.isSimulation && (
-            <span className="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 text-[10px] font-medium uppercase tracking-wider">
-              Mode Simulasi Guru
+            <span className="px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 text-[9px] sm:text-[10px] font-medium uppercase tracking-wider shrink-0">
+              <span className="sm:hidden">Simulasi</span>
+              <span className="hidden sm:inline">Mode Simulasi Guru</span>
             </span>
           )}
 
-          <div className="hidden md:block">
+          <div className="hidden lg:block">
             <span className="text-xs font-semibold text-zinc-100 truncate max-w-xs block">
               {selectedPackage?.subjectName} — {selectedPackage?.title}
             </span>
@@ -498,7 +514,7 @@ export default function ExamWorkspace() {
         </div>
 
         {/* Countdown Timer, Indikator Sinyal & Action Bar */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {/* Indikator Sinyal Jaringan & Ping Real-Time */}
           <NetworkSignalIndicator
             attemptId={activeAttempt.attemptId}
@@ -519,7 +535,7 @@ export default function ExamWorkspace() {
                 useExamStore.getState().loginAsTeacher();
                 navigate('/teacher/dashboard');
               }}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-semibold transition active:scale-[0.98]"
+              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-md bg-amber-500 hover:bg-amber-400 text-zinc-950 text-[11px] sm:text-xs font-semibold transition active:scale-[0.98] shrink-0"
               title="Kembali ke Dashboard Guru"
             >
               <LogOut className="w-3.5 h-3.5" />
@@ -532,7 +548,7 @@ export default function ExamWorkspace() {
             <button
               onClick={() => setIframeKey((prev) => prev + 1)}
               title="Refresh Lembar Soal"
-              className="p-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-800 text-xs flex items-center gap-1 transition"
+              className="p-1 sm:p-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-800 text-xs flex items-center gap-1 transition shrink-0"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               <span className="hidden sm:inline text-[11px]">Refresh Form</span>
@@ -540,19 +556,20 @@ export default function ExamWorkspace() {
           )}
 
           {/* Countdown Timer */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-zinc-900 border border-zinc-800 font-mono text-xs sm:text-sm font-semibold text-zinc-100 tabular-nums">
-            <Clock className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+          <div className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-md bg-zinc-900 border border-zinc-800 font-mono text-[11px] sm:text-xs md:text-sm font-semibold text-zinc-100 tabular-nums shrink-0">
+            <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-zinc-400 shrink-0" />
             <span>{formatTime(activeAttempt.remainingSeconds)}</span>
           </div>
 
           {/* Tombol Konfirmasi Selesai & Keluar Ujian */}
           <button
             onClick={() => setShowExitConfirmModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-md bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-2xs transition active:scale-[0.98]"
+            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 rounded-md bg-rose-600 hover:bg-rose-500 text-white text-[11px] sm:text-xs font-semibold shadow-2xs transition active:scale-[0.98] shrink-0"
             title="Selesaikan pengerjaan dan keluar dari ujian"
           >
-            <CheckCircle className="w-3.5 h-3.5" />
-            <span>Selesai Ujian</span>
+            <CheckCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
+            <span className="sm:hidden">Selesai</span>
+            <span className="hidden sm:inline">Selesai Ujian</span>
           </button>
         </div>
       </header>
@@ -610,7 +627,7 @@ export default function ExamWorkspace() {
       {/* 2. LAYAR PEMBEKUAN MERAH (PENALTY FREEZE OVERLAY) */}
       {/* ======================================================== */}
       {activeAttempt.isLocked && (
-        <div className="fixed inset-0 z-50 bg-[#090D16]/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center animate-fade-in overflow-y-auto">
+        <div className="fixed inset-0 z-[10000] bg-[#090D16] flex flex-col items-center justify-center p-4 sm:p-6 text-center animate-fade-in overflow-y-auto select-none">
           <div className="w-16 h-16 rounded-xl bg-rose-600/20 border border-rose-500/40 flex items-center justify-center text-rose-400 mb-4 animate-pulse">
             <ShieldAlert className="w-9 h-9" />
           </div>
