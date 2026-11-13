@@ -30,6 +30,71 @@ const INITIAL_PACKAGES = [];
 const INITIAL_SESSIONS = [];
 const INITIAL_PROCTORING_STUDENTS = [];
 
+const STORAGE_KEY_ATTEMPT = 'exam_active_attempt';
+
+const getInitialActiveAttempt = () => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY_ATTEMPT);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === 'object') {
+        return {
+          attemptId: parsed.attemptId || null,
+          sessionId: parsed.sessionId || null,
+          selectedPackage: parsed.selectedPackage || null,
+          hasVerifiedEntryPassword: Boolean(parsed.hasVerifiedEntryPassword),
+          screenOrientation: parsed.screenOrientation || localStorage.getItem('exam_screen_orientation') || 'PORTRAIT',
+          isLocked: Boolean(parsed.isLocked),
+          violationCount: Number(parsed.violationCount) || 0,
+          violationLogs: Array.isArray(parsed.violationLogs) ? parsed.violationLogs : [],
+          studentAnswers: (parsed.studentAnswers && typeof parsed.studentAnswers === 'object') ? parsed.studentAnswers : {},
+          remainingSeconds: Number(parsed.remainingSeconds) || 3600,
+          examStartedAt: parsed.examStartedAt || null,
+          examSubmittedAt: parsed.examSubmittedAt || null,
+          supervisorPin: parsed.supervisorPin || '',
+          isSimulation: Boolean(parsed.isSimulation),
+        };
+      }
+    }
+  } catch (_) {}
+  return {
+    attemptId: null,
+    sessionId: null,
+    selectedPackage: null,
+    hasVerifiedEntryPassword: false,
+    screenOrientation: (() => {
+      try {
+        return localStorage.getItem('exam_screen_orientation') || 'PORTRAIT';
+      } catch {
+        return 'PORTRAIT';
+      }
+    })(),
+    isLocked: false,
+    violationCount: 0,
+    violationLogs: [],
+    studentAnswers: {},
+    remainingSeconds: 60 * 60,
+    examStartedAt: null,
+    examSubmittedAt: null,
+    supervisorPin: '',
+    isSimulation: false,
+  };
+};
+
+const persistActiveAttempt = (attempt) => {
+  try {
+    if (attempt && (attempt.attemptId || attempt.sessionId || attempt.selectedPackage)) {
+      localStorage.setItem(STORAGE_KEY_ATTEMPT, JSON.stringify(attempt));
+    }
+  } catch (_) {}
+};
+
+const clearActiveAttemptStorage = () => {
+  try {
+    localStorage.removeItem(STORAGE_KEY_ATTEMPT);
+  } catch (_) {}
+};
+
 export const useExamStore = create((set, get) => ({
   // ==========================================
   // 1. STATE AUTENTIKASI
@@ -109,9 +174,11 @@ export const useExamStore = create((set, get) => ({
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
+    clearActiveAttemptStorage();
     set({
       currentUser: null,
       isAuthenticated: false,
+      activeAttempt: getInitialActiveAttempt(),
     });
   },
 
@@ -177,65 +244,54 @@ export const useExamStore = create((set, get) => ({
   // ==========================================
   // 3. STATE AKTIF SISWA (ARENA UJIAN)
   // ==========================================
-  activeAttempt: {
-    attemptId: null,
-    sessionId: null,
-    selectedPackage: null,
-    hasVerifiedEntryPassword: false,
-    screenOrientation: (() => {
-      try {
-        return localStorage.getItem('exam_screen_orientation') || 'PORTRAIT';
-      } catch {
-        return 'PORTRAIT';
-      }
-    })(), // 'PORTRAIT' | 'LANDSCAPE'
-    isLocked: false,
-    violationCount: 0,
-    violationLogs: [],
-    studentAnswers: {}, // { 'q-1': 'B', 'q-6': 'SIP adalah...' }
-    remainingSeconds: 60 * 60,
-    examStartedAt: null,
-    examSubmittedAt: null,
-  },
+  activeAttempt: getInitialActiveAttempt(),
 
   setAttemptId: (attemptId) => {
-    set((state) => ({
-      activeAttempt: {
+    set((state) => {
+      const updated = {
         ...state.activeAttempt,
         attemptId,
-      },
-    }));
+      };
+      persistActiveAttempt(updated);
+      return { activeAttempt: updated };
+    });
   },
 
   setSessionId: (sessionId, supervisorPin = '') => {
-    set((state) => ({
-      activeAttempt: {
+    set((state) => {
+      const updated = {
         ...state.activeAttempt,
         sessionId,
         supervisorPin: supervisorPin || state.activeAttempt.supervisorPin || '',
-      },
-    }));
+      };
+      persistActiveAttempt(updated);
+      return { activeAttempt: updated };
+    });
   },
 
   setSelectedPackage: (pkg) => {
-    set((state) => ({
-      activeAttempt: {
+    set((state) => {
+      const updated = {
         ...state.activeAttempt,
         selectedPackage: pkg,
-      },
-    }));
+      };
+      persistActiveAttempt(updated);
+      return { activeAttempt: updated };
+    });
   },
 
   setScreenOrientation: (orientation) => {
     try {
       localStorage.setItem('exam_screen_orientation', orientation);
     } catch (_) {}
-    set((state) => ({
-      activeAttempt: {
+    set((state) => {
+      const updated = {
         ...state.activeAttempt,
         screenOrientation: orientation,
-      },
-    }));
+      };
+      persistActiveAttempt(updated);
+      return { activeAttempt: updated };
+    });
   },
 
   startSimulationExam: ({ packageId, sessionId, orientation = 'PORTRAIT', studentName = 'Mode Simulasi Siswa' } = {}) => {
@@ -253,23 +309,27 @@ export const useExamStore = create((set, get) => ({
       nisn: '9999999999',
     };
 
+    const simAttempt = {
+      attemptId: `sim-${Date.now()}`,
+      sessionId: session?.id || 'ses-001',
+      selectedPackage: pkg,
+      hasVerifiedEntryPassword: true,
+      screenOrientation: orientation,
+      isLocked: false,
+      violationCount: 0,
+      violationLogs: [],
+      studentAnswers: {},
+      remainingSeconds: (session?.durationMinutes || 60) * 60,
+      examStartedAt: new Date().toLocaleTimeString('id-ID'),
+      examSubmittedAt: null,
+      isSimulation: true,
+      supervisorPin: 'GURU123',
+    };
+    persistActiveAttempt(simAttempt);
+
     set({
       currentUser: simStudent,
-      activeAttempt: {
-        attemptId: `sim-${Date.now()}`,
-        sessionId: session?.id || 'ses-001',
-        selectedPackage: pkg,
-        hasVerifiedEntryPassword: true,
-        screenOrientation: orientation,
-        isLocked: false,
-        violationCount: 0,
-        violationLogs: [],
-        studentAnswers: {},
-        remainingSeconds: (session?.durationMinutes || 60) * 60,
-        examStartedAt: new Date().toLocaleTimeString('id-ID'),
-        examSubmittedAt: null,
-        isSimulation: true,
-      },
+      activeAttempt: simAttempt,
     });
   },
 
@@ -278,39 +338,49 @@ export const useExamStore = create((set, get) => ({
     const currentSession = examSessions.find((s) => s.id === activeAttempt.sessionId) || examSessions[0];
     
     if (inputPassword && inputPassword.trim().toUpperCase() === currentSession.entryPassword.toUpperCase()) {
-      set((state) => ({
-        activeAttempt: {
+      set((state) => {
+        const updated = {
           ...state.activeAttempt,
           hasVerifiedEntryPassword: true,
           examStartedAt: new Date().toLocaleTimeString('id-ID'),
-        },
-      }));
+        };
+        persistActiveAttempt(updated);
+        return { activeAttempt: updated };
+      });
       return { success: true };
     }
     return { success: false, message: 'Password Masuk salah! Silakan tanyakan kepada pengawas.' };
   },
 
   setStudentAnswer: (questionId, answer) => {
-    set((state) => ({
-      activeAttempt: {
+    set((state) => {
+      const updatedAnswers = {
+        ...state.activeAttempt.studentAnswers,
+        [questionId]: answer,
+      };
+      const updatedAttempt = {
         ...state.activeAttempt,
-        studentAnswers: {
-          ...state.activeAttempt.studentAnswers,
-          [questionId]: answer,
-        },
-      },
-    }));
+        studentAnswers: updatedAnswers,
+      };
+      persistActiveAttempt(updatedAttempt);
+      return { activeAttempt: updatedAttempt };
+    });
   },
 
   decrementTimer: () => {
     set((state) => {
       const currentRemaining = state.activeAttempt.remainingSeconds;
       if (currentRemaining <= 0) return state;
+      const updatedAttempt = {
+        ...state.activeAttempt,
+        remainingSeconds: currentRemaining - 1,
+      };
+      // Persist timer periodically (e.g. every 5 seconds) to avoid storage spam
+      if (currentRemaining % 5 === 0) {
+        persistActiveAttempt(updatedAttempt);
+      }
       return {
-        activeAttempt: {
-          ...state.activeAttempt,
-          remainingSeconds: currentRemaining - 1,
-        },
+        activeAttempt: updatedAttempt,
       };
     });
   },
@@ -355,13 +425,16 @@ export const useExamStore = create((set, get) => ({
         return s;
       });
 
+      const updatedAttempt = {
+        ...state.activeAttempt,
+        isLocked: true,
+        violationCount: updatedCount,
+        violationLogs: updatedLogs,
+      };
+      persistActiveAttempt(updatedAttempt);
+
       return {
-        activeAttempt: {
-          ...state.activeAttempt,
-          isLocked: true,
-          violationCount: updatedCount,
-          violationLogs: updatedLogs,
-        },
+        activeAttempt: updatedAttempt,
         proctoringStudents: updatedProctoring,
       };
     });
@@ -398,9 +471,25 @@ export const useExamStore = create((set, get) => ({
         return s;
       });
 
+      clearActiveAttemptStorage();
+
       return {
         activeAttempt: {
           ...state.activeAttempt,
+          isLocked: false,
+          examSubmittedAt: now,
+        },
+        proctoringStudents: updatedProctoring,
+      };
+    });
+
+    return { success: true };
+  },
+
+  resetActiveAttempt: () => {
+    clearActiveAttemptStorage();
+    set({ activeAttempt: getInitialActiveAttempt() });
+  },
           isLocked: false,
           examSubmittedAt: now,
         },
@@ -457,6 +546,8 @@ export const useExamStore = create((set, get) => ({
           index === 0 && !log.unlockedAt ? { ...log, unlockedAt: nowTime } : log
         ),
       };
+
+      persistActiveAttempt(updatedActiveAttempt);
 
       return {
         proctoringStudents: updatedProctoring,

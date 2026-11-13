@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useExamStore } from '../../store/useExamStore';
 import { useExamSecurity } from '../../hooks/useExamSecurity';
@@ -115,17 +116,53 @@ export default function ExamWorkspace() {
     return () => window.removeEventListener('resize', enforceOrientation);
   }, [activeAttempt.screenOrientation]);
 
-  // Ketika layar terkunci (isLocked = true), bersihkan efek blackout/blur agar layar PIN pengawas 100% terlihat
+  // Pastikan style filter/blur selalu bersih agar layar siswa tidak pernah blank hitam
   useEffect(() => {
-    if (activeAttempt.isLocked) {
+    try {
       document.documentElement.style.filter = '';
       document.documentElement.style.backdropFilter = '';
       document.body.style.filter = '';
       document.body.style.backgroundColor = '';
-      const shield = document.getElementById('instant-anti-screenshot-shield');
-      if (shield) shield.style.display = 'none';
-    }
+    } catch (_) {}
   }, [activeAttempt.isLocked]);
+
+  // Jika workspace dimuat ulang (misal tab di-restore peramban Android) dan state kosong,
+  // pulihkan activeAttempt dari localStorage
+  useEffect(() => {
+    if (!activeAttempt.selectedPackage && !activeAttempt.sessionId) {
+      try {
+        const saved = localStorage.getItem('exam_active_attempt');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && (parsed.selectedPackage || parsed.sessionId)) {
+            useExamStore.setState({ activeAttempt: { ...useExamStore.getState().activeAttempt, ...parsed } });
+            return;
+          }
+        }
+      } catch (_) {}
+
+      // Jika benar-benar tidak ada sesi aktif, arahkan kembali dengan aman ke portal mata pelajaran
+      const fallbackTimer = setTimeout(() => {
+        if (!useExamStore.getState().activeAttempt.selectedPackage) {
+          navigate('/student/subjects');
+        }
+      }, 800);
+      return () => clearTimeout(fallbackTimer);
+    }
+  }, [activeAttempt.selectedPackage, activeAttempt.sessionId, navigate]);
+
+  // Sinkronisasi status attempt dari server saat workspace pulih
+  useEffect(() => {
+    if (activeAttempt.attemptId) {
+      proctoringApi.getAttemptStatus(activeAttempt.attemptId).then((res) => {
+        if (res && res.status === 'LOCKED_VIOLATION' && !activeAttempt.isLocked) {
+          triggerViolationLock('APP_SWITCH', 'Layar ujian terkunci akibat terdeteksi beralih aplikasi.');
+        } else if (res && res.status === 'WORKING' && activeAttempt.isLocked) {
+          unlockStudent(currentUser?.id || 's-001');
+        }
+      }).catch(() => {});
+    }
+  }, [activeAttempt.attemptId]);
 
   // Masuk Kembali ke Mode Fullscreen & Kunci Orientasi
   const handleReEnterFullscreen = async () => {
@@ -440,31 +477,6 @@ export default function ExamWorkspace() {
       />
 
       {/* ======================================================== */}
-      {/* 0. INSTANT ANTI-SCREENSHOT BLACKOUT SHIELD (Z-INDEX 9999) */}
-      {/* Mengaburkan layar seketika dalam 0ms saat gesture 3 jari / tombol fisik terdeteksi */}
-      {/* ======================================================== */}
-      {!activeAttempt.isLocked && (
-        <div
-          id="instant-anti-screenshot-shield"
-          style={{ display: 'none' }}
-          className="fixed inset-0 z-[9999] bg-black/95 backdrop-blur-3xl flex flex-col items-center justify-center text-center p-6 select-none"
-        >
-          <div className="w-16 h-16 rounded-xl bg-rose-600/20 border border-rose-500/40 flex items-center justify-center text-rose-500 mb-4 animate-ping">
-            <ShieldAlert className="w-8 h-8" />
-          </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-rose-400 uppercase tracking-widest mb-2">
-            TANGKAPAN LAYAR TERDETEKSI & DIBLOKIR!
-          </h1>
-          <p className="text-zinc-300 text-xs sm:text-sm max-w-md mb-6 leading-relaxed">
-            Sistem mendeteksi upaya pengambilan tangkapan layar (gesture usap 3 jari atau tombol volume & power di HP). Layar ujian otomatis dikaburkan dan akses Anda dibekukan!
-          </p>
-          <div className="text-xs text-rose-400 font-medium bg-rose-950/80 border border-rose-500/30 px-3.5 py-1.5 rounded-lg">
-            Pelanggaran telah dicatat secara otomatis di E-Jurnal Guru
-          </div>
-        </div>
-      )}
-
-      {/* ======================================================== */}
       {/* TOAST ANTI-SCREENSHOT NOTIFICATION */}
       {/* ======================================================== */}
       {screenshotToast && (
@@ -491,23 +503,23 @@ export default function ExamWorkspace() {
       {/* ======================================================== */}
       {/* 1. TOP SECURITY BAR (KAPSUL HITAM PENGAMAN DI ATAS LAYAR) */}
       {/* ======================================================== */}
-      <header className="bg-zinc-950/90 border-b border-zinc-800/80 px-2 sm:px-4 lg:px-6 py-1.5 sm:py-2.5 flex items-center justify-between z-30 sticky top-0 backdrop-blur-md gap-1 sm:gap-2">
+      <header className="bg-zinc-950/90 border-b border-zinc-800/80 px-2 sm:px-4 py-1.5 flex items-center justify-between z-30 sticky top-0 backdrop-blur-md gap-1 sm:gap-2 w-full max-w-full overflow-hidden">
         {/* Status Monitoring & Judul */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-          <div className="flex items-center gap-1.5 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-semibold tracking-wider uppercase shrink-0">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0 min-w-0">
+          <div className="flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-semibold tracking-wider uppercase shrink-0 whitespace-nowrap">
             <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
-            <span className="sm:hidden">REC</span>
-            <span className="hidden sm:inline">REC • Terproteksi</span>
+            <span className="font-bold">REC</span>
+            <span className="hidden md:inline font-semibold"> • Terproteksi</span>
           </div>
 
           {activeAttempt.isSimulation && (
-            <span className="px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 text-[9px] sm:text-[10px] font-medium uppercase tracking-wider shrink-0">
-              <span className="sm:hidden">Simulasi</span>
-              <span className="hidden sm:inline">Mode Simulasi Guru</span>
+            <span className="px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 text-[9px] sm:text-[10px] font-medium uppercase tracking-wider shrink-0 whitespace-nowrap">
+              <span className="sm:hidden">Sim</span>
+              <span className="hidden sm:inline">Simulasi Guru</span>
             </span>
           )}
 
-          <div className="hidden lg:block">
+          <div className="hidden xl:block">
             <span className="text-xs font-semibold text-zinc-100 truncate max-w-xs block">
               {selectedPackage?.subjectName} — {selectedPackage?.title}
             </span>
@@ -515,7 +527,7 @@ export default function ExamWorkspace() {
         </div>
 
         {/* Countdown Timer, Indikator Sinyal & Action Bar */}
-        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0 ml-auto">
           {/* Indikator Sinyal Jaringan & Ping Real-Time */}
           <NetworkSignalIndicator
             attemptId={activeAttempt.attemptId}
@@ -536,11 +548,11 @@ export default function ExamWorkspace() {
                 useExamStore.getState().loginAsTeacher();
                 navigate('/teacher/dashboard');
               }}
-              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-md bg-amber-500 hover:bg-amber-400 text-zinc-950 text-[11px] sm:text-xs font-semibold transition active:scale-[0.98] shrink-0"
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-amber-500 hover:bg-amber-400 text-zinc-950 text-[11px] sm:text-xs font-semibold transition active:scale-[0.98] shrink-0 whitespace-nowrap"
               title="Kembali ke Dashboard Guru"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Keluar Simulasi</span>
+              <span className="hidden sm:inline">Keluar</span>
             </button>
           )}
 
@@ -549,28 +561,28 @@ export default function ExamWorkspace() {
             <button
               onClick={() => setIframeKey((prev) => prev + 1)}
               title="Refresh Lembar Soal"
-              className="p-1 sm:p-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-800 text-xs flex items-center gap-1 transition shrink-0"
+              className="p-1 sm:p-1.5 rounded-md bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white border border-zinc-800 text-xs flex items-center gap-1 transition shrink-0 whitespace-nowrap"
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline text-[11px]">Refresh Form</span>
+              <span className="hidden md:inline text-[11px]">Refresh Form</span>
             </button>
           )}
 
           {/* Countdown Timer */}
-          <div className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-md bg-zinc-900 border border-zinc-800 font-mono text-[11px] sm:text-xs md:text-sm font-semibold text-zinc-100 tabular-nums shrink-0">
-            <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-zinc-400 shrink-0" />
+          <div className="flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md bg-zinc-900 border border-zinc-800 font-mono text-[11px] sm:text-xs font-semibold text-zinc-100 tabular-nums shrink-0 whitespace-nowrap">
+            <Clock className="w-3 h-3 text-zinc-400 shrink-0" />
             <span>{formatTime(activeAttempt.remainingSeconds)}</span>
           </div>
 
           {/* Tombol Konfirmasi Selesai & Keluar Ujian */}
           <button
             onClick={() => setShowExitConfirmModal(true)}
-            className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 rounded-md bg-rose-600 hover:bg-rose-500 text-white text-[11px] sm:text-xs font-semibold shadow-2xs transition active:scale-[0.98] shrink-0"
+            className="flex items-center gap-1 px-2.5 sm:px-3 py-1 rounded-md bg-rose-600 hover:bg-rose-500 text-white text-[11px] sm:text-xs font-semibold shadow-2xs transition active:scale-[0.98] shrink-0 whitespace-nowrap"
             title="Selesaikan pengerjaan dan keluar dari ujian"
           >
-            <CheckCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0" />
-            <span className="sm:hidden">Selesai</span>
-            <span className="hidden sm:inline">Selesai Ujian</span>
+            <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+            <span>Selesai</span>
+            <span className="hidden md:inline"> Ujian</span>
           </button>
         </div>
       </header>
@@ -626,32 +638,34 @@ export default function ExamWorkspace() {
 
       {/* ======================================================== */}
       {/* 2. LAYAR PEMBEKUAN MERAH (PENALTY FREEZE OVERLAY) */}
+      {/* Di-render via React Portal langsung ke document.body */}
+      {/* Menjamin 100% selalu di atas iframe dan bebas blank hitam */}
       {/* ======================================================== */}
-      {activeAttempt.isLocked && (
-        <div className="fixed inset-0 z-[10000] bg-[#090D16] flex flex-col items-center justify-center p-4 sm:p-6 text-center animate-fade-in overflow-y-auto select-none">
-          <div className="w-16 h-16 rounded-xl bg-rose-600/20 border border-rose-500/40 flex items-center justify-center text-rose-400 mb-4 animate-pulse">
-            <ShieldAlert className="w-9 h-9" />
+      {activeAttempt.isLocked && createPortal(
+        <div className="fixed inset-0 z-[999999] bg-[#090D16] flex flex-col items-center justify-center p-4 sm:p-6 text-center animate-fade-in overflow-y-auto select-none">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-rose-600/20 border border-rose-500/40 flex items-center justify-center text-rose-400 mb-3 sm:mb-4 animate-pulse shrink-0">
+            <ShieldAlert className="w-8 h-8 sm:w-9 sm:h-9" />
           </div>
 
-          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white tracking-tight mb-2 uppercase">
+          <h2 className="text-lg sm:text-2xl font-bold text-white tracking-tight mb-2 uppercase">
             AKSES UJIAN DIBEKUKAN (TERKUNCI)!
           </h2>
 
-          <p className="text-rose-200/90 text-xs sm:text-sm max-w-xl mb-6 leading-relaxed font-normal">
+          <p className="text-rose-200/90 text-xs sm:text-sm max-w-md mb-4 sm:mb-6 leading-relaxed font-normal">
             Sistem mendeteksi Anda mencoba keluar dari halaman ujian, berpindah tab, meminimalkan jendela, atau membuka aplikasi lain. 
             <strong className="text-white font-semibold"> Kejadian ini telah tercatat di E-Jurnal Guru beserta jam dan detiknya.</strong>
           </p>
 
           {/* Rincian Pelanggaran Terdeteksi */}
-          <div className="bg-zinc-900/90 border border-rose-500/40 rounded-xl p-4 max-w-md w-full text-xs text-left text-zinc-200 mb-5 space-y-2">
+          <div className="bg-zinc-900/90 border border-rose-500/40 rounded-xl p-3.5 sm:p-4 max-w-md w-full text-xs text-left text-zinc-200 mb-4 sm:mb-5 space-y-2">
             <div className="font-semibold text-rose-300 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
               <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
               <span>Log Pelanggaran Sistem Terkini:</span>
             </div>
-            <div>• Jenis Pelanggaran: <strong className="font-semibold text-white bg-rose-950/80 px-2 py-0.5 rounded border border-rose-500/30">{formatViolationType(activeAttempt.violationLogs[0]?.violationType)}</strong></div>
-            <div>• Keterangan Sensor: <em className="text-zinc-300 font-normal">{activeAttempt.violationLogs[0]?.description || 'Pelanggaran keamanan terdeteksi sistem.'}</em></div>
-            <div>• Waktu Terdeteksi: <strong className="font-mono text-zinc-100">{activeAttempt.violationLogs[0]?.detectedAt || 'Detik Ini'}</strong></div>
-            <div>• Total Akumulasi: <strong className="text-amber-300 font-semibold">{activeAttempt.violationCount} kali pelanggaran</strong></div>
+            <div>• Jenis Pelanggaran: <strong className="font-semibold text-white bg-rose-950/80 px-2 py-0.5 rounded border border-rose-500/30">{formatViolationType(activeAttempt.violationLogs?.[0]?.violationType || activeAttempt.violationLogs?.[0]?.type || 'APP_SWITCH')}</strong></div>
+            <div>• Keterangan Sensor: <em className="text-zinc-300 font-normal">{activeAttempt.violationLogs?.[0]?.description || 'Pelanggaran keamanan terdeteksi sistem.'}</em></div>
+            <div>• Waktu Terdeteksi: <strong className="font-mono text-zinc-100">{activeAttempt.violationLogs?.[0]?.detectedAt || 'Baru Saja'}</strong></div>
+            <div>• Total Akumulasi: <strong className="text-amber-300 font-semibold">{activeAttempt.violationCount || 1} kali pelanggaran</strong></div>
           </div>
 
           {/* Form Pembukaan Kunci Pengawas (Bebas dari Google Password Manager Popup) */}
@@ -704,7 +718,8 @@ export default function ExamWorkspace() {
           >
             <Maximize2 className="w-3.5 h-3.5" /> Masuk Kembali ke Fullscreen
           </button>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ======================================================== */}

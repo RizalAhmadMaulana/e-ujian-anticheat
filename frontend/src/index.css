@@ -62,4 +62,10 @@ html, body {
   overscroll-behavior-y: contain;
 }
 
+/* Menjamin tidak ada filter/blur residual yang memicu layar blank hitam di mobile */
+html, body, #root {
+  filter: none !important;
+  backdrop-filter: none !important;
+}
+
 

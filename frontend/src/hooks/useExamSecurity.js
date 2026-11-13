@@ -66,25 +66,13 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       );
     };
 
-    // Helper: Eksekusi Efek Pengaburan Total Layar Instan (Khusus Tangkapan Layar Fisik)
-    const triggerInstantBlackout = () => {
-      try {
-        const shield = document.getElementById('instant-anti-screenshot-shield');
-        if (shield) {
-          shield.style.display = 'flex';
-        }
-      } catch (_) {}
-    };
-
-    // Helper: Bersihkan Efek Pengaburan Total agar Layar Siswa & Form Buka Kunci Selalu Terlihat Jelas
-    const clearInstantBlackout = () => {
+    // Helper: Pastikan style filter selalu bersih
+    const ensureCleanDisplay = () => {
       try {
         document.documentElement.style.filter = '';
+        document.documentElement.style.backdropFilter = '';
+        document.body.style.filter = '';
         document.body.style.backgroundColor = '';
-        const shield = document.getElementById('instant-anti-screenshot-shield');
-        if (shield) {
-          shield.style.display = 'none';
-        }
       } catch (_) {}
     };
 
@@ -110,42 +98,27 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
 
     // ========================================================
     // SENSOR 2: ANTI-TAB SWITCH & MINIMIZE (visibilitychange)
+    // Ketika siswa meminimalkan browser, membuka tab lain, atau beralih aplikasi
     // ========================================================
-    let visibilityTimeout = null;
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        // Pulihkan tampilan normal seketika saat siswa kembali ke layar peramban
-        // Menjamin layar tidak pernah blank hitam dan form PIN pengawas dapat diisi dengan lancar
-        clearInstantBlackout();
-        if (visibilityTimeout) {
-          clearTimeout(visibilityTimeout);
-          visibilityTimeout = null;
-        }
-        return;
-      }
+      ensureCleanDisplay();
 
       if (document.visibilityState === 'hidden' || document.hidden) {
         if (isSubmittedRef.current || isLockedRef.current) return;
         if (Date.now() < gracePeriodUntilRef.current) return;
 
-        // Berikan toleransi debounce 800ms agar transisi sistem Android tidak memicu false lock
-        visibilityTimeout = setTimeout(() => {
-          if (document.visibilityState === 'hidden' && !isSubmittedRef.current && !isLockedRef.current) {
-            handleViolation(
-              isMobileDevice() ? 'SCREENSHOT_HARDWARE_BUTTON' : 'TAB_SWITCH',
-              isMobileDevice()
-                ? 'Siswa terdeteksi keluar dari layar ujian atau menekan tombol Power/Screenshot di HP'
-                : 'Siswa terdeteksi berpindah tab peramban atau meminimalkan browser ujian'
-            );
-          }
-        }, 800);
+        handleViolation(
+          isMobileDevice() ? 'APP_SWITCH' : 'TAB_SWITCH',
+          isMobileDevice()
+            ? 'Siswa terdeteksi keluar dari layar ujian atau beralih aplikasi di HP'
+            : 'Siswa terdeteksi berpindah tab peramban atau meminimalkan browser ujian'
+        );
       }
     };
 
     // ========================================================
     // SENSOR 3: ANTI-APP SWITCH & LOSS OF FOCUS (window.onblur / onfocus)
-    // Diberi toleransi terukur (1200ms) agar tidak terlalu reaktif/sensitif
-    // terhadap sentuhan iframe formulir atau kemunculan keyboard virtual HP
+    // Diberi toleransi terukur (1000ms) agar aman terhadap sentuhan iframe Google/Office Form
     // ========================================================
     let blurTimeout = null;
     const handleWindowBlur = () => {
@@ -161,7 +134,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
           return;
         }
 
-        // Jika dokumen benar-benar kehilangan fokus dari sistem operasi secara persisten (>1200ms)
+        // Jika dokumen benar-benar kehilangan fokus dari sistem operasi
         if (!document.hasFocus() || document.visibilityState === 'hidden') {
           handleViolation(
             'APP_SWITCH',
@@ -170,15 +143,17 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
               : 'Siswa terdeteksi beralih ke aplikasi lain di luar peramban ujian (Alt+Tab / Taskbar)'
           );
         }
-      }, 1200);
+      }, 1000);
     };
 
     const handleWindowFocus = () => {
-      if (blurTimeout) {
-        clearTimeout(blurTimeout);
-        blurTimeout = null;
+      ensureCleanDisplay();
+      if (document.hasFocus() && document.visibilityState === 'visible') {
+        if (blurTimeout) {
+          clearTimeout(blurTimeout);
+          blurTimeout = null;
+        }
       }
-      clearInstantBlackout();
     };
 
     // ========================================================
@@ -191,9 +166,8 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       if (e.touches && e.touches.length >= 3) {
         e.preventDefault();
         e.stopPropagation();
-        triggerInstantBlackout();
         if (onScreenshotBlocked) {
-          onScreenshotBlocked('Tangkapan layar 3 jari diblokir! Layar ujian Anda dibekukan.');
+          onScreenshotBlocked('Tangkapan layar 3 jari diblokir! Akses ujian Anda dibekukan.');
         }
         handleViolation(
           'SCREENSHOT_3FINGER_GESTURE',
@@ -210,9 +184,8 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       if (e.touches && e.touches.length >= 3) {
         e.preventDefault();
         e.stopPropagation();
-        triggerInstantBlackout();
         if (onScreenshotBlocked) {
-          onScreenshotBlocked('Tangkapan layar 3 jari diblokir! Layar ujian Anda dibekukan.');
+          onScreenshotBlocked('Tangkapan layar 3 jari diblokir! Akses ujian Anda dibekukan.');
         }
         handleViolation(
           'SCREENSHOT_3FINGER_GESTURE',
@@ -350,7 +323,6 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       if (isVolumeKey) {
         e.preventDefault();
         e.stopPropagation();
-        triggerInstantBlackout();
         if (onScreenshotBlocked) {
           onScreenshotBlocked('Tombol fisik screenshot diblokir! Layar ujian Anda dibekukan.');
         }
