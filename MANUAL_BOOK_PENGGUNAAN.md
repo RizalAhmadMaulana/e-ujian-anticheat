@@ -389,7 +389,32 @@ Setelah sesi ujian selesai atau saat monitoring nilai berlangsung, guru dapat me
 
 ---
 
-### 3.8. Menu 7: Pengaturan & Identitas Sekolah Dinamis (Kop Dokumen & Kepala Sekolah)
+### 3.8. Menu: Riwayat Pelanggaran Siswa & Sinkronisasi Dua Arah E-Jurnal
+Menu ini khusus dirancang bagi Pengawas dan Administrator untuk meninjau secara mendalam seluruh log catatan pelanggaran integritas ujian yang terekam pada sesi asesmen terbuka, serta memberikan wewenang penuh untuk menghapus data riwayat tersebut jika terbukti tidak disengaja oleh siswa (misalnya insiden false positive akibat notifikasi sistem HP, gestur tak sengaja, atau pop-up sistem) sebelum dokumen Berita Acara E-Jurnal dicetak.
+
+- **Membuka Menu:** Klik menu **"Riwayat Pelanggaran"** (`/teacher/violations`) di bilah navigasi guru.
+- **Filter Terpadu (Identik dengan E-Jurnal):**
+  1. **Filter Paket Soal:** Pilih paket mata pelajaran spesifik yang sedang dievaluasi.
+  2. **Filter Kelas / Rombel:** Saring berdasarkan rombel kelas peserta.
+  3. **Pilih Sesi Ujian Terbuka:** Pilih sesi ujian yang aktif/selesai untuk memuat seluruh rekaman pelanggaran siswa.
+- **4 Kartu Metrik KPI:**
+  - **Total Pelanggaran:** Akumulasi seluruh insiden pelanggaran yang tercatat pada sesi terpilih.
+  - **Siswa Terdeteksi:** Jumlah peserta yang pernah mengalami penalti penguncian layar.
+  - **Sudah Dibuka Kunci:** Jumlah insiden yang telah disetujui buka kunci oleh guru atau dengan PIN pengawas.
+  - **Status Masih Terkunci:** Jumlah siswa yang saat ini layarnya masih dalam keadaan beku (terkunci).
+- **Tabel Catatan Integritas Ujian & Fitur Penghapusan:**
+  - Menampilkan kolom: `NO`, `NAMA SISWA`, `NISN`, `JENIS PELANGGARAN`, `KETERANGAN SENSOR`, `WAKTU`, `STATUS BUKA KUNCI`, dan tombol `AKSI` (Ikon Tong Sampah Merah).
+  - **Hapus Satuan:** Klik ikon hapus pada baris pelanggaran tertentu jika insiden tersebut diakui tidak disengaja oleh siswa.
+  - **Hapus Massal (Bulk Delete):** Centang beberapa baris pelanggaran melalui checkbox di sisi kiri, lalu klik tombol **"Hapus Terpilih"** pada bilah aksi.
+  - **Bersihkan Log Sesi:** Tersedia opsi untuk membersihkan seluruh riwayat pelanggaran pada sesi terkait dengan 1-klik.
+- **Sinkronisasi Otomatis Dua Arah ke E-Jurnal Berita Acara:**
+  - Setiap data riwayat pelanggaran yang dihapus dari menu ini **secara otomatis dan seketika langsung terhapus dari tabel Catatan Integritas Ujian pada menu E-Jurnal**.
+  - Total pelanggaran siswa dan rekapitulasi presensi E-Jurnal langsung dikalkulasi ulang secara akurat.
+  - Saat E-Jurnal dicetak ke printer fisik maupun diunduh dalam format PDF atau Excel (.xlsx), dokumen resmi berita acara akan bersih dari catatan pelanggaran yang telah dihapus guru.
+
+---
+
+### 3.9. Menu 7: Pengaturan & Identitas Sekolah Dinamis (Kop Dokumen & Kepala Sekolah)
 Menu ini digunakan untuk menyesuaikan seluruh identitas sekolah atau madrasah secara dinamis tanpa perlu mengubah baris kode program.
 
 - **Membuka Menu:** Klik menu **"Pengaturan Sekolah"** (`/teacher/settings`).

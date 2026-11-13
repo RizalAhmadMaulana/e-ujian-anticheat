@@ -103,6 +103,11 @@ export default function TeacherLayout() {
       icon: FileCheck 
     },
     { 
+      to: '/teacher/violations', 
+      label: 'Riwayat Pelanggaran', 
+      icon: ShieldAlert 
+    },
+    { 
       to: '/teacher/ejournal', 
       label: 'E-Jurnal Ujian', 
       icon: FileSpreadsheet 

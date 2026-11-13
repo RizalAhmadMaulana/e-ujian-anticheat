@@ -61,6 +61,30 @@ export const proctoringApi = {
       latency_ms: latencyMs,
     });
     return response.data;
+  },
+
+  /**
+   * Mengambil riwayat catatan pelanggaran siswa terfilter
+   */
+  getViolations: async (params = {}) => {
+    const response = await axiosInstance.get('/proctoring/violations/', { params });
+    return response.data;
+  },
+
+  /**
+   * Guru menghapus satu catatan pelanggaran siswa
+   */
+  deleteViolation: async (violationId) => {
+    const response = await axiosInstance.delete(`/proctoring/violations/${violationId}/`);
+    return response.data;
+  },
+
+  /**
+   * Guru menghapus banyak catatan pelanggaran sekaligus (atau per sesi)
+   */
+  bulkDeleteViolations: async (payload = {}) => {
+    const response = await axiosInstance.post('/proctoring/violations/bulk-delete/', payload);
+    return response.data;
   }
 };
 

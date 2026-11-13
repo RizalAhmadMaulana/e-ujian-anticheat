@@ -19,6 +19,7 @@ import ExamPackageList from './pages/teacher/ExamPackageList';
 import ExamSessionSetup from './pages/teacher/ExamSessionSetup';
 import LiveProctoring from './pages/teacher/LiveProctoring';
 import EssayGrading from './pages/teacher/EssayGrading';
+import ViolationHistory from './pages/teacher/ViolationHistory';
 import EJournalReport from './pages/teacher/EJournalReport';
 import SchoolSettings from './pages/teacher/SchoolSettings';
 import ProfileSettings from './pages/teacher/ProfileSettings';
@@ -74,6 +75,7 @@ export default function App() {
           <Route path="sessions" element={<ExamSessionSetup />} />
           <Route path="proctoring" element={<LiveProctoring />} />
           <Route path="grading" element={<EssayGrading />} />
+          <Route path="violations" element={<ViolationHistory />} />
           <Route path="ejournal" element={<EJournalReport />} />
           <Route path="settings" element={<SchoolSettings />} />
           <Route path="profile" element={<ProfileSettings />} />

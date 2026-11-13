@@ -5,7 +5,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import StudentAttempt, ViolationLog
-from .serializers import StudentAttemptDetailSerializer, ViolationLogSerializer
+from .serializers import (
+    StudentAttemptDetailSerializer, 
+    ViolationLogSerializer,
+    ViolationHistorySerializer
+)
 from apps.exams.models import ExamSession
 
 class SessionProctoringStatusView(APIView):
@@ -300,6 +304,138 @@ class StudentHeartbeatAPIView(APIView):
             "success": True,
             "latency_ms": latency,
             "timestamp": timezone.now().isoformat()
+        }, status=status.HTTP_200_OK)
+
+
+class ViolationHistoryListView(APIView):
+    """
+    GET /api/proctoring/violations/
+    Mengambil riwayat pelanggaran terfilter berdasarkan sesi, paket soal, dan kelas
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        queryset = ViolationLog.objects.select_related(
+            'attempt', 
+            'attempt__student', 
+            'attempt__session', 
+            'attempt__session__package', 
+            'attempt__session__classroom'
+        ).order_by('-detected_at')
+
+        session_id = request.query_params.get('session_id')
+        package_id = request.query_params.get('package_id')
+        classroom_id = request.query_params.get('classroom_id')
+        search = request.query_params.get('search')
+
+        if session_id and session_id != 'ALL':
+            queryset = queryset.filter(attempt__session_id=session_id)
+        if package_id and package_id != 'ALL':
+            queryset = queryset.filter(attempt__session__package_id=package_id)
+        if classroom_id and classroom_id != 'ALL':
+            queryset = queryset.filter(attempt__session__classroom_id=classroom_id)
+        if search:
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(attempt__student__full_name__icontains=search) |
+                Q(attempt__student__username__icontains=search) |
+                Q(description__icontains=search)
+            )
+
+        serializer = ViolationHistorySerializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ViolationHistoryDeleteView(APIView):
+    """
+    DELETE /api/proctoring/violations/<int:violation_id>/
+    Menghapus satu catatan log pelanggaran, memperbarui akumulasi count attempt, dan otomatis sinkron ke E-Jurnal
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, violation_id):
+        violation = get_object_or_404(
+            ViolationLog.objects.select_related('attempt', 'attempt__session'), 
+            id=violation_id
+        )
+        attempt = violation.attempt
+        session = attempt.session
+
+        student_name = attempt.student.full_name or attempt.student.username
+        violation_type_label = violation.get_violation_type_display()
+        violation.delete()
+
+        # Update akumulasi violation_count pada StudentAttempt
+        new_violation_count = attempt.violations.count()
+        attempt.violation_count = new_violation_count
+        attempt.save(update_fields=['violation_count'])
+
+        # Update agregasi total_violations_recorded pada ExamJournal jika ada
+        try:
+            from apps.ejournal.models import ExamJournal
+            journal = ExamJournal.objects.filter(session=session).first()
+            if journal:
+                journal.total_violations_recorded = sum(att.violation_count for att in session.attempts.all())
+                journal.save(update_fields=['total_violations_recorded'])
+        except Exception:
+            pass
+
+        return Response({
+            "success": True,
+            "message": f"Catatan pelanggaran {student_name} ({violation_type_label}) berhasil dihapus.",
+            "remaining_violation_count": new_violation_count
+        }, status=status.HTTP_200_OK)
+
+
+class ViolationHistoryBulkDeleteView(APIView):
+    """
+    POST /api/proctoring/violations/bulk-delete/
+    Menghapus banyak catatan pelanggaran sekaligus (atau seluruh log sesi) dan sinkron ke E-Jurnal
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        ids = request.data.get('ids', [])
+        session_id = request.data.get('session_id')
+
+        if not ids and not session_id:
+            return Response({
+                "success": False,
+                "error": "Parameter ids atau session_id wajib disertakan."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        queryset = ViolationLog.objects.select_related('attempt', 'attempt__session')
+        if ids:
+            queryset = queryset.filter(id__in=ids)
+        elif session_id:
+            queryset = queryset.filter(attempt__session_id=session_id)
+
+        affected_attempts = list(set(v.attempt for v in queryset))
+        affected_sessions = list(set(att.session for att in affected_attempts))
+
+        count = queryset.count()
+        queryset.delete()
+
+        # Update violation_count untuk setiap attempt yang terpengaruh
+        for attempt in affected_attempts:
+            attempt.violation_count = attempt.violations.count()
+            attempt.save(update_fields=['violation_count'])
+
+        # Update ExamJournal untuk setiap sesi yang terpengaruh
+        try:
+            from apps.ejournal.models import ExamJournal
+            for session in affected_sessions:
+                journal = ExamJournal.objects.filter(session=session).first()
+                if journal:
+                    journal.total_violations_recorded = sum(att.violation_count for att in session.attempts.all())
+                    journal.save(update_fields=['total_violations_recorded'])
+        except Exception:
+            pass
+
+        return Response({
+            "success": True,
+            "deleted_count": count,
+            "message": f"Berhasil menghapus {count} catatan pelanggaran."
         }, status=status.HTTP_200_OK)
 
 

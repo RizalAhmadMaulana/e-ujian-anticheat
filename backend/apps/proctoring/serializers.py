@@ -13,6 +13,37 @@ class ViolationLogSerializer(serializers.ModelSerializer):
         ]
 
 
+class ViolationHistorySerializer(serializers.ModelSerializer):
+    attempt_id = serializers.UUIDField(source='attempt.id', read_only=True)
+    student_id = serializers.UUIDField(source='attempt.student.id', read_only=True)
+    student_name = serializers.CharField(source='attempt.student.full_name', read_only=True)
+    nisn = serializers.CharField(source='attempt.student.username', read_only=True)
+    classroom_name = serializers.CharField(source='attempt.session.classroom.name', read_only=True)
+    subject_name = serializers.CharField(source='attempt.session.package.subject_name', read_only=True)
+    session_title = serializers.CharField(source='attempt.session.title', read_only=True)
+    session_id = serializers.UUIDField(source='attempt.session.id', read_only=True)
+    violation_type_label = serializers.CharField(source='get_violation_type_display', read_only=True)
+
+    class Meta:
+        model = ViolationLog
+        fields = [
+            'id',
+            'attempt_id',
+            'student_id',
+            'session_id',
+            'student_name',
+            'nisn',
+            'classroom_name',
+            'subject_name',
+            'session_title',
+            'violation_type',
+            'violation_type_label',
+            'description',
+            'detected_at',
+            'unlocked_by_teacher_at'
+        ]
+
+
 class StudentAttemptDetailSerializer(serializers.ModelSerializer):
     student_id = serializers.UUIDField(source='student.id', read_only=True)
     student_name = serializers.CharField(source='student.full_name', read_only=True)

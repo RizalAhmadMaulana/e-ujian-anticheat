@@ -27,8 +27,10 @@
    - [Menu 6: Bank Soal & Paket Ujian (Hybrid Mode)](#menu-6-bank-soal--paket-ujian-hybrid-mode)
    - [Menu 7: Jadwal & Sesi Ujian (One-Click Copy Password & PIN Pengawas)](#menu-7-jadwal--sesi-ujian-one-click-copy-password--pin-pengawas)
    - [Menu 8: Ruang Pengawas Real-Time (Live Proctoring & Dual Unlock)](#menu-8-ruang-pengawas-real-time-live-proctoring--dual-unlock)
-   - [Menu 9: E-Jurnal & Rekapitulasi Berita Acara (Ekspor PDF/Excel)](#menu-9-e-jurnal--rekapitulasi-berita-acara-ekspor-pdfexcel)
-### Menu 10: Pengaturan Profil Akun Guru & Pop-Up Keamanan Login
+   - [Menu 9: Koreksi Jawaban Esai Guru & Rubrik Penilaian Manual](#menu-9-koreksi-jawaban-esai-guru--rubrik-penilaian-manual-teachergrading)
+   - [Menu 10: Riwayat Pelanggaran Siswa & Sinkronisasi Dua Arah E-Jurnal](#menu-10-riwayat-pelanggaran-siswa--sinkronisasi-dua-arah-e-jurnal)
+   - [Menu 11: E-Jurnal & Rekapitulasi Berita Acara (Ekspor PDF/Excel)](#menu-11-e-jurnal--rekapitulasi-berita-acara-ekspor-pdfexcel)
+### Menu 12: Pengaturan Profil Akun Guru & Pop-Up Keamanan Login
 - **Rute:** `/teacher/profile`
 - **Fungsi:** Mengelola biodata diri (Nama Lengkap, NIP/Username, Email), mengganti kata sandi secara aman, dan menjamin **Sinkronisasi Otomatis 2-Arah** dengan Manajemen Pengguna & Data Guru.
 - **Fitur Utama:**
@@ -386,7 +388,19 @@ Setelah masuk melalui portal login terpadu (`/login`) menggunakan **NIP** dan ka
 
 ---
 
-### Menu 10: E-Jurnal & Rekapitulasi Berita Acara (Ekspor PDF/Excel)
+### Menu 10: Riwayat Pelanggaran Siswa & Sinkronisasi Dua Arah E-Jurnal
+- **Rute:** `/teacher/violations`
+- **Fungsi:** Memonitor dan meninjau riwayat pelanggaran sensor anti-cheat dari rombel kelas dan sesi ujian terbuka, serta memberikan wewenang kepada guru/pengawas untuk menghapus data riwayat tersebut jika insiden terjadi tanpa disengaja oleh siswa (misalnya sentuhan tidak sengaja, notifikasi sistem HP, atau false positive) sebelum dokumen Berita Acara E-Jurnal dicetak.
+- **Fitur Utama:**
+  1. **Filter Terpadu (Identik dengan E-Jurnal):** Filter Paket Soal, Filter Kelas / Rombel, dan Pilih Sesi Ujian Terbuka.
+  2. **4 Kartu Metrik KPI:** Total Pelanggaran, Siswa Terdeteksi, Sudah Dibuka Kunci, dan Status Masih Terkunci dengan angka tabular monospace.
+  3. **Tabel Catatan Integritas Ujian:** Checkbox seleksi massal, Nomor, Nama Siswa, NISN, Jenis Pelanggaran, Keterangan Sensor, Waktu Deteksi, Status Buka Kunci, dan tombol Aksi Hapus individual.
+  4. **Hapus Satuan & Hapus Massal:** Dukungan hapus 1 rekaman atau seleksi multi-baris melalui tombol **"Hapus Terpilih"** dan opsi **"Bersihkan Seluruh Log Sesi"**.
+  5. **Sinkronisasi Dua Arah Terpadu:** Penghapusan log di menu ini secara langsung menghapus data di database, me-reset akumulasi pelanggaran siswa (`violation_count`), memperbarui `total_violations_recorded` pada E-Jurnal, dan seketika lenyap dari tabel Catatan Integritas E-Jurnal, cetak PDF ReportLab, dan unduhan Excel Berita Acara.
+
+---
+
+### Menu 11: E-Jurnal & Rekapitulasi Berita Acara (Ekspor PDF/Excel)
 - **Rute:** `/teacher/ejournal`
 - **Fungsi:** Merekap nilai, kehadiran, log pelanggaran, dan mencetak berita acara resmi standar dinas.
 - **Langkah-langkah:**
