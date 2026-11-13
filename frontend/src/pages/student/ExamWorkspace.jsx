@@ -179,6 +179,7 @@ export default function ExamWorkspace() {
     activeAttempt.sessionId,
     {
       onStudentUnlocked: handleRemoteUnlocked,
+      onAllStudentsUnlocked: handleRemoteUnlocked,
       onStudentDisqualified: handleRemoteDisqualified,
       onAnnouncement: handleReceiveAnnouncement
     }

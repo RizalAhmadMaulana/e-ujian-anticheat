@@ -300,7 +300,7 @@ Ruang ujian harus dibuka terlebih dahulu agar siswa dapat mulai mengerjakan sesu
 
 ---
 
-### 3.6. Menu 5: Ruang Pengawas Real-Time (Live Proctoring & Unlock Siswa)
+### 3.6. Menu 5: Ruang Pengawas Real-Time (Live Proctoring, Buka Kunci Siswa, & Buka Kunci Seluruh Siswa)
 Halaman ini adalah pusat komando guru saat ujian berlangsung untuk mengawasi kejujuran siswa secara langsung via WebSocket.
 
 - **Membuka Menu:** Klik menu **"Live Proctoring"** (`/teacher/proctoring`).
@@ -309,9 +309,17 @@ Halaman ini adalah pusat komando guru saat ujian berlangsung untuk mengawasi kej
   - 🟢 **Kartu Hijau ("Fokus Mengerjakan"):** Siswa sedang tertib mengerjakan ujian dalam mode layar penuh terkunci.
   - 🔴 **Kartu Merah Berkedip ("Layar Terkunci - Pelanggaran"):** Siswa terdeteksi melakukan kecurangan (mencoba berpindah tab, meminimalkan browser, membuka aplikasi lain, keluar fullscreen, atau mencoba screenshot). Layar siswa di HP/laptopnya saat ini **dibekukan total** dengan sirine peringatan darurat.
   - 🔵 **Kartu Biru ("Selesai Terkirim"):** Siswa telah menyelesaikan ujian dan lembar jawaban serta nilai telah tersimpan.
-- **Membuka Kunci Layar Siswa (Unlock):**
+- **Membuka Kunci Layar Siswa (Unlock Satuan):**
   - Jika siswa yang terkunci telah ditegur oleh pengawas, klik tombol hijau **"Buka Kunci Layar"** pada kartu siswa tersebut di layar monitor guru.
   - Seketika itu juga layar siswa akan terbuka kembali secara otomatis tanpa perlu memuat ulang (*refresh*) halaman siswa.
+- **Membuka Kunci Seluruh Siswa Sekaligus (Mass Unlock 1-Klik — FITUR BARU):**
+  - **Fungsi:** Jika terdapat banyak siswa yang layarnya terkunci bersamaan (misalnya akibat kendala notifikasi HP massal, gangguan jaringan sesaat, atau setelah pengawas memberikan arahan bersama ke seluruh kelas), guru **tidak perlu mengklik tombol buka kunci satu per satu**.
+  - **Cara Penggunaan:**
+    1. Klik tombol hijau **"Buka Kunci Seluruh Siswa"** (ikon `Unlock`) di header atas ruang Live Proctoring atau tombol cepat **"Buka Semua Kunci (X)"** di bar filter status.
+    2. Tombol ini secara otomatis mendeteksi dan menampilkan lencana angka jumlah siswa yang sedang terkunci (`Layar Terkunci`).
+    3. Muncul dialog konfirmasi: *"Buka Kunci Seluruh Siswa? Sistem mendeteksi ada X siswa yang layarnya saat ini terkunci."*
+    4. Klik tombol **"Ya, Buka Kunci X Siswa"**.
+    5. Sistem secara instan mengirimkan sinyal pemulihan massal melalui WebSocket Daphne dan REST API. Seluruh layar gawai siswa yang terblokir akan seketika terbuka kembali dan status mereka kembali menjadi 🟢 **Fokus Mengerjakan** dalam mode layar penuh tanpa perlu reload.
 - **Siaran Pengumuman Langsung Pengawas (Live Broadcast Announcement):**
   - Pengawas dapat memberikan ralat soal darurat, klarifikasi opsi, atau pengingat batas waktu ke seluruh peserta ujian tanpa perlu bersuara atau mengganggu konsentrasi ruangan.
   - Klik tombol ungu **"Kirim Siaran Siswa"** (ikon `Megaphone`) di bar toolbar Live Proctoring.

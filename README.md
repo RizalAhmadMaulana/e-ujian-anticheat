@@ -349,7 +349,7 @@ Setelah masuk melalui portal login terpadu (`/login`) menggunakan **NIP** dan ka
 
 ---
 
-### Menu 8: Ruang Pengawas Real-Time (Live Proctoring, Dual Unlock & Live Broadcast Announcement)
+### Menu 8: Ruang Pengawas Real-Time (Live Proctoring, Buka Kunci Seluruh Siswa, Dual Unlock & Live Broadcast Announcement)
 - **Rute:** `/teacher/proctoring`
 - **Fungsi:** Pusat monitoring ujian live via WebSocket tanpa perlu me-refresh browser.
 - **Langkah-langkah:**
@@ -358,10 +358,14 @@ Setelah masuk melalui portal login terpadu (`/login`) menggunakan **NIP** dan ka
      - 🟢 **Fokus Mengerjakan:** Siswa berada dalam mode fullscreen aman.
      - 🔴 **Layar Terkunci (Pelanggaran):** Siswa terdeteksi melanggar sensor anti-cheat (keluar fullscreen, pindah tab, split screen, screenshot, klik kanan, atau copas).
      - 🔵 **Selesai Terkirim:** Siswa telah menyelesaikan pengerjaan.
-  3. **Dual Unlock (Buka Kunci Layar 100% Fleksibel):**
+  3. **Buka Kunci Seluruh Siswa Sekaligus (Mass Unlock 1-Klik — FITUR BARU):**
+     - Terletak di header atas ruang Live Proctoring dan shortcut pada filter status "Layar Terkunci".
+     - Menampilkan lencana angka jumlah siswa yang saat ini terkunci secara dinamis (`Buka Kunci Seluruh Siswa (X)`).
+     - Guru tidak perlu mengklik kartu siswa satu per satu; cukup klik tombol ini dan konfirmasi dialog modal, sistem secara serentak membuka kunci seluruh layar gawai siswa via WebSocket Daphne dan REST API seketika.
+  4. **Dual Unlock Satuan (Buka Kunci Layar 100% Fleksibel):**
      - **Metode 1 (Remote Guru):** Guru mengklik tombol hijau **"Buka Kunci Layar"** pada kartu siswa; sinyal WebSocket dikirim dan layar siswa seketika terbuka kembali ke fullscreen.
      - **Metode 2 (Mandiri Siswa):** Siswa memasukkan **PIN Pengawas Ruangan** yang sah pada formulir layar merah lalu klik **"Buka Kunci"**; layar seketika kembali ke arena ujian dengan masa imunitas sensor 5 detik.
-  4. **Siaran Pengumuman Langsung Pengawas (Live Broadcast Announcement):**
+  5. **Siaran Pengumuman Langsung Pengawas (Live Broadcast Announcement):**
      - Klik tombol ungu **"Kirim Siaran Siswa"** (ikon `Megaphone`).
      - Tentukan tingkat urgensi: `ℹ️ Info Umum`, `⚠️ Peringatan Waktu`, atau `🚨 Ralat Vital`.
      - Tuliskan pesan instruksi atau koreksi nomor soal tertentu, lalu klik **"Kirim ke Seluruh Siswa"**.

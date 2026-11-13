@@ -38,6 +38,14 @@ export const proctoringApi = {
   },
 
   /**
+   * Guru membuka kembali seluruh layar siswa yang terkunci dalam satu sesi secara massal
+   */
+  unlockAllStudents: async (sessionId) => {
+    const response = await axiosInstance.post(`/proctoring/sessions/${sessionId}/unlock-all/`);
+    return response.data;
+  },
+
+  /**
    * Guru mendiskualifikasi siswa dari ruang ujian
    */
   disqualifyStudent: async (attemptId) => {

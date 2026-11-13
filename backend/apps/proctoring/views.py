@@ -126,6 +126,85 @@ class UnlockStudentAPIView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+class UnlockAllStudentsAPIView(APIView):
+    """
+    POST /api/proctoring/sessions/<uuid:session_id>/unlock-all/
+    Guru membuka kembali seluruh layar siswa yang terkunci pada sesi tersebut secara massal
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, session_id):
+        session = get_object_or_404(ExamSession, id=session_id)
+        locked_attempts = StudentAttempt.objects.filter(
+            session=session,
+            status=StudentAttempt.AttemptStatus.LOCKED_VIOLATION
+        ).select_related('student')
+
+        now = timezone.now()
+        unlocked_items = []
+
+        for attempt in locked_attempts:
+            attempt.status = StudentAttempt.AttemptStatus.WORKING
+            attempt.save(update_fields=['status'])
+
+            last_log = attempt.violations.filter(unlocked_by_teacher_at__isnull=True).first()
+            if last_log:
+                last_log.unlocked_by_teacher_at = now
+                last_log.save(update_fields=['unlocked_by_teacher_at'])
+
+            unlocked_items.append({
+                "attempt_id": str(attempt.id),
+                "student_name": attempt.student.full_name or attempt.student.username,
+                "unlocked_at": now.strftime("%H:%M:%S")
+            })
+
+        count = len(unlocked_items)
+
+        # Broadcast event ke WebSocket room agar seluruh tab/client siswa ter-update real-time
+        try:
+            from asgiref.sync import async_to_sync
+            from channels.layers import get_channel_layer
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                # 1. Kirim event individual untuk tiap attempt
+                for item in unlocked_items:
+                    async_to_sync(channel_layer.group_send)(
+                        f"proctoring_{session.id}",
+                        {
+                            "type": "broadcast_message",
+                            "data": {
+                                "event": "STUDENT_UNLOCKED",
+                                "attempt_id": item['attempt_id'],
+                                "student_name": item['student_name'],
+                                "status": "WORKING",
+                                "unlocked_at": item['unlocked_at'],
+                                "message": "Layar ujian telah dibuka kembali oleh Guru Pengawas."
+                            }
+                        }
+                    )
+                # 2. Kirim sinyal massal ALL_STUDENTS_UNLOCKED
+                async_to_sync(channel_layer.group_send)(
+                    f"proctoring_{session.id}",
+                    {
+                        "type": "broadcast_message",
+                        "data": {
+                            "event": "ALL_STUDENTS_UNLOCKED",
+                            "session_id": str(session.id),
+                            "count": count,
+                            "message": f"Seluruh layar siswa yang terkunci ({count} siswa) telah dibuka kembali oleh Guru Pengawas."
+                        }
+                    }
+                )
+        except Exception:
+            pass
+
+        return Response({
+            "success": True,
+            "message": f"Berhasil membuka kunci seluruh siswa ({count} siswa).",
+            "unlocked_count": count
+        }, status=status.HTTP_200_OK)
+
+
 class DisqualifyStudentAPIView(APIView):
     """
     POST /api/proctoring/attempts/<uuid:attempt_id>/disqualify/

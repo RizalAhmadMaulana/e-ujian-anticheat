@@ -70,6 +70,22 @@ export const useProctorSocket = (sessionId, callbacks = {}) => {
               if (onStudentUnlocked) onStudentUnlocked(data);
               break;
 
+            case 'ALL_STUDENTS_UNLOCKED':
+              // Pemulihan massal untuk seluruh siswa yang sedang dalam sesi
+              const storeNow = useExamStore.getState();
+              const isStudentUser = storeNow.currentUser?.role === 'STUDENT';
+              if (isStudentUser && storeNow.activeAttempt?.isLocked) {
+                storeNow.unlockStudent(storeNow.currentUser?.id);
+                if (typeof document !== 'undefined' && document.documentElement.requestFullscreen && !document.fullscreenElement) {
+                  document.documentElement.requestFullscreen().catch(() => {});
+                }
+              }
+
+              if (callbacksRef.current.onAllStudentsUnlocked) {
+                callbacksRef.current.onAllStudentsUnlocked(data);
+              }
+              break;
+
             case 'STUDENT_DISQUALIFIED':
               if (onStudentDisqualified) onStudentDisqualified(data);
               break;
@@ -152,6 +168,11 @@ export const useProctorSocket = (sessionId, callbacks = {}) => {
     });
   }, [sendMessage]);
 
+  // 2b. Perintah Guru Membuka Kunci Seluruh Siswa Sekaligus (Mass Unlock)
+  const sendUnlockAllCommand = useCallback(() => {
+    return sendMessage('UNLOCK_ALL_STUDENTS', {});
+  }, [sendMessage]);
+
   // 3. Perintah Guru Mendiskualifikasi Siswa
   const sendDisqualifyCommand = useCallback((attemptId) => {
     return sendMessage('DISQUALIFY_STUDENT', {
@@ -181,6 +202,7 @@ export const useProctorSocket = (sessionId, callbacks = {}) => {
     lastMessage,
     sendViolationReport,
     sendUnlockCommand,
+    sendUnlockAllCommand,
     sendDisqualifyCommand,
     notifySubmission,
     sendAnnouncement,
@@ -188,6 +210,7 @@ export const useProctorSocket = (sessionId, callbacks = {}) => {
     // Aliases for compatibility
     reportViolation: sendViolationReport,
     unlockStudent: sendUnlockCommand,
+    unlockAllStudents: sendUnlockAllCommand,
     disqualifyStudent: sendDisqualifyCommand
   };
 };

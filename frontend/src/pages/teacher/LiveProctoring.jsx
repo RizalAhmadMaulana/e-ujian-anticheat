@@ -51,6 +51,11 @@ export default function LiveProctoring() {
   const [broadcastHistory, setBroadcastHistory] = useState([]);
   const [broadcastAlertToast, setBroadcastAlertToast] = useState('');
 
+  // State Buka Kunci Seluruh Siswa (Mass Unlock)
+  const [isUnlockAllModalOpen, setIsUnlockAllModalOpen] = useState(false);
+  const [isUnlockingAll, setIsUnlockingAll] = useState(false);
+  const [unlockAllSuccessToast, setUnlockAllSuccessToast] = useState('');
+
   // 1. Ambil daftar sesi ujian dari backend
   useEffect(() => {
     const fetchSessions = async () => {
@@ -145,6 +150,18 @@ export default function LiveProctoring() {
     }));
   }, []);
 
+  const handleAllStudentsUnlocked = useCallback(() => {
+    setLiveStudents(prev => prev.map(student => {
+      if (student.status === 'LOCKED_VIOLATION') {
+        return {
+          ...student,
+          status: 'WORKING'
+        };
+      }
+      return student;
+    }));
+  }, []);
+
   const handleStudentDisqualified = useCallback((payload) => {
     setLiveStudents(prev => prev.map(student => {
       if (student.attemptId === payload.attempt_id) {
@@ -184,11 +201,12 @@ export default function LiveProctoring() {
     );
   }, []);
 
-  const { isConnected, sendUnlockCommand, sendDisqualifyCommand, sendAnnouncement } = useProctorSocket(
+  const { isConnected, sendUnlockCommand, sendUnlockAllCommand, sendDisqualifyCommand, sendAnnouncement } = useProctorSocket(
     selectedSessionId,
     {
       onStudentLocked: handleStudentLocked,
       onStudentUnlocked: handleStudentUnlocked,
+      onAllStudentsUnlocked: handleAllStudentsUnlocked,
       onStudentDisqualified: handleStudentDisqualified,
       onStudentSubmitted: handleStudentSubmitted,
       onNetworkHeartbeat: handleNetworkHeartbeat
@@ -235,6 +253,47 @@ export default function LiveProctoring() {
     // 2. Perbarui Store & State Lokal
     storeUnlockStudent(student.studentId);
     setLiveStudents(prev => prev.map(s => s.studentId === student.studentId ? { ...s, status: 'WORKING' } : s));
+  };
+
+  // Aksi Buka Kunci Seluruh Siswa Sekaligus (Mass Unlock)
+  const handleUnlockAll = async () => {
+    if (!selectedSessionId) return;
+    setIsUnlockingAll(true);
+
+    const targetStudents = (liveStudents.length > 0 ? liveStudents : proctoringStudents);
+    const lockedStudents = targetStudents.filter(s => s.status === 'LOCKED_VIOLATION');
+    const count = lockedStudents.length;
+
+    try {
+      // 1. Panggil WebSocket perintah massal
+      sendUnlockAllCommand();
+
+      // 2. Panggil REST API Backend
+      await proctoringApi.unlockAllStudents(selectedSessionId);
+
+      // 3. Perbarui Store Zustand Lokal
+      lockedStudents.forEach(s => {
+        storeUnlockStudent(s.studentId);
+      });
+
+      // 4. Perbarui State liveStudents Lokal
+      setLiveStudents(prev => prev.map(s => s.status === 'LOCKED_VIOLATION' ? { ...s, status: 'WORKING' } : s));
+
+      setIsUnlockAllModalOpen(false);
+      setUnlockAllSuccessToast(`Berhasil membuka kunci seluruh siswa (${count} siswa)! Layar ujian siswa telah pulih kembali.`);
+      setTimeout(() => setUnlockAllSuccessToast(''), 5000);
+    } catch (err) {
+      console.warn('Unlock all API fallback ke lokal:', err);
+      lockedStudents.forEach(s => {
+        storeUnlockStudent(s.studentId);
+      });
+      setLiveStudents(prev => prev.map(s => s.status === 'LOCKED_VIOLATION' ? { ...s, status: 'WORKING' } : s));
+      setIsUnlockAllModalOpen(false);
+      setUnlockAllSuccessToast(`Layar ${count} siswa berhasil dibuka kembali.`);
+      setTimeout(() => setUnlockAllSuccessToast(''), 5000);
+    } finally {
+      setIsUnlockingAll(false);
+    }
   };
 
   // Aksi Diskualifikasi Siswa
@@ -307,6 +366,33 @@ export default function LiveProctoring() {
             )}
           </div>
 
+          {/* Tombol Buka Kunci Seluruh Siswa */}
+          <button
+            onClick={() => {
+              if (lockedCount === 0) {
+                setBroadcastAlertToast('Saat ini tidak ada siswa yang layarnya terkunci.');
+                setTimeout(() => setBroadcastAlertToast(''), 4000);
+                return;
+              }
+              setIsUnlockAllModalOpen(true);
+            }}
+            disabled={isLoading || isUnlockingAll}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shadow-xs hover:-translate-y-0.5 active:scale-[0.98] ${
+              lockedCount > 0
+                ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/20'
+                : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600 border border-zinc-200'
+            }`}
+            title="Buka kembali layar seluruh siswa yang saat ini terkunci secara serentak"
+          >
+            <Unlock className="w-3.5 h-3.5" />
+            <span>Buka Kunci Seluruh Siswa</span>
+            {lockedCount > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-white text-emerald-800 font-mono font-bold">
+                {lockedCount}
+              </span>
+            )}
+          </button>
+
           {/* Tombol Kirim Siaran ke Siswa */}
           <button
             onClick={() => setIsBroadcastModalOpen(true)}
@@ -327,6 +413,14 @@ export default function LiveProctoring() {
           </button>
         </div>
       </div>
+
+      {/* Toast Sukses Unlock All */}
+      {unlockAllSuccessToast && (
+        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-lg text-xs font-medium flex items-center gap-2 shadow-2xs animate-fadeIn">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>{unlockAllSuccessToast}</span>
+        </div>
+      )}
 
       {/* Toast Sukses Broadcast */}
       {broadcastAlertToast && (
@@ -435,6 +529,17 @@ export default function LiveProctoring() {
               {submittedCount}
             </span>
           </button>
+
+          {lockedCount > 0 && (
+            <button
+              onClick={() => setIsUnlockAllModalOpen(true)}
+              className="ml-auto px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition flex items-center gap-1.5 shadow-2xs shrink-0 active:scale-[0.98]"
+              title="Buka Kunci Seluruh Siswa yang Terkunci"
+            >
+              <Unlock className="w-3.5 h-3.5" />
+              <span>Buka Semua Kunci ({lockedCount})</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -738,6 +843,75 @@ export default function LiveProctoring() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL KONFIRMASI BUKA KUNCI SELURUH SISWA (MASS UNLOCK)   */}
+      {/* ======================================================== */}
+      {isUnlockAllModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn select-none">
+          <div className="bg-white rounded-xl border border-zinc-200/90 max-w-md w-full p-6 shadow-xl space-y-4 relative">
+            <div className="flex items-start gap-3.5">
+              <div className="w-11 h-11 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shrink-0">
+                <Unlock className="w-5 h-5" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-bold text-zinc-900 tracking-tight">
+                  Buka Kunci Seluruh Siswa?
+                </h3>
+                <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                  Sistem mendeteksi ada <strong className="text-rose-600 font-semibold">{lockedCount} siswa</strong> yang layarnya saat ini terkunci akibat penalti keamanan.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsUnlockAllModalOpen(false)}
+                className="p-1 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="bg-zinc-50 border border-zinc-200/80 rounded-lg p-3.5 text-xs text-zinc-600 space-y-2 leading-relaxed">
+              <div className="flex items-center gap-1.5 text-zinc-800 font-semibold">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>Pemulihan Layar Ujian Otomatis</span>
+              </div>
+              <p>
+                Dengan menekan tombol konfirmasi di bawah, sinyal buka kunci akan dikirimkan ke seluruh peramban siswa yang terkunci secara serentak. Layar ujian siswa otomatis kembali aktif dalam mode layar penuh (Fullscreen) tanpa perlu dibuka satu per satu.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-zinc-100">
+              <button
+                type="button"
+                disabled={isUnlockingAll}
+                onClick={() => setIsUnlockAllModalOpen(false)}
+                className="px-3.5 py-2 rounded-lg text-xs font-medium text-zinc-700 hover:bg-zinc-100 transition disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={isUnlockingAll}
+                onClick={handleUnlockAll}
+                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition flex items-center gap-1.5 shadow-2xs hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-50"
+              >
+                {isUnlockingAll ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Membuka Kunci...</span>
+                  </>
+                ) : (
+                  <>
+                    <Unlock className="w-3.5 h-3.5" />
+                    <span>Ya, Buka Kunci {lockedCount} Siswa</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

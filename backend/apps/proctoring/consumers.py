@@ -97,6 +97,39 @@ class ProctoringConsumer(AsyncJsonWebsocketConsumer):
                 )
 
         # ========================================================
+        # 2B. AKSI GURU: BUKA KUNCI SELURUH SISWA (UNLOCK ALL)
+        # ========================================================
+        elif action in ['UNLOCK_ALL_STUDENTS', 'UNLOCK_ALL']:
+            unlocked_list = await self.unlock_all_students_in_db(self.session_id)
+            for item in unlocked_list:
+                await self.channel_layer.group_send(
+                    self.group_name,
+                    {
+                        "type": "broadcast_message",
+                        "data": {
+                            "event": "STUDENT_UNLOCKED",
+                            "attempt_id": str(item['attempt_id']),
+                            "student_name": item['student_name'],
+                            "status": "WORKING",
+                            "unlocked_at": item['unlocked_at'],
+                            "message": "Layar ujian telah dibuka kembali oleh Guru Pengawas."
+                        }
+                    }
+                )
+            await self.channel_layer.group_send(
+                self.group_name,
+                {
+                    "type": "broadcast_message",
+                    "data": {
+                        "event": "ALL_STUDENTS_UNLOCKED",
+                        "session_id": str(self.session_id),
+                        "count": len(unlocked_list),
+                        "message": f"Seluruh layar siswa yang terkunci ({len(unlocked_list)} siswa) telah dibuka kembali oleh Guru Pengawas."
+                    }
+                }
+            )
+
+        # ========================================================
         # 3. AKSI GURU: DISKUALIFIKASI SISWA (FORCE STOP)
         # ========================================================
         elif action == 'DISQUALIFY_STUDENT':
@@ -212,6 +245,31 @@ class ProctoringConsumer(AsyncJsonWebsocketConsumer):
             }
         except StudentAttempt.DoesNotExist:
             return None
+
+    @database_sync_to_async
+    def unlock_all_students_in_db(self, session_id):
+        try:
+            attempts = StudentAttempt.objects.select_related('student').filter(
+                session_id=session_id,
+                status=StudentAttempt.AttemptStatus.LOCKED_VIOLATION
+            )
+            now = timezone.now()
+            unlocked = []
+            for attempt in attempts:
+                attempt.status = StudentAttempt.AttemptStatus.WORKING
+                attempt.save(update_fields=['status'])
+                last_log = attempt.violations.filter(unlocked_by_teacher_at__isnull=True).first()
+                if last_log:
+                    last_log.unlocked_by_teacher_at = now
+                    last_log.save(update_fields=['unlocked_by_teacher_at'])
+                unlocked.append({
+                    "attempt_id": str(attempt.id),
+                    "student_name": attempt.student.full_name or attempt.student.username,
+                    "unlocked_at": now.strftime("%H:%M:%S")
+                })
+            return unlocked
+        except Exception:
+            return []
 
     @database_sync_to_async
     def disqualify_student_in_db(self, attempt_id):
