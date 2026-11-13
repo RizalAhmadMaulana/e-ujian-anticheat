@@ -23,6 +23,9 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
   const prevIsLockedRef = useRef(activeAttempt.isLocked);
   const consecutiveBlurChecksRef = useRef(0);
   const edgeSwipeCandidateRef = useRef(null);
+  const longPressTimerRef = useRef(null);
+  const longPressTouchPosRef = useRef(null);
+  const mouseDragStartPosRef = useRef(null);
 
   useEffect(() => {
     isSubmittedRef.current = Boolean(activeAttempt.examSubmittedAt);
@@ -35,6 +38,12 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       gracePeriodUntilRef.current = Date.now() + 5000;
       consecutiveBlurChecksRef.current = 0;
       edgeSwipeCandidateRef.current = null;
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+      longPressTouchPosRef.current = null;
+      mouseDragStartPosRef.current = null;
       try {
         document.documentElement.style.filter = '';
         document.body.style.backgroundColor = '';
@@ -188,7 +197,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     };
 
     // ========================================================
-    // SENSOR 4: MOBILE (HP) - DETEKSI SCREENSHOT GESTURE 3 JARI & SMART SIDEBAR SWIPE
+    // SENSOR 4: MOBILE (HP) - DETEKSI SCREENSHOT GESTURE 3 JARI, SMART SIDEBAR SWIPE, & ANTI-BLOCK TEKS (LONG-PRESS)
     // ========================================================
     const handleTouchStart = (e) => {
       if (isSubmittedRef.current || isLockedRef.current) return;
@@ -222,6 +231,29 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         } else {
           edgeSwipeCandidateRef.current = null;
         }
+
+        // 3. Pencegahan & Deteksi Long-Press untuk Mem-Block / Menyeleksi Teks Soal di HP
+        // Di smartphone, menyeleksi teks hanya dapat dilakukan dengan menahan sentuhan (long-press).
+        // Ambang batas long-press Android adalah 400-500ms.
+        // Dengan timer 320ms, sistem mencegat dan membatalkan seleksi SEBELUM Android memicu seleksi teks dan Google Touch to Search / Pintasan AI!
+        longPressTouchPosRef.current = { x: touch.clientX, y: touch.clientY };
+        if (longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current);
+        }
+        longPressTimerRef.current = setTimeout(() => {
+          if (isSubmittedRef.current || isLockedRef.current) return;
+          if (Date.now() < gracePeriodUntilRef.current) return;
+
+          // Hapus seleksi teks seketika dari peramban
+          try {
+            window.getSelection()?.removeAllRanges();
+          } catch (_) {}
+
+          handleViolation(
+            'TEXT_SELECTION_ATTEMPT',
+            'Siswa terdeteksi mencoba menahan sentuhan untuk mem-block / menyeleksi teks soal ujian di HP'
+          );
+        }, 320);
       }
     };
 
@@ -258,6 +290,100 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
           );
           return false;
         }
+      }
+
+      // 3. Jika jari bergerak > 8px (scrolling lembar soal wajar), batalkan timer long-press
+      if (longPressTouchPosRef.current && e.touches && e.touches.length === 1) {
+        const touch = e.touches[0];
+        const dist = Math.hypot(
+          touch.clientX - longPressTouchPosRef.current.x,
+          touch.clientY - longPressTouchPosRef.current.y
+        );
+        if (dist > 8) {
+          if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+          }
+        }
+      }
+    };
+
+    const handleTouchEnd = () => {
+      edgeSwipeCandidateRef.current = null;
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+    };
+
+    // ========================================================
+    // SENSOR ANTI-DRAG & SELEKSI TEKS MOUSE DI LAPTOP / DESKTOP
+    // ========================================================
+    const handleMouseDown = (e) => {
+      if (isSubmittedRef.current || isLockedRef.current) return;
+      if (Date.now() < gracePeriodUntilRef.current) return;
+
+      // Izinkan pada input teks jawaban sah
+      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+        return;
+      }
+
+      if (e.button === 0) { // Tombol klik kiri
+        mouseDragStartPosRef.current = { x: e.clientX, y: e.clientY };
+      }
+    };
+
+    const handleMouseMove = (e) => {
+      if (!mouseDragStartPosRef.current) return;
+      if (isSubmittedRef.current || isLockedRef.current) return;
+      if (Date.now() < gracePeriodUntilRef.current) return;
+
+      // Jika tombol kiri ditekan sambil menyeret kursor (e.buttons === 1)
+      if (e.buttons === 1) {
+        const dist = Math.hypot(
+          e.clientX - mouseDragStartPosRef.current.x,
+          e.clientY - mouseDragStartPosRef.current.y
+        );
+        if (dist > 14) { // Menyeret kursor lebih dari 14px untuk mem-block teks soal
+          mouseDragStartPosRef.current = null;
+          try {
+            window.getSelection()?.removeAllRanges();
+          } catch (_) {}
+          handleViolation(
+            'TEXT_SELECTION_ATTEMPT',
+            'Siswa terdeteksi mencoba menyeret kursor untuk mem-block / menyeleksi teks soal ujian di Laptop'
+          );
+        }
+      } else {
+        mouseDragStartPosRef.current = null;
+      }
+    };
+
+    const handleMouseUp = () => {
+      mouseDragStartPosRef.current = null;
+    };
+
+    // ========================================================
+    // SENSOR GLOBAL: SELECTION CHANGE (ANTI-BLOCK TEKS MUTLAK)
+    // ========================================================
+    const handleSelectionChange = () => {
+      if (isSubmittedRef.current || isLockedRef.current) return;
+      if (Date.now() < gracePeriodUntilRef.current) return;
+
+      const sel = window.getSelection();
+      if (sel && sel.toString().trim().length > 0) {
+        const activeEl = document.activeElement;
+        // Izinkan seleksi jika berada di dalam input jawaban yang sah
+        if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+          return;
+        }
+        try {
+          sel.removeAllRanges();
+        } catch (_) {}
+        handleViolation(
+          'TEXT_SELECTION_ATTEMPT',
+          'Siswa terdeteksi mencoba mem-block / menyeleksi teks lembar soal ujian'
+        );
       }
     };
 
@@ -369,6 +495,13 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         return true;
       }
       e.preventDefault();
+      try {
+        window.getSelection()?.removeAllRanges();
+      } catch (_) {}
+      handleViolation(
+        'TEXT_SELECTION_ATTEMPT',
+        'Siswa terdeteksi mencoba mem-block / menyeleksi teks soal ujian'
+      );
       return false;
     };
 
@@ -680,8 +813,19 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     document.addEventListener('touchstart', handleTouchStart, { capture: true, passive: false });
     window.addEventListener('touchmove', handleTouchMove, { capture: true, passive: false });
     document.addEventListener('touchmove', handleTouchMove, { capture: true, passive: false });
+    window.addEventListener('touchend', handleTouchEnd, { capture: true, passive: true });
+    document.addEventListener('touchend', handleTouchEnd, { capture: true, passive: true });
+    window.addEventListener('touchcancel', handleTouchEnd, { capture: true, passive: true });
+    document.addEventListener('touchcancel', handleTouchEnd, { capture: true, passive: true });
 
-    // Mouse & context menu events
+    // Mouse & context menu events (termasuk deteksi drag-selection teks pada desktop)
+    window.addEventListener('mousedown', handleMouseDown, true);
+    document.addEventListener('mousedown', handleMouseDown, true);
+    window.addEventListener('mousemove', handleMouseMove, true);
+    document.addEventListener('mousemove', handleMouseMove, true);
+    window.addEventListener('mouseup', handleMouseUp, true);
+    document.addEventListener('mouseup', handleMouseUp, true);
+
     window.addEventListener('contextmenu', handleContextMenu, true);
     document.addEventListener('contextmenu', handleContextMenu, true);
     window.addEventListener('auxclick', handleAuxClick, true);
@@ -697,6 +841,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
 
     // Selection & Drag events
     document.addEventListener('selectstart', handleSelectStart, true);
+    document.addEventListener('selectionchange', handleSelectionChange, true);
     window.addEventListener('dragstart', handleDragStart, true);
     document.addEventListener('dragstart', handleDragStart, true);
     window.addEventListener('dragover', handleDrop, true);
@@ -730,6 +875,17 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       document.removeEventListener('touchstart', handleTouchStart, { capture: true });
       window.removeEventListener('touchmove', handleTouchMove, { capture: true });
       document.removeEventListener('touchmove', handleTouchMove, { capture: true });
+      window.removeEventListener('touchend', handleTouchEnd, { capture: true });
+      document.removeEventListener('touchend', handleTouchEnd, { capture: true });
+      window.removeEventListener('touchcancel', handleTouchEnd, { capture: true });
+      document.removeEventListener('touchcancel', handleTouchEnd, { capture: true });
+
+      window.removeEventListener('mousedown', handleMouseDown, true);
+      document.removeEventListener('mousedown', handleMouseDown, true);
+      window.removeEventListener('mousemove', handleMouseMove, true);
+      document.removeEventListener('mousemove', handleMouseMove, true);
+      window.removeEventListener('mouseup', handleMouseUp, true);
+      document.removeEventListener('mouseup', handleMouseUp, true);
 
       window.removeEventListener('contextmenu', handleContextMenu, true);
       document.removeEventListener('contextmenu', handleContextMenu, true);
@@ -744,6 +900,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       document.removeEventListener('cut', handleCut, true);
 
       document.removeEventListener('selectstart', handleSelectStart, true);
+      document.removeEventListener('selectionchange', handleSelectionChange, true);
       window.removeEventListener('dragstart', handleDragStart, true);
       document.removeEventListener('dragstart', handleDragStart, true);
       window.removeEventListener('dragover', handleDrop, true);

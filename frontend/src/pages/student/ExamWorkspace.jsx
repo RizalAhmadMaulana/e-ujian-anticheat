@@ -57,7 +57,6 @@ export default function ExamWorkspace() {
   const [supervisorUnlockPin, setSupervisorUnlockPin] = useState('');
   const [unlockError, setUnlockError] = useState('');
   const [activeAnnouncement, setActiveAnnouncement] = useState(null); // { message, urgency, senderName, timestamp }
-  const [pendingFullscreenResume, setPendingFullscreenResume] = useState(false);
   const [isFullscreenActive, setIsFullscreenActive] = useState(true);
 
   // Formatter Jenis Pelanggaran Human-Readable
@@ -181,9 +180,6 @@ export default function ExamWorkspace() {
         document.msFullscreenElement
       );
       setIsFullscreenActive(isFull);
-      if (isFull) {
-        setPendingFullscreenResume(false);
-      }
     };
 
     updateFullscreenState();
@@ -237,10 +233,8 @@ export default function ExamWorkspace() {
   const handleRemoteUnlocked = useCallback((payload) => {
     if (!activeAttempt.attemptId || payload.attempt_id === activeAttempt.attemptId) {
       unlockStudent(currentUser?.id || 's-001');
-      // Karena dibuka jarak jauh oleh guru (tanpa gesture siswa), peramban memerlukan 1 sentuhan aktivasi
-      // Tampilkan dialog resume fullscreen agar siswa langsung kembali ke mode fullscreen resmi
-      setPendingFullscreenResume(true);
-      setUnlockSuccessToast('Layar berhasil dibuka kembali oleh Guru Pengawas!');
+      handleReEnterFullscreen().catch(() => {});
+      setUnlockSuccessToast('Layar berhasil dibuka kembali oleh Guru Pengawas! Silakan lanjutkan pengerjaan soal.');
       setTimeout(() => setUnlockSuccessToast(''), 5000);
     }
   }, [activeAttempt.attemptId, currentUser, unlockStudent]);
@@ -298,8 +292,8 @@ export default function ExamWorkspace() {
         const res = await proctoringApi.getAttemptStatus(activeAttempt.attemptId);
         if (res && res.status === 'WORKING') {
           unlockStudent(currentUser?.id || 's-001');
-          setPendingFullscreenResume(true);
-          setUnlockSuccessToast('Layar berhasil dibuka kembali oleh Guru Pengawas!');
+          handleReEnterFullscreen().catch(() => {});
+          setUnlockSuccessToast('Layar berhasil dibuka kembali oleh Guru Pengawas! Silakan lanjutkan pengerjaan soal.');
           setTimeout(() => setUnlockSuccessToast(''), 5000);
         }
       } catch (err) {
@@ -480,21 +474,7 @@ export default function ExamWorkspace() {
       // 3. Masuk Fullscreen seketika dalam konteks user-click gesture
       await handleReEnterFullscreen();
 
-      // 4. Verifikasi status fullscreen setelah jeda render singkat
-      // Jika browser mobile belum mengaktifkan fullscreen, tampilkan modal 1-tap agar PASTI fullscreen
-      setTimeout(() => {
-        const isFull = Boolean(
-          document.fullscreenElement ||
-          document.webkitFullscreenElement ||
-          document.mozFullScreenElement ||
-          document.msFullscreenElement
-        );
-        if (!isFull) {
-          setPendingFullscreenResume(true);
-        }
-      }, 300);
-
-      // 5. Tampilkan toast non-blocking
+      // 4. Tampilkan toast non-blocking
       setUnlockSuccessToast('Layar berhasil dibuka kembali! Selamat mengerjakan.');
       setTimeout(() => setUnlockSuccessToast(''), 5000);
 
@@ -821,10 +801,23 @@ export default function ExamWorkspace() {
           /* ========================================== */
           <div 
             className="flex-1 w-full h-full relative bg-white select-none"
+            style={{
+              WebkitUserSelect: 'none',
+              userSelect: 'none',
+              WebkitTouchCallout: 'none'
+            }}
             onContextMenu={(e) => {
               e.preventDefault();
               handleSecurityViolation('CONTEXT_MENU_ATTEMPT', 'Siswa mencoba membuka menu klik kanan (Context Menu) pada lembar ujian');
               triggerViolationLock('CONTEXT_MENU_ATTEMPT', 'Siswa mencoba membuka menu klik kanan (Context Menu) pada lembar ujian');
+            }}
+            onCopy={(e) => {
+              e.preventDefault();
+              triggerViolationLock('COPY_ATTEMPT', 'Siswa terdeteksi mencoba menyalin konten lembar ujian');
+            }}
+            onCut={(e) => {
+              e.preventDefault();
+              triggerViolationLock('CUT_ATTEMPT', 'Siswa terdeteksi mencoba memotong konten lembar ujian');
             }}
           >
             <iframe
@@ -832,6 +825,11 @@ export default function ExamWorkspace() {
               src={selectedPackage.externalUrl}
               title="Lembar Ujian Eksternal Google Form"
               className="w-full h-full border-0 absolute inset-0 select-none"
+              style={{
+                WebkitUserSelect: 'none',
+                userSelect: 'none',
+                WebkitTouchCallout: 'none'
+              }}
               allow="fullscreen"
             />
           </div>
@@ -839,7 +837,7 @@ export default function ExamWorkspace() {
           /* ========================================== */
           /* MODE SOAL MANDIRI (NATIVE QUESTIONS)       */
           /* ========================================== */
-          <div className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 flex flex-col md:flex-row gap-4 overflow-y-auto z-10">
+          <div className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 flex flex-col md:flex-row gap-4 overflow-y-auto z-10 select-none">
             {/* Panel Kiri: Lembar Soal Aktif */}
             <div className="flex-1 bg-zinc-900/80 border border-zinc-800 rounded-xl p-5 sm:p-6 flex flex-col justify-between space-y-5">
               {currentQuestion ? (
@@ -884,7 +882,7 @@ export default function ExamWorkspace() {
                   </div>
 
                   {/* Teks Pertanyaan Soal (Dukungan Tipografi Rumus Matematika KaTeX) */}
-                  <div className="text-sm sm:text-base text-zinc-100 font-medium leading-relaxed">
+                  <div className="text-sm sm:text-base text-zinc-100 font-medium leading-relaxed select-none">
                     <MathText text={currentQuestion.questionText || currentQuestion.question_text || ''} />
                   </div>
 
@@ -1246,40 +1244,6 @@ export default function ExamWorkspace() {
           </div>
         )}
       </main>
-
-      {/* ======================================================== */}
-      {/* MODAL AKTIVASI FULLSCREEN SETELAH BUKA KUNCI            */}
-      {/* Menjamin masuk fullscreen dengan 1 sentuhan aktivasi sah */}
-      {/* ======================================================== */}
-      {pendingFullscreenResume && !activeAttempt.isLocked && (
-        <div className="fixed inset-0 z-[10000] bg-[#090D16]/95 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 text-center select-none animate-fade-in">
-          <div className="max-w-md w-full bg-zinc-900 border border-emerald-500/50 rounded-2xl p-6 sm:p-7 shadow-2xl space-y-4">
-            <div className="w-16 h-16 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 mx-auto animate-pulse">
-              <CheckCircle className="w-9 h-9" />
-            </div>
-
-            <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight">
-              Akses Ujian Berhasil Dibuka!
-            </h3>
-
-            <p className="text-xs text-zinc-300 leading-relaxed font-normal">
-              Kunci ujian Anda telah dibuka oleh Pengawas. Silakan sentuh tombol di bawah untuk mengunci kembali layar penuh (Fullscreen) dan melanjutkan pengerjaan soal.
-            </p>
-
-            <button
-              type="button"
-              onClick={async () => {
-                await handleReEnterFullscreen();
-                setPendingFullscreenResume(false);
-              }}
-              className="w-full py-3.5 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-bold text-xs sm:text-sm shadow-lg flex items-center justify-center gap-2 transition"
-            >
-              <Maximize2 className="w-4 h-4" />
-              <span>Kunci Layar Penuh & Lanjutkan Ujian</span>
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* ======================================================== */}
       {/* MODAL KONFIRMASI SELESAI & KELUAR UJIAN                  */}
