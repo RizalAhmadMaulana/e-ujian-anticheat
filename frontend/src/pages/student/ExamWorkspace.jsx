@@ -800,7 +800,7 @@ export default function ExamWorkspace() {
           /* MODE IFRAME SECURE: GOOGLE FORM / MS TEAMS */
           /* ========================================== */
           <div 
-            className="flex-1 w-full h-full relative bg-white select-none"
+            className="flex-1 w-full h-full relative bg-white select-none flex flex-col"
             style={{
               WebkitUserSelect: 'none',
               userSelect: 'none',
@@ -820,18 +820,32 @@ export default function ExamWorkspace() {
               triggerViolationLock('CUT_ATTEMPT', 'Siswa terdeteksi mencoba memotong konten lembar ujian');
             }}
           >
-            <iframe
-              key={iframeKey}
-              src={selectedPackage.externalUrl}
-              title="Lembar Ujian Eksternal Google Form"
-              className="w-full h-full border-0 absolute inset-0 select-none"
-              style={{
-                WebkitUserSelect: 'none',
-                userSelect: 'none',
-                WebkitTouchCallout: 'none'
-              }}
-              allow="fullscreen"
-            />
+            {/* Security Notice Bar for External Forms */}
+            <div className="bg-amber-950/90 border-b border-amber-800/80 px-3 py-1.5 flex items-center justify-between text-[11px] text-amber-200 shrink-0 z-10 shadow-xs">
+              <div className="flex items-center gap-1.5 truncate">
+                <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span className="font-semibold text-amber-300">Protokol Keamanan Lembar Eksternal:</span>
+                <span className="text-amber-200/90 truncate">Dilarang memicu pintasan AI peramban (Gemini / Google Search) atau aplikasi luar. Layar akan otomatis terkunci seketika.</span>
+              </div>
+              <span className="text-[10px] px-2 py-0.5 rounded bg-amber-900/60 border border-amber-700/60 font-mono text-amber-300 shrink-0 ml-2">
+                Zero-Tolerance ON
+              </span>
+            </div>
+
+            <div className="flex-1 w-full relative">
+              <iframe
+                key={iframeKey}
+                src={selectedPackage.externalUrl}
+                title="Lembar Ujian Eksternal Google Form"
+                className="w-full h-full border-0 absolute inset-0 select-none"
+                style={{
+                  WebkitUserSelect: 'none',
+                  userSelect: 'none',
+                  WebkitTouchCallout: 'none'
+                }}
+                allow="fullscreen"
+              />
+            </div>
           </div>
         ) : (
           /* ========================================== */

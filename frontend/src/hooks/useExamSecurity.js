@@ -182,7 +182,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
               : 'Siswa terdeteksi berpindah tab peramban atau meminimalkan browser ujian'
           );
         }
-      }, 700);
+      }, 300);
     };
 
     const handleWindowFocus = () => {
@@ -253,7 +253,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
             'TEXT_SELECTION_ATTEMPT',
             'Siswa terdeteksi mencoba menahan sentuhan untuk mem-block / menyeleksi teks soal ujian di HP'
           );
-        }, 320);
+        }, 250);
       }
     };
 
@@ -344,7 +344,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
           e.clientX - mouseDragStartPosRef.current.x,
           e.clientY - mouseDragStartPosRef.current.y
         );
-        if (dist > 14) { // Menyeret kursor lebih dari 14px untuk mem-block teks soal
+        if (dist > 8) { // Menyeret kursor lebih dari 8px untuk mem-block teks soal
           mouseDragStartPosRef.current = null;
           try {
             window.getSelection()?.removeAllRanges();
