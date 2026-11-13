@@ -490,15 +490,6 @@ export const useExamStore = create((set, get) => ({
     clearActiveAttemptStorage();
     set({ activeAttempt: getInitialActiveAttempt() });
   },
-          isLocked: false,
-          examSubmittedAt: now,
-        },
-        proctoringStudents: updatedProctoring,
-      };
-    });
-
-    return { success: true };
-  },
 
   verifyExitPassword: (_inputPassword) => {
     // Kompatibilitas mundur: keluar langsung tanpa memerlukan kata sandi
