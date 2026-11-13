@@ -105,8 +105,8 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
 
       if (document.visibilityState === 'hidden' || document.hidden) {
         if (isSubmittedRef.current || isLockedRef.current) return;
-        if (Date.now() < gracePeriodUntilRef.current) return;
 
+        // Seketika kunci saat browser keluar / hidden agar saat siswa kembali, layar kunci sudah siap & tampil
         handleViolation(
           isMobileDevice() ? 'APP_SWITCH' : 'TAB_SWITCH',
           isMobileDevice()
@@ -118,24 +118,25 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
 
     // ========================================================
     // SENSOR 3: ANTI-APP SWITCH & LOSS OF FOCUS (window.onblur / onfocus)
-    // Diberi toleransi terukur (1000ms) agar aman terhadap sentuhan iframe Google/Office Form
+    // Diberi toleransi terukur agar aman terhadap sentuhan iframe Google/Office Form
     // ========================================================
     let blurTimeout = null;
     const handleWindowBlur = () => {
       if (blurTimeout) clearTimeout(blurTimeout);
       blurTimeout = setTimeout(() => {
         if (isSubmittedRef.current || isLockedRef.current) return;
-        if (Date.now() < gracePeriodUntilRef.current) return;
 
-        // Periksa jika fokus berada di dalam iframe internal (Google Form / MS Forms)
-        const activeEl = document.activeElement;
-        const isFocusInsideIframe = activeEl && (activeEl.tagName === 'IFRAME' || activeEl.closest('iframe'));
-        if (isFocusInsideIframe) {
-          return;
+        // Jika tab masih terlihat (visible), periksa jika fokus berpindah ke iframe internal
+        if (document.visibilityState === 'visible') {
+          const activeEl = document.activeElement;
+          const isFocusInsideIframe = activeEl && (activeEl.tagName === 'IFRAME' || activeEl.closest('iframe'));
+          if (isFocusInsideIframe) {
+            return;
+          }
         }
 
         // Jika dokumen benar-benar kehilangan fokus dari sistem operasi
-        if (!document.hasFocus() || document.visibilityState === 'hidden') {
+        if (document.visibilityState === 'hidden' || !document.hasFocus()) {
           handleViolation(
             'APP_SWITCH',
             isMobileDevice()
@@ -519,21 +520,23 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       if (isSubmittedRef.current || isLockedRef.current) return;
       if (Date.now() < gracePeriodUntilRef.current) return;
 
-      // Deteksi pembukaan DevTools via resize threshold saat layar penuh
-      const isFullscreen = Boolean(
-        document.fullscreenElement ||
-        document.webkitFullscreenElement ||
-        document.mozFullScreenElement ||
-        document.msFullscreenElement
-      );
-      if (isFullscreen) {
-        const widthDiff = window.outerWidth - window.innerWidth;
-        const heightDiff = window.outerHeight - window.innerHeight;
-        if (widthDiff > 160 || heightDiff > 160) {
-          handleViolation(
-            'DEVTOOLS_ATTEMPT',
-            'Siswa terdeteksi membuka panel samping Developer Tools / Inspect Element'
-          );
+      // Deteksi pembukaan DevTools via resize threshold saat layar penuh (Hanya Desktop, abaikan di HP karena virtual keyboard)
+      if (!isMobileDevice()) {
+        const isFullscreen = Boolean(
+          document.fullscreenElement ||
+          document.webkitFullscreenElement ||
+          document.mozFullScreenElement ||
+          document.msFullscreenElement
+        );
+        if (isFullscreen) {
+          const widthDiff = window.outerWidth - window.innerWidth;
+          const heightDiff = window.outerHeight - window.innerHeight;
+          if (widthDiff > 160 || heightDiff > 160) {
+            handleViolation(
+              'DEVTOOLS_ATTEMPT',
+              'Siswa terdeteksi membuka panel samping Developer Tools / Inspect Element'
+            );
+          }
         }
       }
     }, 500);

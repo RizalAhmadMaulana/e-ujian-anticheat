@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useExamStore } from '../../store/useExamStore';
 import { useExamSecurity } from '../../hooks/useExamSecurity';
@@ -93,7 +92,9 @@ export default function ExamWorkspace() {
     return true;
   };
 
-  const selectedPackage = activeAttempt.selectedPackage;
+  const selectedPackage = activeAttempt.selectedPackage || 
+    (useExamStore.getState().examPackages || []).find((p) => p.id === activeAttempt.packageId) || 
+    useExamStore.getState().examPackages?.[0];
 
   // 0. Enforce Orientasi Layar (PORTRAIT / LANDSCAPE) saat komponen dimuat
   useEffect(() => {
@@ -143,10 +144,11 @@ export default function ExamWorkspace() {
 
       // Jika benar-benar tidak ada sesi aktif, arahkan kembali dengan aman ke portal mata pelajaran
       const fallbackTimer = setTimeout(() => {
-        if (!useExamStore.getState().activeAttempt.selectedPackage) {
+        const currentAttempt = useExamStore.getState().activeAttempt;
+        if (!currentAttempt.selectedPackage && !currentAttempt.sessionId) {
           navigate('/student/subjects');
         }
-      }, 800);
+      }, 2500);
       return () => clearTimeout(fallbackTimer);
     }
   }, [activeAttempt.selectedPackage, activeAttempt.sessionId, navigate]);
@@ -638,94 +640,102 @@ export default function ExamWorkspace() {
 
       {/* ======================================================== */}
       {/* 2. LAYAR PEMBEKUAN MERAH (PENALTY FREEZE OVERLAY) */}
-      {/* Di-render via React Portal langsung ke document.body */}
-      {/* Menjamin 100% selalu di atas iframe dan bebas blank hitam */}
+      {/* Di-render langsung in-DOM sebagai fixed overlay z-[9999] */}
+      {/* 100% kebal bug GPU compositor & selalu tampil tajam di HP */}
       {/* ======================================================== */}
-      {activeAttempt.isLocked && createPortal(
-        <div className="fixed inset-0 z-[999999] bg-[#090D16] flex flex-col items-center justify-center p-4 sm:p-6 text-center animate-fade-in overflow-y-auto select-none">
-          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-rose-600/20 border border-rose-500/40 flex items-center justify-center text-rose-400 mb-3 sm:mb-4 animate-pulse shrink-0">
-            <ShieldAlert className="w-8 h-8 sm:w-9 sm:h-9" />
-          </div>
-
-          <h2 className="text-lg sm:text-2xl font-bold text-white tracking-tight mb-2 uppercase">
-            AKSES UJIAN DIBEKUKAN (TERKUNCI)!
-          </h2>
-
-          <p className="text-rose-200/90 text-xs sm:text-sm max-w-md mb-4 sm:mb-6 leading-relaxed font-normal">
-            Sistem mendeteksi Anda mencoba keluar dari halaman ujian, berpindah tab, meminimalkan jendela, atau membuka aplikasi lain. 
-            <strong className="text-white font-semibold"> Kejadian ini telah tercatat di E-Jurnal Guru beserta jam dan detiknya.</strong>
-          </p>
-
-          {/* Rincian Pelanggaran Terdeteksi */}
-          <div className="bg-zinc-900/90 border border-rose-500/40 rounded-xl p-3.5 sm:p-4 max-w-md w-full text-xs text-left text-zinc-200 mb-4 sm:mb-5 space-y-2">
-            <div className="font-semibold text-rose-300 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-              <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
-              <span>Log Pelanggaran Sistem Terkini:</span>
-            </div>
-            <div>• Jenis Pelanggaran: <strong className="font-semibold text-white bg-rose-950/80 px-2 py-0.5 rounded border border-rose-500/30">{formatViolationType(activeAttempt.violationLogs?.[0]?.violationType || activeAttempt.violationLogs?.[0]?.type || 'APP_SWITCH')}</strong></div>
-            <div>• Keterangan Sensor: <em className="text-zinc-300 font-normal">{activeAttempt.violationLogs?.[0]?.description || 'Pelanggaran keamanan terdeteksi sistem.'}</em></div>
-            <div>• Waktu Terdeteksi: <strong className="font-mono text-zinc-100">{activeAttempt.violationLogs?.[0]?.detectedAt || 'Baru Saja'}</strong></div>
-            <div>• Total Akumulasi: <strong className="text-amber-300 font-semibold">{activeAttempt.violationCount || 1} kali pelanggaran</strong></div>
-          </div>
-
-          {/* Form Pembukaan Kunci Pengawas (Bebas dari Google Password Manager Popup) */}
-          <div className="max-w-md w-full bg-zinc-900/90 border border-zinc-800 p-4 rounded-xl space-y-3 mb-4">
-            <div className="text-xs text-zinc-300 font-medium">
-              Minta Guru Pengawas untuk membuka kunci melalui menu Live Proctoring, atau masukkan PIN Pengawas di bawah ini:
+      {activeAttempt.isLocked && (
+        <div className="fixed inset-0 z-[9999] bg-[#090D16] flex flex-col items-center justify-center p-4 sm:p-6 text-center select-none overflow-y-auto">
+          <div className="max-w-md w-full my-auto flex flex-col items-center space-y-3.5 sm:space-y-4">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-rose-600/20 border border-rose-500/40 flex items-center justify-center text-rose-400 animate-pulse shrink-0">
+              <ShieldAlert className="w-8 h-8 sm:w-9 sm:h-9" />
             </div>
 
-            <div className="flex gap-2">
-              <input
-                type="text"
-                readOnly
-                onFocus={(e) => e.target.removeAttribute('readonly')}
-                autoComplete="one-time-code"
-                autoCorrect="off"
-                autoCapitalize="characters"
-                spellCheck="false"
-                role="presentation"
-                data-lpignore="true"
-                data-form-type="other"
-                value={supervisorUnlockPin}
-                onChange={(e) => setSupervisorUnlockPin(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleSupervisorLocalUnlock(e);
-                  }
-                }}
-                placeholder="PIN Pengawas Ruangan"
-                style={{
-                  WebkitTextSecurity: 'disc',
-                  textSecurity: 'disc'
-                }}
-                className="flex-1 px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 font-mono text-center uppercase tracking-widest"
-              />
-              <button
-                type="button"
-                onClick={handleSupervisorLocalUnlock}
-                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shadow-2xs shrink-0 active:scale-[0.98]"
-              >
-                <Unlock className="w-3.5 h-3.5" /> Buka Kunci
-              </button>
-            </div>
-            {unlockError && <div className="text-[11px] text-rose-400 font-medium">{unlockError}</div>}
-          </div>
+            <h2 className="text-lg sm:text-2xl font-bold text-white tracking-tight uppercase">
+              AKSES UJIAN DIBEKUKAN (TERKUNCI)!
+            </h2>
 
-          <button
-            onClick={handleReEnterFullscreen}
-            className="px-5 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium border border-zinc-700 transition flex items-center gap-2 active:scale-[0.98]"
-          >
-            <Maximize2 className="w-3.5 h-3.5" /> Masuk Kembali ke Fullscreen
-          </button>
-        </div>,
-        document.body
+            <p className="text-rose-200/90 text-xs sm:text-sm leading-relaxed font-normal">
+              Sistem mendeteksi Anda mencoba keluar dari halaman ujian, berpindah tab, meminimalkan jendela, atau membuka aplikasi lain. 
+              <strong className="text-white font-semibold"> Kejadian ini telah tercatat di E-Jurnal Guru beserta jam dan detiknya.</strong>
+            </p>
+
+            {/* Rincian Pelanggaran Terdeteksi */}
+            <div className="bg-zinc-900 border border-rose-500/40 rounded-xl p-3.5 sm:p-4 w-full text-xs text-left text-zinc-200 space-y-2">
+              <div className="font-semibold text-rose-300 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+                <span>Log Pelanggaran Sistem Terkini:</span>
+              </div>
+              <div>• Jenis Pelanggaran: <strong className="font-semibold text-white bg-rose-950/80 px-2 py-0.5 rounded border border-rose-500/30">{formatViolationType(activeAttempt.violationLogs?.[0]?.violationType || activeAttempt.violationLogs?.[0]?.type || 'APP_SWITCH')}</strong></div>
+              <div>• Keterangan Sensor: <em className="text-zinc-300 font-normal">{activeAttempt.violationLogs?.[0]?.description || 'Pelanggaran keamanan terdeteksi sistem.'}</em></div>
+              <div>• Waktu Terdeteksi: <strong className="font-mono text-zinc-100">{activeAttempt.violationLogs?.[0]?.detectedAt || 'Baru Saja'}</strong></div>
+              <div>• Total Akumulasi: <strong className="text-amber-300 font-semibold">{activeAttempt.violationCount || 1} kali pelanggaran</strong></div>
+            </div>
+
+            {/* Form Pembukaan Kunci Pengawas (Bebas dari Google Password Manager Popup) */}
+            <div className="w-full bg-zinc-900 border border-zinc-800 p-4 rounded-xl space-y-3">
+              <div className="text-xs text-zinc-300 font-medium">
+                Minta Guru Pengawas untuk membuka kunci melalui menu Live Proctoring, atau masukkan PIN Pengawas di bawah ini:
+              </div>
+
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  onFocus={(e) => e.target.removeAttribute('readonly')}
+                  autoComplete="one-time-code"
+                  autoCorrect="off"
+                  autoCapitalize="characters"
+                  spellCheck="false"
+                  role="presentation"
+                  data-lpignore="true"
+                  data-form-type="other"
+                  value={supervisorUnlockPin}
+                  onChange={(e) => setSupervisorUnlockPin(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSupervisorLocalUnlock(e);
+                    }
+                  }}
+                  placeholder="PIN Pengawas Ruangan"
+                  style={{
+                    WebkitTextSecurity: 'disc',
+                    textSecurity: 'disc'
+                  }}
+                  className="flex-1 px-3 py-2 bg-zinc-950 border border-zinc-700 rounded-lg text-xs text-white focus:outline-none focus:border-emerald-500 font-mono text-center uppercase tracking-widest"
+                />
+                <button
+                  type="button"
+                  onClick={handleSupervisorLocalUnlock}
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shadow-2xs shrink-0 active:scale-[0.98]"
+                >
+                  <Unlock className="w-3.5 h-3.5" /> Buka Kunci
+                </button>
+              </div>
+              {unlockError && <div className="text-[11px] text-rose-400 font-medium">{unlockError}</div>}
+            </div>
+
+            <button
+              onClick={handleReEnterFullscreen}
+              className="px-5 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium border border-zinc-700 transition flex items-center gap-2 active:scale-[0.98]"
+            >
+              <Maximize2 className="w-3.5 h-3.5" /> Masuk Kembali ke Fullscreen
+            </button>
+          </div>
+        </div>
       )}
 
       {/* ======================================================== */}
       {/* 3. AREA PENGERJAAN SOAL (HYBRID RENDERER) */}
+      {/* Disembunyikan (visibility: hidden) saat terkunci agar tidak membebani GPU & bebas blank */}
       {/* ======================================================== */}
-      <main className="flex-1 flex flex-col overflow-hidden relative">
+      <main 
+        className="flex-1 flex flex-col overflow-hidden relative"
+        style={{
+          visibility: activeAttempt.isLocked ? 'hidden' : 'visible',
+          pointerEvents: activeAttempt.isLocked ? 'none' : 'auto'
+        }}
+      >
         {selectedPackage?.examType === 'EXTERNAL_LINK' ? (
           /* ========================================== */
           /* MODE IFRAME SECURE: GOOGLE FORM / MS TEAMS */

@@ -134,8 +134,15 @@ export default function GatekeeperPin() {
         return;
       }
 
-      // 2. Berhasil diverifikasi: Daftarkan attempt siswa di backend
+      // 2. Berhasil diverifikasi: Daftarkan attempt siswa di backend & persist ke store/storage
       const targetOrientation = activeAttempt.screenOrientation || localStorage.getItem('exam_screen_orientation') || 'PORTRAIT';
+      if (selectedPackage) {
+        useExamStore.getState().setSelectedPackage(selectedPackage);
+      }
+      if (sessId) {
+        useExamStore.getState().setSessionId(sessId, targetSession?.supervisor_pin || targetSession?.supervisorPin || '');
+      }
+
       if (sessId && sessId.length > 10) {
         try {
           const attemptRes = await startExamAttemptApi(sessId, targetOrientation);
