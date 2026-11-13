@@ -163,11 +163,16 @@ export default function GatekeeperPin() {
       setShowPinnedToast(true);
 
       try {
+        if (document.activeElement && typeof document.activeElement.blur === 'function') {
+          document.activeElement.blur();
+        }
         const docEl = document.documentElement;
         if (docEl.requestFullscreen) {
-          await docEl.requestFullscreen();
+          await docEl.requestFullscreen({ navigationUI: 'hide' });
         } else if (docEl.webkitRequestFullscreen) {
           await docEl.webkitRequestFullscreen();
+        } else if (docEl.mozRequestFullScreen) {
+          await docEl.mozRequestFullScreen();
         } else if (docEl.msRequestFullscreen) {
           await docEl.msRequestFullscreen();
         }

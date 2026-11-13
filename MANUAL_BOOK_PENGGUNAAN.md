@@ -572,9 +572,9 @@ Sistem menerapkan protokol **Zero-Tolerance Lockdown**. Jika siswa melakukan sal
 **Cara Membuka Kunci (Dual-Mode):**
 1. Siswa wajib melapor kepada Guru Pengawas di ruang kelas.
 2. Pengawas dapat membuka kunci melalui 2 opsi:
-   - **Opsi 1 (Mandiri Siswa dengan PIN Pengawas):** Siswa memasukkan **PIN Pengawas Ruangan** (contoh: `PIN-2114` atau `2114`) yang diberikan oleh guru pengawas pada kartu Jadwal & Sesi Ujian, lalu klik tombol **"Buka Kunci"**. Layar langsung pulih ke fullscreen tanpa dialog popup yang menghalangi. Sistem telah bebas dari pop-up Google Password Manager sehingga tampilan tidak akan terhalang oleh pop-up peramban.
-   - **Opsi 2 (Dari Laptop Guru - Remote 1-Click):** Guru membuka menu *Live Proctoring* di laptopnya dan mengklik tombol hijau **"Buka Kunci Layar Siswa"**. Layar siswa seketika terbuka otomatis via WebSocket Daphne Channels.
-3. **Masa Imunitas (5-Second Grace Period):** Setelah kunci terbuka, sensor memberikan masa tenggang 5 detik agar siswa dapat kembali fokus dalam mode fullscreen tanpa memicu sirene palsu.
+   - **Opsi 1 (Mandiri Siswa dengan PIN Pengawas):** Siswa memasukkan **PIN Pengawas Ruangan** (contoh: `PIN-2114` atau `2114`) yang diberikan oleh guru pengawas pada kartu Jadwal & Sesi Ujian, lalu klik tombol **"Buka Kunci"**. Keyboard virtual Android akan langsung ditutup dan layar seketika kembali ke mode Fullscreen. Jika peramban memerlukan sentuhan konfirmasi, sistem memunculkan tombol aktivasi 1-tap untuk mengunci kembali layar penuh.
+   - **Opsi 2 (Dari Laptop Guru - Remote 1-Click via Live Proctoring):** Guru membuka menu *Live Proctoring* di laptopnya dan mengklik tombol hijau **"Buka Kunci Layar Siswa"** (atau *"Buka Kunci Seluruh Siswa"*). Pada layar HP/Laptop siswa, seketika muncul modal interaktif: *"Akses Ujian Berhasil Dibuka! Sentuh Kunci Layar Penuh & Lanjutkan Ujian"*. Saat siswa menyentuh tombol tersebut (sebagai aktivasi resmi browser), layar otomatis kembali terkunci penuh (Fullscreen) dengan bilah alamat peramban tersembunyi rapi.
+3. **Masa Imunitas & Tombol Layar Penuh Cadangan:** Setelah kunci terbuka, sensor memberikan masa tenggang agar siswa dapat kembali fokus tanpa memicu sirene palsu. Di bilah atas (Security Bar) juga disediakan tombol darurat **"Layar Penuh"** (amber pulse) jika sewaktu-waktu fullscreen terlepas.
 
 ---
 

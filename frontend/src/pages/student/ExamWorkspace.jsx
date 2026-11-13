@@ -57,6 +57,8 @@ export default function ExamWorkspace() {
   const [supervisorUnlockPin, setSupervisorUnlockPin] = useState('');
   const [unlockError, setUnlockError] = useState('');
   const [activeAnnouncement, setActiveAnnouncement] = useState(null); // { message, urgency, senderName, timestamp }
+  const [pendingFullscreenResume, setPendingFullscreenResume] = useState(false);
+  const [isFullscreenActive, setIsFullscreenActive] = useState(true);
 
   // Formatter Jenis Pelanggaran Human-Readable
   const formatViolationType = (type) => {
@@ -166,15 +168,57 @@ export default function ExamWorkspace() {
     }
   }, [activeAttempt.attemptId]);
 
-  // Masuk Kembali ke Mode Fullscreen & Kunci Orientasi
+  // Pantau status fullscreen aktif secara real-time
+  useEffect(() => {
+    const updateFullscreenState = () => {
+      const isFull = Boolean(
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.mozFullScreenElement ||
+        document.msFullscreenElement
+      );
+      setIsFullscreenActive(isFull);
+      if (isFull) {
+        setPendingFullscreenResume(false);
+      }
+    };
+
+    updateFullscreenState();
+    document.addEventListener('fullscreenchange', updateFullscreenState);
+    document.addEventListener('webkitfullscreenchange', updateFullscreenState);
+    document.addEventListener('mozfullscreenchange', updateFullscreenState);
+    document.addEventListener('MSFullscreenChange', updateFullscreenState);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', updateFullscreenState);
+      document.removeEventListener('webkitfullscreenchange', updateFullscreenState);
+      document.removeEventListener('mozfullscreenchange', updateFullscreenState);
+      document.removeEventListener('MSFullscreenChange', updateFullscreenState);
+    };
+  }, []);
+
+  // Masuk Kembali ke Mode Fullscreen & Kunci Orientasi secara Handal
   const handleReEnterFullscreen = async () => {
     try {
+      if (document.activeElement && typeof document.activeElement.blur === 'function') {
+        document.activeElement.blur();
+      }
+
       const docEl = document.documentElement;
       if (docEl.requestFullscreen) {
-        await docEl.requestFullscreen();
+        await docEl.requestFullscreen({ navigationUI: 'hide' });
       } else if (docEl.webkitRequestFullscreen) {
         await docEl.webkitRequestFullscreen();
+      } else if (docEl.mozRequestFullScreen) {
+        await docEl.mozRequestFullScreen();
+      } else if (docEl.msRequestFullscreen) {
+        await docEl.msRequestFullscreen();
       }
+    } catch (err) {
+      console.warn('Gagal request fullscreen:', err);
+    }
+
+    try {
       const savedOrientation = activeAttempt.screenOrientation || localStorage.getItem('exam_screen_orientation') || 'PORTRAIT';
       if (window.screen && window.screen.orientation && window.screen.orientation.lock) {
         if (savedOrientation === 'PORTRAIT') {
@@ -183,16 +227,16 @@ export default function ExamWorkspace() {
           window.screen.orientation.lock('landscape-primary').catch(() => window.screen.orientation.lock('landscape').catch(() => {}));
         }
       }
-    } catch (err) {
-      console.warn('Gagal request fullscreen:', err);
-    }
+    } catch (_) {}
   };
 
   // 1. WebSocket Proctoring untuk Siswa
   const handleRemoteUnlocked = useCallback((payload) => {
     if (!activeAttempt.attemptId || payload.attempt_id === activeAttempt.attemptId) {
-      handleReEnterFullscreen();
       unlockStudent(currentUser?.id || 's-001');
+      // Karena dibuka jarak jauh oleh guru (tanpa gesture siswa), peramban memerlukan 1 sentuhan aktivasi
+      // Tampilkan dialog resume fullscreen agar siswa langsung kembali ke mode fullscreen resmi
+      setPendingFullscreenResume(true);
       setUnlockSuccessToast('Layar berhasil dibuka kembali oleh Guru Pengawas!');
       setTimeout(() => setUnlockSuccessToast(''), 5000);
     }
@@ -250,8 +294,8 @@ export default function ExamWorkspace() {
       try {
         const res = await proctoringApi.getAttemptStatus(activeAttempt.attemptId);
         if (res && res.status === 'WORKING') {
-          handleReEnterFullscreen();
           unlockStudent(currentUser?.id || 's-001');
+          setPendingFullscreenResume(true);
           setUnlockSuccessToast('Layar berhasil dibuka kembali oleh Guru Pengawas!');
           setTimeout(() => setUnlockSuccessToast(''), 5000);
         }
@@ -420,19 +464,38 @@ export default function ExamWorkspace() {
     const isValid = candidatePins.has(inputPin) || candidatePins.has(cleanInputPin);
 
     if (isValid) {
-      // 1. Eksekusi request fullscreen dalam konteks user-click gesture
-      handleReEnterFullscreen();
+      // 1. Blur input agar keyboard virtual di HP langsung tertutup
+      if (document.activeElement && typeof document.activeElement.blur === 'function') {
+        document.activeElement.blur();
+      }
 
       // 2. Buka status lock di store
       unlockStudent(currentUser?.id || 's-001');
       setSupervisorUnlockPin('');
       setUnlockError('');
 
-      // 3. Tampilkan toast non-blocking (HINDARI window.alert agar fullscreen & fokus tidak terlepas!)
+      // 3. Masuk Fullscreen seketika dalam konteks user-click gesture
+      await handleReEnterFullscreen();
+
+      // 4. Verifikasi status fullscreen setelah jeda render singkat
+      // Jika browser mobile belum mengaktifkan fullscreen, tampilkan modal 1-tap agar PASTI fullscreen
+      setTimeout(() => {
+        const isFull = Boolean(
+          document.fullscreenElement ||
+          document.webkitFullscreenElement ||
+          document.mozFullScreenElement ||
+          document.msFullscreenElement
+        );
+        if (!isFull) {
+          setPendingFullscreenResume(true);
+        }
+      }, 300);
+
+      // 5. Tampilkan toast non-blocking
       setUnlockSuccessToast('Layar berhasil dibuka kembali! Selamat mengerjakan.');
       setTimeout(() => setUnlockSuccessToast(''), 5000);
 
-      // 4. Sinkronisasi ke backend secara asynchronous
+      // 6. Sinkronisasi ke backend secara asynchronous
       if (activeAttempt.attemptId) {
         try {
           await proctoringApi.unlockStudent(activeAttempt.attemptId, supervisorUnlockPin);
@@ -567,6 +630,19 @@ export default function ExamWorkspace() {
             >
               <RefreshCw className="w-3.5 h-3.5" />
               <span className="hidden md:inline text-[11px]">Refresh Form</span>
+            </button>
+          )}
+
+          {/* Tombol Re-Enter Fullscreen jika Layar Penuh Terlepas */}
+          {!isFullscreenActive && !activeAttempt.isLocked && (
+            <button
+              type="button"
+              onClick={handleReEnterFullscreen}
+              className="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-md bg-amber-500 hover:bg-amber-400 text-zinc-950 text-[11px] font-bold shadow-2xs transition active:scale-[0.98] shrink-0 whitespace-nowrap animate-pulse"
+              title="Aktifkan Kembali Mode Layar Penuh"
+            >
+              <Maximize2 className="w-3 h-3" />
+              <span>Layar Penuh</span>
             </button>
           )}
 
@@ -1167,6 +1243,40 @@ export default function ExamWorkspace() {
           </div>
         )}
       </main>
+
+      {/* ======================================================== */}
+      {/* MODAL AKTIVASI FULLSCREEN SETELAH BUKA KUNCI            */}
+      {/* Menjamin masuk fullscreen dengan 1 sentuhan aktivasi sah */}
+      {/* ======================================================== */}
+      {pendingFullscreenResume && !activeAttempt.isLocked && (
+        <div className="fixed inset-0 z-[10000] bg-[#090D16]/95 backdrop-blur-md flex items-center justify-center p-4 sm:p-6 text-center select-none animate-fade-in">
+          <div className="max-w-md w-full bg-zinc-900 border border-emerald-500/50 rounded-2xl p-6 sm:p-7 shadow-2xl space-y-4">
+            <div className="w-16 h-16 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 mx-auto animate-pulse">
+              <CheckCircle className="w-9 h-9" />
+            </div>
+
+            <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight">
+              Akses Ujian Berhasil Dibuka!
+            </h3>
+
+            <p className="text-xs text-zinc-300 leading-relaxed font-normal">
+              Kunci ujian Anda telah dibuka oleh Pengawas. Silakan sentuh tombol di bawah untuk mengunci kembali layar penuh (Fullscreen) dan melanjutkan pengerjaan soal.
+            </p>
+
+            <button
+              type="button"
+              onClick={async () => {
+                await handleReEnterFullscreen();
+                setPendingFullscreenResume(false);
+              }}
+              className="w-full py-3.5 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-bold text-xs sm:text-sm shadow-lg flex items-center justify-center gap-2 transition"
+            >
+              <Maximize2 className="w-4 h-4" />
+              <span>Kunci Layar Penuh & Lanjutkan Ujian</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ======================================================== */}
       {/* MODAL KONFIRMASI SELESAI & KELUAR UJIAN                  */}
