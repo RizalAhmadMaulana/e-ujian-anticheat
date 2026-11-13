@@ -21,6 +21,8 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
   // Menjamin inisialisasi fullscreen, orientasi, dan rendering awal tidak memicu false lock
   const gracePeriodUntilRef = useRef(Date.now() + 6000);
   const prevIsLockedRef = useRef(activeAttempt.isLocked);
+  const consecutiveBlurChecksRef = useRef(0);
+  const edgeSwipeCandidateRef = useRef(null);
 
   useEffect(() => {
     isSubmittedRef.current = Boolean(activeAttempt.examSubmittedAt);
@@ -31,6 +33,8 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     // Serta pulihkan efek pengaburan blackout jika sebelumnya aktif
     if (prevIsLockedRef.current === true && activeAttempt.isLocked === false) {
       gracePeriodUntilRef.current = Date.now() + 5000;
+      consecutiveBlurChecksRef.current = 0;
+      edgeSwipeCandidateRef.current = null;
       try {
         document.documentElement.style.filter = '';
         document.body.style.backgroundColor = '';
@@ -117,8 +121,9 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     };
 
     // ========================================================
-    // SENSOR 3: ANTI-APP SWITCH & LOSS OF FOCUS (window.onblur / onfocus)
-    // Diberi toleransi terukur agar aman terhadap sentuhan iframe Google/Office Form
+    // SENSOR 3: ANTI-APP SWITCH, MODE MENGAMBANG & LOSS OF FOCUS (window.onblur / onfocus)
+    // Diberi toleransi terukur agar aman terhadap sentuhan iframe Google/Office Form,
+    // namun secara instan mengunci jika terdeteksi Mode Mengambang (Floating Window / Sidebar)
     // ========================================================
     let blurTimeout = null;
     const handleWindowBlur = () => {
@@ -126,29 +131,54 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       blurTimeout = setTimeout(() => {
         if (isSubmittedRef.current || isLockedRef.current) return;
 
-        // Jika tab masih terlihat (visible), periksa jika fokus berpindah ke iframe internal
+        // Bersihkan clipboard sistem seketika saat peramban kehilangan fokus untuk mencegah paste ke AI/aplikasi luar
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText('');
+          }
+        } catch (_) {}
+
+        // Jika dokumen masih terlihat (visible):
+        // Periksa apakah fokus sah berpindah ke dalam iframe (Google Form / Office Form).
+        // CATATAN KRUSIAL: Jika fokus berada di dalam iframe internal, dokumen peramban TETAP memegang fokus OS (document.hasFocus() === true).
+        // Sebaliknya, jika siswa membuka Mode Mengambang (Floating Window seperti Gemini / WhatsApp / Bilah Sisi Xiaomi/Samsung),
+        // fokus sistem operasi berpindah ke aplikasi luar sehingga document.hasFocus() menjadi FALSE!
         if (document.visibilityState === 'visible') {
           const activeEl = document.activeElement;
           const isFocusInsideIframe = activeEl && (activeEl.tagName === 'IFRAME' || activeEl.closest('iframe'));
-          if (isFocusInsideIframe) {
+          
+          if (isFocusInsideIframe && document.hasFocus()) {
+            // Fokus sah di dalam lembar soal iframe
+            return;
+          }
+
+          // Jika dokumen terlihat tapi kehilangan fokus OS (Mode Mengambang / Floating Window / Sidebar / Bilah Notifikasi)
+          if (!document.hasFocus()) {
+            handleViolation(
+              isMobileDevice() ? 'FLOATING_WINDOW_ATTEMPT' : 'APP_SWITCH',
+              isMobileDevice()
+                ? 'Siswa terdeteksi membuka mode mengambang (Floating Window), bilah sisi, atau bilah notifikasi di HP'
+                : 'Siswa terdeteksi beralih ke jendela aplikasi lain di luar peramban ujian (Alt+Tab / Taskbar)'
+            );
             return;
           }
         }
 
-        // Jika dokumen benar-benar kehilangan fokus dari sistem operasi
-        if (document.visibilityState === 'hidden' || !document.hasFocus()) {
+        // Jika dokumen benar-benar disembunyikan / diminimalkan (Beralih Aplikasi Total / Pindah Tab)
+        if (document.visibilityState === 'hidden' || document.hidden || !document.hasFocus()) {
           handleViolation(
-            'APP_SWITCH',
+            isMobileDevice() ? 'APP_SWITCH' : 'TAB_SWITCH',
             isMobileDevice()
-              ? 'Siswa terdeteksi beralih aplikasi, membuka floating window, atau menarik bilah status di HP'
-              : 'Siswa terdeteksi beralih ke aplikasi lain di luar peramban ujian (Alt+Tab / Taskbar)'
+              ? 'Siswa terdeteksi keluar dari layar ujian atau beralih aplikasi di HP'
+              : 'Siswa terdeteksi berpindah tab peramban atau meminimalkan browser ujian'
           );
         }
-      }, 1000);
+      }, 700);
     };
 
     const handleWindowFocus = () => {
       ensureCleanDisplay();
+      consecutiveBlurChecksRef.current = 0;
       if (document.hasFocus() && document.visibilityState === 'visible') {
         if (blurTimeout) {
           clearTimeout(blurTimeout);
@@ -158,12 +188,13 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     };
 
     // ========================================================
-    // SENSOR 4: MOBILE (HP) - DETEKSI SCREENSHOT GESTURE 3 JARI
+    // SENSOR 4: MOBILE (HP) - DETEKSI SCREENSHOT GESTURE 3 JARI & SMART SIDEBAR SWIPE
     // ========================================================
     const handleTouchStart = (e) => {
       if (isSubmittedRef.current || isLockedRef.current) return;
       if (Date.now() < gracePeriodUntilRef.current) return;
 
+      // 1. Deteksi Gesture Screenshot 3 Jari di HP
       if (e.touches && e.touches.length >= 3) {
         e.preventDefault();
         e.stopPropagation();
@@ -176,12 +207,29 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         );
         return false;
       }
+
+      // 2. Deteksi Gesture Usapan Tepi Layar (Memicu Bilah Sisi / Sidebar Aplikasi Mengambang di HP)
+      if (e.touches && e.touches.length === 1 && isMobileDevice()) {
+        const touch = e.touches[0];
+        const screenW = window.innerWidth || window.screen.width;
+        // Sentuhan dimulai di tepi ekstrem (kurang dari 20px dari tepi kiri atau kanan)
+        if (touch.clientX < 20 || touch.clientX > (screenW - 20)) {
+          edgeSwipeCandidateRef.current = {
+            startX: touch.clientX,
+            startY: touch.clientY,
+            startTime: Date.now()
+          };
+        } else {
+          edgeSwipeCandidateRef.current = null;
+        }
+      }
     };
 
     const handleTouchMove = (e) => {
       if (isSubmittedRef.current || isLockedRef.current) return;
       if (Date.now() < gracePeriodUntilRef.current) return;
 
+      // 1. Gesture Screenshot 3 Jari
       if (e.touches && e.touches.length >= 3) {
         e.preventDefault();
         e.stopPropagation();
@@ -193,6 +241,23 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
           'Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture usap 3 jari di HP'
         );
         return false;
+      }
+
+      // 2. Deteksi Tarikan Tepi Layar ke Arah Tengah (Smart Sidebar Gesture Memicu Jendela Mengambang)
+      if (edgeSwipeCandidateRef.current && e.touches && e.touches.length === 1 && isMobileDevice()) {
+        const touch = e.touches[0];
+        const deltaX = Math.abs(touch.clientX - edgeSwipeCandidateRef.current.startX);
+        const deltaY = Math.abs(touch.clientY - edgeSwipeCandidateRef.current.startY);
+
+        // Jika gerakan horizontal mengarah ke dalam > 30px dalam waktu cepat (< 500ms)
+        if (deltaX > 30 && deltaX > deltaY * 1.3 && (Date.now() - edgeSwipeCandidateRef.current.startTime) < 500) {
+          edgeSwipeCandidateRef.current = null;
+          handleViolation(
+            'FLOATING_WINDOW_ATTEMPT',
+            'Siswa terdeteksi mengusap tepi layar untuk membuka bilah sisi aplikasi mengambang (Smart Sidebar / Floating Window) di HP'
+          );
+          return false;
+        }
       }
     };
 
@@ -513,14 +578,16 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     };
 
     // ========================================================
-    // SENSOR 10: DEVTOOLS RESIZE MONITOR
-    // Memeriksa pembukaan DevTools via resize threshold saat layar penuh
+    // SENSOR 10: CONTINUOUS INTEGRITY HEARTBEAT MONITOR (DAEMON 400ms)
+    // Memeriksa DevTools (Desktop), Mode Mengambang (Mobile), dan Mode Layar Belah (Split Screen)
     // ========================================================
     const heartbeatInterval = setInterval(() => {
       if (isSubmittedRef.current || isLockedRef.current) return;
       if (Date.now() < gracePeriodUntilRef.current) return;
 
-      // Deteksi pembukaan DevTools via resize threshold saat layar penuh (Hanya Desktop, abaikan di HP karena virtual keyboard)
+      // ----------------------------------------------------
+      // SENSOR 10A: DevTools Resize Monitor (Hanya Desktop)
+      // ----------------------------------------------------
       if (!isMobileDevice()) {
         const isFullscreen = Boolean(
           document.fullscreenElement ||
@@ -539,7 +606,62 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
           }
         }
       }
-    }, 500);
+
+      // ----------------------------------------------------
+      // SENSOR 10B: Deteksi Mode Mengambang (Floating Window) di HP
+      // Memantau jika peramban kehilangan fokus OS secara persisten (> 800ms)
+      // ----------------------------------------------------
+      if (isMobileDevice()) {
+        if (!document.hasFocus()) {
+          consecutiveBlurChecksRef.current += 1;
+          // Jika kehilangan fokus selama 2 siklus beruntun (~800ms)
+          if (consecutiveBlurChecksRef.current >= 2) {
+            consecutiveBlurChecksRef.current = 0;
+            if (document.visibilityState === 'visible') {
+              handleViolation(
+                'FLOATING_WINDOW_ATTEMPT',
+                'Siswa terdeteksi membuka mode mengambang (Floating Window) atau aplikasi lain di atas layar ujian'
+              );
+            } else {
+              handleViolation(
+                'APP_SWITCH',
+                'Siswa terdeteksi keluar dari layar ujian atau beralih aplikasi di HP'
+              );
+            }
+            return;
+          }
+        } else {
+          consecutiveBlurChecksRef.current = 0;
+        }
+
+        // ----------------------------------------------------
+        // SENSOR 10C: Deteksi Mode Layar Belah (Split Screen / Multi-Window di HP)
+        // ----------------------------------------------------
+        const isFullscreen = Boolean(
+          document.fullscreenElement ||
+          document.webkitFullscreenElement ||
+          document.mozFullScreenElement ||
+          document.msFullscreenElement
+        );
+
+        const screenHeight = window.screen.height || window.screen.availHeight || 1;
+        const heightRatio = window.innerHeight / screenHeight;
+
+        // Abaikan jika virtual keyboard sedang aktif pada input native
+        const isNativeInputActive = Boolean(
+          document.activeElement && 
+          (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')
+        );
+
+        // Pada mode layar belah Android, fullscreen terlepas otomatis dan tinggi innerHeight anjlok < 58% layar
+        if (!isFullscreen && heightRatio < 0.58 && !isNativeInputActive) {
+          handleViolation(
+            'SPLIT_SCREEN_ATTEMPT',
+            'Siswa terdeteksi mengaktifkan mode layar belah (Split Screen) di HP'
+          );
+        }
+      }
+    }, 400);
 
     // ========================================================
     // REGISTRASI LISTENER DENGAN CAPTURE MODE (PRIORITAS TERTINGGI)

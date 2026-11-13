@@ -79,6 +79,9 @@ export default function ExamWorkspace() {
       'TAB_SWITCH': 'Pindah Tab / Minimize Browser',
       'APP_SWITCH': 'Beralih ke Aplikasi Lain (Alt+Tab / Taskbar)',
       'EXIT_FULLSCREEN': 'Keluar Mode Layar Penuh (ESC)',
+      'FLOATING_WINDOW_ATTEMPT': 'Aplikasi Jendela Mengambang (Floating Window)',
+      'SPLIT_SCREEN_ATTEMPT': 'Mode Layar Belah HP (Split Screen)',
+      'NOTIFICATION_BAR_PULLDOWN': 'Menarik Bilah Notifikasi HP',
     };
     return map[type] || type || 'Pelanggaran Keamanan';
   };
