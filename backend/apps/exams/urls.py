@@ -17,6 +17,7 @@ from .views import (
     GradeEssaySubmissionView,
     SessionStudentResultsView,
     StudentAttemptDetailBreakdownView,
+    ExportSessionResultsExcelView,
 )
 
 urlpatterns = [
@@ -51,6 +52,7 @@ urlpatterns = [
 
     # Rekap Nilai & Analisis Lembar Jawaban Siswa
     path('sessions/<uuid:session_id>/student-results/', SessionStudentResultsView.as_view(), name='session_student_results'),
+    path('sessions/<uuid:session_id>/export-results-excel/', ExportSessionResultsExcelView.as_view(), name='session_export_results_excel'),
     path('attempts/<uuid:attempt_id>/breakdown/', StudentAttemptDetailBreakdownView.as_view(), name='attempt_detail_breakdown'),
 ]
 

@@ -510,6 +510,31 @@ Menu ini digunakan oleh masing-masing guru atau staf pengawas ujian untuk meleng
   - Karena sistem menggunakan arsitektur basis data relasional terpadu (`Django User Model`), setiap pembaruan nama, NIP/username, email, maupun password di halaman Profil Pengguna ini **seketika langsung mengubah dan menyinkronkan data** yang tampil di menu **Manajemen Pengguna** (`/teacher/users`) dan **Data Guru** (`/teacher/teachers`).
   - Guru tidak perlu meminta admin untuk mengubah data kembali, dan navbar header langsung menampilkan nama baru secara *real-time* tanpa perlu logout.
 
+---
+
+### 3.10. Menu Rekap Nilai Siswa & Ekspor Excel Analisis Butir Soal (`/teacher/results`)
+Menu ini disediakan khusus bagi guru untuk menganalisis hasil belajar peserta didik secara komprehensif, cepat, dan terintegrasi dengan Berita Acara E-Jurnal:
+
+- **Filter Bertingkat (3-Level Cascade):**
+  1. **Filter Paket Soal:** Memilih paket asesmen mandiri atau tautan Google Form.
+  2. **Filter Kelas / Rombel:** Memilih kelas rombel tertentu atau seluruh kelas.
+  3. **Pilih Sesi Ujian Aktif:** Memilih ruang ujian terbuka yang sedang atau telah dilaksanakan.
+- **4 Kartu Metrik Statistik Kelas:**
+  - **Total Peserta:** Jumlah siswa yang terdaftar dalam rombel sesi ujian.
+  - **Selesai / Terkirim:** Jumlah lembar jawaban yang telah berhasil dikirimkan peserta beserta persentasenya.
+  - **Rata-Rata Kelas:** Rerata perolehan nilai siswa secara real-time (skala 0 - 100).
+  - **Tertinggi / Terendah:** Rekor nilai tertinggi dan nilai terendah pada sesi tersebut.
+- **Tabel Rekapitulasi Nilai & Status Pengerjaan:**
+  - Menampilkan NISN, Nama Siswa, Kelas, Durasi Pengerjaan, Total Jawaban Benar, Pelanggaran Sensor Anti-Cheat, Status (Selesai, Sedang Mengerjakan, atau Belum Masuk), dan Nilai Akhir.
+  - **Lihat Lembar Jawaban Siswa:** Klik tombol **"Lihat Jawaban"** untuk membuka modal rincian lembar jawaban siswa per butir soal (dilengkapi penanda warna hijau untuk jawaban benar, merah untuk jawaban salah, dan oranye untuk koreksi esai guru).
+- **Fitur Unduh Rekap Excel (.xlsx) Lengkap dengan Analisis Butir Soal:**
+  - Tersedia tombol **"Unduh Rekap Excel"** di bilah aksi atas dan di atas tabel data.
+  - Berkas spreadsheet `.xlsx` yang diunduh memiliki 2 sheet profesional:
+    1. **Sheet 1 (Rekap Nilai Siswa):** Berisi Kop Sekolah resmi, ringkasan sesi, tabel identitas siswa, nilai akhir, serta **rincian analisis jawaban per butir soal (Kolom No. 1 s/d N)** dengan indikator status Benar/Salah berwana.
+    2. **Sheet 2 (Kunci Jawaban & Analisis Butir Soal):** Berisi kunci jawaban resmi tiap nomor, tipe soal, dan persentase ketuntasan (daya serap soal) oleh siswa.
+- **Integrasi Cepat ke Koreksi Esai & E-Jurnal:**
+  - Tombol pintas langsung menuju menu **Koreksi Esai** manual guru dan **E-Jurnal Berita Acara** resmi.
+
 
 ---
 

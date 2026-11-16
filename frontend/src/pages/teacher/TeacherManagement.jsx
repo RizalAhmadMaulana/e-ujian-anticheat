@@ -221,6 +221,15 @@ export default function TeacherManagement() {
       setImportResult(res);
       showToast(res.message || 'Proses impor guru berhasil!');
       fetchTeachers();
+
+      // Otomatis menutup pop-up modal import setelah data berhasil masuk
+      setTimeout(() => {
+        setIsImportModalOpen(false);
+        setImportFile(null);
+        setImportResult(null);
+        setImportError('');
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }, 1000);
     } catch (err) {
       setImportError(err.response?.data?.error || 'Gagal mengimpor file Excel guru.');
     } finally {

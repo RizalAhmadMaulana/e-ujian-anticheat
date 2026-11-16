@@ -246,9 +246,19 @@ export default function StudentManagement() {
     try {
       const res = await importStudentsExcelApi(importFile);
       setImportResult(res);
-      showToast(res.message || 'Proses impor siswa berhasil!');
+      const msg = res.message || `Impor data siswa selesai! ${res.created_count || 0} siswa baru terdaftar.`;
+      showToast(msg);
       fetchStudents();
       fetchClassrooms();
+
+      // Otomatis menutup pop-up modal import setelah data berhasil masuk
+      setTimeout(() => {
+        setIsImportModalOpen(false);
+        setImportFile(null);
+        setImportResult(null);
+        setImportError('');
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }, 1000);
     } catch (err) {
       setImportError(err.response?.data?.error || 'Gagal mengimpor file Excel siswa.');
     } finally {

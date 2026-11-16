@@ -33,7 +33,8 @@ import {
   getSessionsApi, 
   getPackagesApi, 
   getSessionStudentResultsApi, 
-  getStudentAttemptBreakdownApi 
+  getStudentAttemptBreakdownApi,
+  downloadSessionResultsExcelApi
 } from '../../api/examApi';
 import { getClassroomsApi } from '../../api/authApi';
 import MathText from '../../components/common/MathText';
@@ -60,6 +61,7 @@ export default function StudentResults() {
   const [sessionResults, setSessionResults] = useState(null);
   const [isLoadingResults, setIsLoadingResults] = useState(false);
   const [resultsError, setResultsError] = useState('');
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
 
   // Student Attempt Breakdown Modal State
   const [selectedAttempt, setSelectedAttempt] = useState(null);
@@ -223,6 +225,26 @@ export default function StudentResults() {
     return sessions.find((s) => String(s.id) === String(selectedSessionId)) || null;
   }, [sessions, selectedSessionId]);
 
+  // Handler Download Rekapitulasi Nilai & Analisis Butir Soal ke Excel (.xlsx)
+  const handleDownloadExcel = async () => {
+    if (!selectedSessionId) {
+      alert('Silakan pilih sesi ujian terlebih dahulu.');
+      return;
+    }
+    setIsExportingExcel(true);
+    try {
+      const currentPkgTitle = currentSessionObj?.title || 'Rekap_Ujian';
+      const currentCls = currentSessionObj?.classroom_display || currentSessionObj?.classroom_name || 'Kelas';
+      const cleanFilename = `Rekap_Nilai_${currentPkgTitle}_${currentCls}.xlsx`.replace(/[^\w.-]/g, '_');
+      await downloadSessionResultsExcelApi(selectedSessionId, cleanFilename);
+    } catch (err) {
+      console.error('Gagal mengunduh file excel rekapitulasi nilai:', err);
+      alert('Gagal mengunduh rekap Excel: ' + (err.response?.data?.error || err.message || 'Terjadi kesalahan'));
+    } finally {
+      setIsExportingExcel(false);
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
       {/* ======================================================== */}
@@ -247,6 +269,18 @@ export default function StudentResults() {
 
         {/* Quick Action Navigation Links */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Tombol Unduh Rekap Excel */}
+          <button
+            type="button"
+            onClick={handleDownloadExcel}
+            disabled={isExportingExcel || !selectedSessionId}
+            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shadow-2xs active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed"
+            title="Unduh seluruh rekapitulasi nilai dan rincian jawaban per butir soal ke format Excel (.xlsx)"
+          >
+            <FileSpreadsheet className={`w-3.5 h-3.5 ${isExportingExcel ? 'animate-bounce' : ''}`} />
+            <span>{isExportingExcel ? 'Mengunduh...' : 'Unduh Rekap Excel'}</span>
+          </button>
+
           {/* Link ke Koreksi Esai */}
           <button
             type="button"
@@ -466,13 +500,13 @@ export default function StudentResults() {
       {/* ======================================================== */}
       <div className="bg-white rounded-xl border border-zinc-200/90 shadow-2xs overflow-hidden">
         {/* Toolbar Pencarian & Filter Tab */}
-        <div className="p-4 border-b border-zinc-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-zinc-50/50">
+        <div className="p-4 border-b border-zinc-100 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-zinc-50/50">
           {/* Status Tabs */}
-          <div className="flex items-center gap-1 bg-zinc-200/70 p-1 rounded-lg w-full sm:w-auto">
+          <div className="flex items-center gap-1 bg-zinc-200/70 p-1 rounded-lg overflow-x-auto">
             <button
               type="button"
               onClick={() => setStatusTab('ALL')}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition whitespace-nowrap ${
                 statusTab === 'ALL'
                   ? 'bg-white text-zinc-900 shadow-2xs font-semibold'
                   : 'text-zinc-600 hover:text-zinc-900'
@@ -483,7 +517,7 @@ export default function StudentResults() {
             <button
               type="button"
               onClick={() => setStatusTab('SUBMITTED')}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition whitespace-nowrap ${
                 statusTab === 'SUBMITTED'
                   ? 'bg-white text-zinc-900 shadow-2xs font-semibold'
                   : 'text-zinc-600 hover:text-zinc-900'
@@ -494,26 +528,41 @@ export default function StudentResults() {
             <button
               type="button"
               onClick={() => setStatusTab('IN_PROGRESS')}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition whitespace-nowrap ${
                 statusTab === 'IN_PROGRESS'
                   ? 'bg-white text-zinc-900 shadow-2xs font-semibold'
                   : 'text-zinc-600 hover:text-zinc-900'
               }`}
             >
-              Sedang Mengerjakan ({sessionResults?.students?.filter((s) => s.status !== 'SUBMITTED').length || 0})
+              Sedang Mengerjakan ({sessionResults?.students?.filter((s) => s.status !== 'SUBMITTED' && s.status !== 'NOT_STARTED').length || 0})
             </button>
           </div>
 
-          {/* Search Box */}
-          <div className="relative w-full sm:w-72">
-            <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Cari nama siswa atau NISN..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full text-xs pl-8 pr-3 py-1.5 bg-white border border-zinc-300 rounded-lg text-zinc-800 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition"
-            />
+          <div className="flex items-center gap-2">
+            {/* Search Box */}
+            <div className="relative w-full sm:w-64">
+              <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Cari nama siswa atau NISN..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full text-xs pl-8 pr-3 py-1.5 bg-white border border-zinc-300 rounded-lg text-zinc-800 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition"
+              />
+            </div>
+
+            {/* Tombol Unduh Rekap Excel di Atas Tabel */}
+            <button
+              type="button"
+              onClick={handleDownloadExcel}
+              disabled={isExportingExcel || !selectedSessionId}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white text-xs font-semibold transition shadow-2xs active:scale-[0.98] shrink-0 cursor-pointer disabled:cursor-not-allowed"
+              title="Unduh seluruh rekapitulasi nilai dan rincian jawaban siswa ke format Excel (.xlsx)"
+            >
+              <FileSpreadsheet className={`w-3.5 h-3.5 ${isExportingExcel ? 'animate-bounce' : ''}`} />
+              <span className="hidden sm:inline">{isExportingExcel ? 'Menyiapkan...' : 'Download Excel'}</span>
+              <span className="sm:hidden">Excel</span>
+            </button>
           </div>
         </div>
 
@@ -525,10 +574,28 @@ export default function StudentResults() {
               <div className="text-xs text-zinc-500 font-medium">Memuat rekap nilai siswa...</div>
             </div>
           ) : resultsError ? (
-            <div className="py-12 text-center space-y-2">
-              <AlertCircle className="w-8 h-8 text-rose-500 mx-auto" />
-              <div className="text-xs font-semibold text-rose-600">{resultsError}</div>
-              <p className="text-[11px] text-zinc-400">Pastikan backend server aktif dan sesi telah terkonfigurasi dengan benar.</p>
+            <div className="py-14 text-center space-y-3 px-4">
+              <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <div className="text-sm font-semibold text-zinc-800">
+                  {resultsError.includes('500') || resultsError.includes('Gagal memuat')
+                    ? 'Belum Ada Aktivitas Pengerjaan Sesi Ini'
+                    : resultsError}
+                </div>
+                <p className="text-xs text-zinc-500 max-w-md mx-auto leading-relaxed">
+                  Belum ada siswa yang mulai atau mengirimkan lembar jawaban pada sesi ujian ini. Nilai dan analisis butir soal akan otomatis terdata secara real-time saat siswa mulai mengerjakan.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => fetchSessionResults(selectedSessionId)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-white border border-zinc-300 text-zinc-700 hover:bg-zinc-50 text-xs font-semibold shadow-2xs transition cursor-pointer"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-zinc-500" />
+                <span>Segarkan Data</span>
+              </button>
             </div>
           ) : !selectedSessionId ? (
             <div className="py-16 text-center space-y-2 text-zinc-400">
@@ -536,9 +603,18 @@ export default function StudentResults() {
               <div className="text-xs font-medium">Silakan pilih sesi ujian pada filter di atas untuk melihat nilai.</div>
             </div>
           ) : filteredStudents.length === 0 ? (
-            <div className="py-16 text-center space-y-2 text-zinc-400">
-              <Users className="w-8 h-8 mx-auto text-zinc-300" />
-              <div className="text-xs font-medium">Belum ada data siswa yang sesuai dengan filter atau kata kunci.</div>
+            <div className="py-14 text-center space-y-3 px-4">
+              <div className="w-12 h-12 rounded-xl bg-zinc-100 border border-zinc-200 text-zinc-400 flex items-center justify-center mx-auto">
+                <Users className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <div className="text-sm font-semibold text-zinc-700">Belum Ada Siswa yang Terdata</div>
+                <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+                  {searchQuery 
+                    ? `Tidak ditemukan siswa dengan kata kunci "${searchQuery}". Coba kata kunci lain.`
+                    : 'Belum ada siswa yang mengerjakan atau terdaftar di sesi ini.'}
+                </p>
+              </div>
             </div>
           ) : (
             <table className="w-full text-left text-xs">
@@ -612,6 +688,11 @@ export default function StudentResults() {
                           <AlertTriangle className="w-3 h-3 text-rose-500" />
                           <span>Terkunci</span>
                         </span>
+                      ) : st.status === 'NOT_STARTED' ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-zinc-100 text-zinc-600 border border-zinc-200">
+                          <Clock className="w-3 h-3 text-zinc-400" />
+                          <span>Belum Masuk</span>
+                        </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
                           <Clock className="w-3 h-3 text-blue-500" />
@@ -620,7 +701,7 @@ export default function StudentResults() {
                       )}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      {st.total_score !== null && st.total_score !== undefined ? (
+                      {st.total_score !== null && st.total_score !== undefined && st.status !== 'NOT_STARTED' ? (
                         <div className="inline-flex items-baseline gap-1 px-2.5 py-1 rounded-lg bg-zinc-900 text-white font-mono font-bold text-xs shadow-2xs">
                           <span className="text-sm font-black text-emerald-400">{st.total_score}</span>
                           <span className="text-[10px] text-zinc-400">/ 100</span>
@@ -633,9 +714,9 @@ export default function StudentResults() {
                       <button
                         type="button"
                         onClick={() => handleOpenBreakdownModal(st)}
-                        disabled={!st.attempt_id}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white hover:bg-emerald-50 border border-zinc-200 hover:border-emerald-300 text-zinc-700 hover:text-emerald-700 font-semibold text-xs transition shadow-2xs active:scale-[0.98] disabled:opacity-40 cursor-pointer"
-                        title="Lihat Rincian Analisis Jawaban Siswa per Butir Soal"
+                        disabled={!st.attempt_id || st.status === 'NOT_STARTED'}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white hover:bg-emerald-50 border border-zinc-200 hover:border-emerald-300 text-zinc-700 hover:text-emerald-700 font-semibold text-xs transition shadow-2xs active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                        title={st.status === 'NOT_STARTED' ? 'Siswa belum memulai ujian' : 'Lihat Rincian Analisis Jawaban Siswa per Butir Soal'}
                       >
                         <Eye className="w-3.5 h-3.5 text-emerald-600" />
                         <span>Lihat Jawaban</span>

@@ -400,15 +400,16 @@ Setelah masuk melalui portal login terpadu (`/login`) menggunakan **NIP** dan ka
 
 ---
 
-### Menu 10: Rekap Nilai Siswa & Analisis Butir Soal (/teacher/results)
+### Menu 10: Rekap Nilai Siswa, Analisis Butir Soal & Unduh Excel (/teacher/results)
 - **Rute:** `/teacher/results`
-- **Fungsi:** Menampilkan rekapitulasi nilai komprehensif, capaian kelas, dan analisis lembar jawaban per butir soal siswa (kunci jawaban sistem vs pilihan siswa, rumus KaTeX, dan perolehan poin per butir).
+- **Fungsi:** Menampilkan rekapitulasi nilai komprehensif, capaian kelas, analisis lembar jawaban per butir soal siswa (kunci jawaban sistem vs pilihan siswa, rumus KaTeX, dan perolehan poin per butir), serta ekspor rekap spreadsheet Excel (.xlsx).
 - **Fitur Utama:**
   1. **Filter Terpadu 3-Level:** Filter Paket Soal, Filter Kelas/Rombel, dan Sesi Ujian Aktif.
   2. **4 Kartu KPI:** Total Peserta, Selesai/Terkirim, Rata-Rata Nilai Kelas, serta Nilai Tertinggi & Terendah.
   3. **Tabel Rekapitulasi Nilai:** No, NISN, Nama Siswa, Kelas, Durasi Pengerjaan, Butir Benar, Sensor Anti-Cheat, Status, Nilai Akhir, dan tombol **"Lihat Jawaban"**.
   4. **Modal Rincian Lembar Jawaban Siswa:** Bedah butir soal 1 s/d N (status Benar/Sebagian/Salah/Esai, perolehan poin, opsi pilihan siswa vs kunci jawaban sistem).
-  5. **Integrasi Dua Arah:** Tombol pintas ke Berita Acara E-Jurnal (`/teacher/ejournal`) dan menu Koreksi Esai (`/teacher/grading`).
+  5. **Fitur Unduh Rekap Excel (.xlsx) Lengkap:** Tombol **"Unduh Rekap Excel"** untuk mengunduh spreadsheet 2-sheet berisi Kop Sekolah resmi, rekapitulasi skor siswa, rincian per butir nomor 1 s/d N, dan kunci jawaban resmi beserta analisis daya serap soal.
+  6. **Integrasi Dua Arah:** Tombol pintas ke Berita Acara E-Jurnal (`/teacher/ejournal`) dan menu Koreksi Esai (`/teacher/grading`).
 
 ---
 

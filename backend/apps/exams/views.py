@@ -18,6 +18,7 @@ from .services import calculate_auto_grading_score
 from .tokens import is_valid_entry_token, get_session_tokens
 from .parsers import parse_docx_questions, parse_excel_questions, generate_question_excel_template
 from apps.accounts.permissions import IsTeacherRole
+from apps.accounts.models import User, SchoolSetting
 from apps.proctoring.models import StudentAttempt
 
 class ExamPackageListCreateView(generics.ListCreateAPIView):
@@ -630,8 +631,8 @@ class SessionEssaySubmissionsView(APIView):
         return Response({
             "success": True,
             "session_id": str(session.id),
-            "session_title": session.title,
-            "subject_name": session.package.subject_name,
+            "session_title": session.package.title if session.package else "Sesi Ujian",
+            "subject_name": session.package.subject_name if session.package else "-",
             "classroom": session.get_classrooms_display(),
             "total_essay_questions": len(questions_data),
             "essay_questions": questions_data,
@@ -706,86 +707,149 @@ class GradeEssaySubmissionView(APIView):
 class SessionStudentResultsView(APIView):
     """
     GET /api/exams/sessions/<uuid:session_id>/student-results/
-    Mengambil ringkasan rekapitulasi nilai seluruh siswa pada sesi ujian tertentu
+    Mengambil ringkasan rekapitulasi nilai seluruh siswa pada sesi ujian tertentu beserta statistik kelas
     """
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, session_id):
         session = get_object_or_404(ExamSession.objects.select_related('package', 'classroom'), id=session_id)
         package = session.package
-        questions = list(Question.objects.filter(package=package).prefetch_related('options').order_by('order_number'))
+        questions = list(Question.objects.filter(package=package).prefetch_related('options').order_by('order_number')) if package else []
         total_questions_count = len(questions)
         total_max_points = sum(q.points for q in questions)
 
-        attempts = StudentAttempt.objects.filter(session=session).select_related('student', 'student__classroom').order_by('student__full_name')
+        # Ambil daftar seluruh siswa yang berhak mengikuti sesi ujian ini
+        if session.allow_all_classes:
+            students_qs = list(User.objects.filter(role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name'))
+        elif hasattr(session, 'classrooms') and session.classrooms.exists():
+            students_qs = list(User.objects.filter(classroom__in=session.classrooms.all(), role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name'))
+        elif session.classroom:
+            students_qs = list(User.objects.filter(classroom=session.classroom, role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name'))
+        else:
+            students_qs = list(User.objects.filter(role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name'))
+
+        # Peta attempt yang sudah tersimpan untuk sesi ini
+        attempts_qs = StudentAttempt.objects.filter(session=session).select_related('student', 'student__classroom')
+        attempts_by_student = {att.student_id: att for att in attempts_qs}
+
+        # Gabungkan siswa yang terdaftar maupun siswa yang telah memiliki attempt
+        enrolled_student_ids = set(s.id for s in students_qs)
+        all_students = list(students_qs)
+        for att in attempts_qs:
+            if att.student_id not in enrolled_student_ids:
+                all_students.append(att.student)
+                enrolled_student_ids.add(att.student_id)
+
+        all_students.sort(key=lambda s: (s.full_name or s.username or "").lower())
 
         students_data = []
         scores_list = []
 
-        for att in attempts:
-            answers = att.answers_json or {}
-            essay_scores = att.essay_scores or {}
+        for st in all_students:
+            att = attempts_by_student.get(st.id)
+            if att:
+                answers = att.answers_json or {}
+                essay_scores = att.essay_scores or {}
 
-            # Hitung butir soal yang benar untuk pilihan ganda & objektif
-            correct_count = 0
-            for q in questions:
-                ans = answers.get(str(q.id)) or answers.get(f"q_{q.order_number}")
-                if ans is None:
-                    continue
-                if q.question_type == Question.QuestionTypeChoices.MULTIPLE_CHOICE:
-                    correct_opt = next((o for o in q.options.all() if o.is_correct), None)
-                    if correct_opt:
-                        raw_str = str(ans).strip()
-                        if raw_str == str(correct_opt.id) or raw_str.upper() == correct_opt.option_label.strip().upper():
+                # Hitung butir soal yang benar untuk pilihan ganda & objektif
+                correct_count = 0
+                for q in questions:
+                    ans = answers.get(str(q.id)) or answers.get(f"q_{q.order_number}")
+                    if ans is None:
+                        continue
+                    if q.question_type == Question.QuestionTypeChoices.MULTIPLE_CHOICE:
+                        correct_opt = next((o for o in q.options.all() if o.is_correct), None)
+                        if correct_opt:
+                            raw_str = str(ans).strip()
+                            if raw_str == str(correct_opt.id) or raw_str.upper() == correct_opt.option_label.strip().upper():
+                                correct_count += 1
+                    elif q.question_type == Question.QuestionTypeChoices.MULTIPLE_CHOICE_COMPLEX:
+                        correct_labels = set(q.options.filter(is_correct=True).values_list('option_label', flat=True))
+                        student_items = set(str(x).strip().upper() for x in ans) if isinstance(ans, list) else set()
+                        if student_items == correct_labels:
                             correct_count += 1
-                elif q.question_type == Question.QuestionTypeChoices.SHORT_ANSWER:
-                    extra = q.extra_data or {}
-                    accepted = extra.get('exact_keys') or extra.get('accepted_answers') or extra.get('keys') or []
-                    if isinstance(accepted, str):
-                        accepted = [x.strip() for x in accepted.split('/') if x.strip()]
-                    if any(str(ans).strip().lower() == str(acc).strip().lower() for acc in accepted):
-                        correct_count += 1
-                elif q.question_type == Question.QuestionTypeChoices.ESSAY:
-                    e_info = essay_scores.get(str(q.id), {})
-                    if e_info.get('score', 0) > 0:
-                        correct_count += 1
+                    elif q.question_type == Question.QuestionTypeChoices.SHORT_ANSWER:
+                        extra = q.extra_data or {}
+                        accepted = extra.get('exact_keys') or extra.get('accepted_answers') or extra.get('keys') or []
+                        if isinstance(accepted, str):
+                            accepted = [x.strip() for x in accepted.split('/') if x.strip()]
+                        if any(str(ans).strip().lower() == str(acc).strip().lower() for acc in accepted):
+                            correct_count += 1
+                    elif q.question_type == Question.QuestionTypeChoices.TRUE_FALSE_MATRIX:
+                        extra = q.extra_data or {}
+                        rows = extra.get('rows', [])
+                        if isinstance(ans, dict) and rows:
+                            if sum(1 for i, r in enumerate(rows) if ans.get(str(i)) == bool(r.get('correct') or r.get('is_correct'))) == len(rows):
+                                correct_count += 1
+                    elif q.question_type == Question.QuestionTypeChoices.MATCHING_PAIR:
+                        extra = q.extra_data or {}
+                        pairs = extra.get('pairs', [])
+                        if isinstance(ans, dict) and pairs:
+                            if sum(1 for p in pairs if str(ans.get(p.get('left'), '')).strip().lower() == str(p.get('right', '')).strip().lower()) == len(pairs):
+                                correct_count += 1
+                    elif q.question_type == Question.QuestionTypeChoices.ESSAY:
+                        e_info = essay_scores.get(str(q.id), {})
+                        if e_info.get('score', 0) > 0:
+                            correct_count += 1
 
-            score_val = float(att.total_score) if att.total_score is not None else (0.0 if att.status == StudentAttempt.AttemptStatus.SUBMITTED else None)
-            if score_val is not None:
-                scores_list.append(score_val)
+                score_val = float(att.total_score) if att.total_score is not None else (0.0 if att.status == StudentAttempt.AttemptStatus.SUBMITTED else None)
+                if score_val is not None:
+                    scores_list.append(score_val)
 
-            students_data.append({
-                "attempt_id": str(att.id),
-                "student_id": str(att.student.id),
-                "nisn": att.student.nisn or "-",
-                "student_name": att.student.full_name,
-                "classroom_name": att.student.classroom.name if getattr(att.student, 'classroom', None) else session.get_classrooms_display(),
-                "status": att.status,
-                "status_label": att.get_status_display(),
-                "total_score": score_val,
-                "correct_count": correct_count,
-                "total_questions": total_questions_count,
-                "violation_count": att.violation_count,
-                "started_at": att.started_at.isoformat() if att.started_at else None,
-                "finished_at": att.finished_at.isoformat() if att.finished_at else None,
-            })
+                students_data.append({
+                    "attempt_id": str(att.id),
+                    "student_id": str(st.id),
+                    "nisn": st.nisn or st.username or "-",
+                    "student_name": st.full_name or st.username,
+                    "classroom_name": st.classroom.name if getattr(st, 'classroom', None) else session.get_classrooms_display(),
+                    "status": att.status,
+                    "status_label": att.get_status_display(),
+                    "total_score": score_val,
+                    "correct_count": correct_count,
+                    "total_questions": total_questions_count,
+                    "violation_count": att.violation_count,
+                    "started_at": att.started_at.isoformat() if att.started_at else None,
+                    "finished_at": att.finished_at.isoformat() if att.finished_at else None,
+                })
+            else:
+                students_data.append({
+                    "attempt_id": None,
+                    "student_id": str(st.id),
+                    "nisn": st.nisn or st.username or "-",
+                    "student_name": st.full_name or st.username,
+                    "classroom_name": st.classroom.name if getattr(st, 'classroom', None) else session.get_classrooms_display(),
+                    "status": "NOT_STARTED",
+                    "status_label": "Belum Masuk",
+                    "total_score": None,
+                    "correct_count": 0,
+                    "total_questions": total_questions_count,
+                    "violation_count": 0,
+                    "started_at": None,
+                    "finished_at": None,
+                })
 
         avg_score = round(sum(scores_list) / len(scores_list), 1) if scores_list else 0.0
         max_score = max(scores_list) if scores_list else 0.0
         min_score = min(scores_list) if scores_list else 0.0
 
+        session_title = session.package.title if (session.package and hasattr(session.package, 'title')) else "Sesi Ujian"
+        subject_name = session.package.subject_name if session.package else "-"
+        exam_type = session.package.exam_type if session.package else "NATIVE_QUESTIONS"
+
         return Response({
             "success": True,
             "session_id": str(session.id),
-            "session_title": session.title,
-            "subject_name": package.subject_name,
+            "session_title": session_title,
+            "subject_name": subject_name,
             "classroom_display": session.get_classrooms_display(),
-            "exam_type": package.exam_type,
+            "exam_type": exam_type,
             "total_questions": total_questions_count,
             "total_max_points": total_max_points,
             "statistics": {
                 "total_students": len(students_data),
                 "submitted_count": len(scores_list),
+                "in_progress_count": len([s for s in students_data if s["status"] == "WORKING"]),
+                "not_started_count": len([s for s in students_data if s["status"] == "NOT_STARTED"]),
                 "average_score": avg_score,
                 "highest_score": max_score,
                 "lowest_score": min_score,
@@ -1005,8 +1069,8 @@ class StudentAttemptDetailBreakdownView(APIView):
             "student_name": attempt.student.full_name,
             "nisn": attempt.student.nisn,
             "classroom": attempt.student.classroom.name if getattr(attempt.student, 'classroom', None) else session.get_classrooms_display(),
-            "session_title": session.title,
-            "subject_name": package.subject_name,
+            "session_title": session.package.title if session.package else "Sesi Ujian",
+            "subject_name": package.subject_name if package else "-",
             "total_score": float(attempt.total_score) if attempt.total_score is not None else 0.0,
             "total_max_points": sum(q.points for q in questions),
             "total_correct": total_correct_count,
@@ -1014,6 +1078,121 @@ class StudentAttemptDetailBreakdownView(APIView):
             "total_questions": len(questions),
             "items": items
         }, status=status.HTTP_200_OK)
+
+
+class ExportSessionResultsExcelView(APIView):
+    """
+    GET /api/exams/sessions/<uuid:session_id>/export-results-excel/
+    Mengunduh berkas Excel (.xlsx) resmi rekapitulasi nilai dan analisis lembar jawaban per butir soal
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, session_id):
+        session = get_object_or_404(ExamSession.objects.select_related('package', 'classroom'), id=session_id)
+        package = session.package
+        questions = list(Question.objects.filter(package=package).prefetch_related('options').order_by('order_number')) if package else []
+
+        if session.allow_all_classes:
+            students_qs = list(User.objects.filter(role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name'))
+        elif hasattr(session, 'classrooms') and session.classrooms.exists():
+            students_qs = list(User.objects.filter(classroom__in=session.classrooms.all(), role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name'))
+        elif session.classroom:
+            students_qs = list(User.objects.filter(classroom=session.classroom, role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name'))
+        else:
+            students_qs = list(User.objects.filter(role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name'))
+
+        attempts_qs = StudentAttempt.objects.filter(session=session).select_related('student', 'student__classroom')
+        attempts_by_student = {att.student_id: att for att in attempts_qs}
+
+        enrolled_student_ids = set(s.id for s in students_qs)
+        all_students = list(students_qs)
+        for att in attempts_qs:
+            if att.student_id not in enrolled_student_ids:
+                all_students.append(att.student)
+                enrolled_student_ids.add(att.student_id)
+
+        all_students.sort(key=lambda s: (s.full_name or s.username or "").lower())
+
+        students_data = []
+        for st in all_students:
+            att = attempts_by_student.get(st.id)
+            if att:
+                answers = att.answers_json or {}
+                essay_scores = att.essay_scores or {}
+                correct_count = 0
+                for q in questions:
+                    ans = answers.get(str(q.id)) or answers.get(f"q_{q.order_number}")
+                    if ans is None:
+                        continue
+                    if q.question_type == Question.QuestionTypeChoices.MULTIPLE_CHOICE:
+                        correct_opt = next((o for o in q.options.all() if o.is_correct), None)
+                        if correct_opt and (str(ans).strip() == str(correct_opt.id) or str(ans).strip().upper() == correct_opt.option_label.strip().upper()):
+                            correct_count += 1
+                    elif q.question_type == Question.QuestionTypeChoices.MULTIPLE_CHOICE_COMPLEX:
+                        correct_labels = set(q.options.filter(is_correct=True).values_list('option_label', flat=True))
+                        student_items = set(str(x).strip().upper() for x in ans) if isinstance(ans, list) else set()
+                        if student_items == correct_labels:
+                            correct_count += 1
+                    elif q.question_type == Question.QuestionTypeChoices.SHORT_ANSWER:
+                        extra = q.extra_data or {}
+                        accepted = extra.get('exact_keys') or extra.get('accepted_answers') or []
+                        if isinstance(accepted, str):
+                            accepted = [x.strip() for x in accepted.split('/') if x.strip()]
+                        if any(str(ans).strip().lower() == str(acc).strip().lower() for acc in accepted):
+                            correct_count += 1
+                    elif q.question_type == Question.QuestionTypeChoices.TRUE_FALSE_MATRIX:
+                        extra = q.extra_data or {}
+                        rows = extra.get('rows', [])
+                        if isinstance(ans, dict) and rows:
+                            if sum(1 for i, r in enumerate(rows) if ans.get(str(i)) == bool(r.get('correct') or r.get('is_correct'))) == len(rows):
+                                correct_count += 1
+                    elif q.question_type == Question.QuestionTypeChoices.MATCHING_PAIR:
+                        extra = q.extra_data or {}
+                        pairs = extra.get('pairs', [])
+                        if isinstance(ans, dict) and pairs:
+                            if sum(1 for p in pairs if str(ans.get(p.get('left'), '')).strip().lower() == str(p.get('right', '')).strip().lower()) == len(pairs):
+                                correct_count += 1
+                    elif q.question_type == Question.QuestionTypeChoices.ESSAY:
+                        e_info = essay_scores.get(str(q.id), {})
+                        if e_info.get('score', 0) > 0:
+                            correct_count += 1
+
+                score_val = float(att.total_score) if att.total_score is not None else (0.0 if att.status == StudentAttempt.AttemptStatus.SUBMITTED else None)
+                students_data.append({
+                    "student_id": st.id,
+                    "nisn": st.nisn or st.username or "-",
+                    "student_name": st.full_name or st.username,
+                    "classroom_name": st.classroom.name if getattr(st, 'classroom', None) else session.get_classrooms_display(),
+                    "status": att.status,
+                    "total_score": score_val,
+                    "correct_count": correct_count,
+                    "violation_count": att.violation_count,
+                })
+            else:
+                students_data.append({
+                    "student_id": st.id,
+                    "nisn": st.nisn or st.username or "-",
+                    "student_name": st.full_name or st.username,
+                    "classroom_name": st.classroom.name if getattr(st, 'classroom', None) else session.get_classrooms_display(),
+                    "status": "NOT_STARTED",
+                    "total_score": None,
+                    "correct_count": 0,
+                    "violation_count": 0,
+                })
+
+        from .excel_results_generator import generate_session_results_excel
+        excel_bytes = generate_session_results_excel(session, questions, students_data, attempts_by_student)
+
+        cls_slug = session.get_classrooms_display().replace(', ', '_').replace(' ', '_')
+        subj_slug = (package.subject_name or 'Ujian').replace(' ', '_') if package else 'Ujian'
+        filename = f"Rekap_Nilai_{cls_slug}_{subj_slug}.xlsx"
+
+        response = HttpResponse(
+            excel_bytes,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
 
 
 

@@ -184,6 +184,24 @@ export const getStudentAttemptBreakdownApi = async (attemptId) => {
   return response.data;
 };
 
+export const downloadSessionResultsExcelApi = async (sessionId, defaultFilename = 'Rekap_Nilai_Siswa.xlsx') => {
+  const response = await axiosInstance.get(`/exams/sessions/${sessionId}/export-results-excel/`, {
+    responseType: 'blob',
+  });
+  const blob = new Blob([response.data], { 
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+  });
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = downloadUrl;
+  link.setAttribute('download', defaultFilename);
+  document.body.appendChild(link);
+  link.click();
+  link.parentNode.removeChild(link);
+  window.URL.revokeObjectURL(downloadUrl);
+  return true;
+};
+
 export const examApi = {
   getPackagesApi,
   getPackageDetailApi,
@@ -208,6 +226,7 @@ export const examApi = {
   saveEssayGradeApi,
   getSessionStudentResultsApi,
   getStudentAttemptBreakdownApi,
+  downloadSessionResultsExcelApi,
 
   // Aliases for compatibility
   getPackages: getPackagesApi,
@@ -233,6 +252,7 @@ export const examApi = {
   saveEssayGrade: saveEssayGradeApi,
   getSessionStudentResults: getSessionStudentResultsApi,
   getStudentAttemptBreakdown: getStudentAttemptBreakdownApi,
+  downloadSessionResultsExcel: downloadSessionResultsExcelApi,
 };
 
 export default examApi;
