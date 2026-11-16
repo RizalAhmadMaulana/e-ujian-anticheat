@@ -161,13 +161,15 @@ export default function ExamSessionSetup() {
   const handleToggleClassroom = (clsId) => {
     setAllowAllClasses(false);
     setSelectedClassroomIds((prev) => {
-      const exists = prev.includes(clsId);
-      const next = exists ? prev.filter((id) => id !== clsId) : [...prev, clsId];
-      
+      const exists = prev.some((id) => String(id) === String(clsId));
+      const next = exists
+        ? prev.filter((id) => String(id) !== String(clsId))
+        : [...prev, clsId];
+
       const pkg = examPackages.find((p) => p.id === selectedPackageId);
       if (pkg && next.length > 0) {
         const names = classroomsList
-          .filter((c) => next.includes(c.id))
+          .filter((c) => next.some((id) => String(id) === String(c.id)))
           .map((c) => c.name)
           .join(', ');
         setSessionTitle(`Ujian ${pkg.subjectName || pkg.subject_name || 'Mapel'} Kelas ${names}`);
@@ -214,7 +216,7 @@ export default function ExamSessionSetup() {
     if (allowAllClasses) return 'Semua Kelas (Seluruh Siswa)';
     if (!selectedClassroomIds || selectedClassroomIds.length === 0) return 'Belum ada kelas yang dipilih';
     return classroomsList
-      .filter((c) => selectedClassroomIds.includes(c.id))
+      .filter((c) => selectedClassroomIds.some((id) => String(id) === String(c.id)))
       .map((c) => c.name)
       .join(', ');
   };
@@ -269,31 +271,39 @@ export default function ExamSessionSetup() {
       loadedClassIds = session.classroom_ids;
     } else if (session.classroomIds && Array.isArray(session.classroomIds) && session.classroomIds.length > 0) {
       loadedClassIds = session.classroomIds;
-    } else if (session.classrooms && Array.isArray(session.classrooms)) {
-      loadedClassIds = session.classrooms.map((c) => (typeof c === 'object' ? c.id : c));
-    } else if (session.classroom && typeof session.classroom === 'string' && session.classroom !== 'Semua Kelas') {
-      const splitted = session.classroom.split(',').map((s) => s.trim().toLowerCase());
-      loadedClassIds = classroomsList
-        .filter((c) => splitted.includes(c.name.toLowerCase()))
-        .map((c) => c.id);
-      if (loadedClassIds.length === 0) {
-        const found = classroomsList.find((c) => c.name.toLowerCase() === session.classroom.trim().toLowerCase());
-        if (found) loadedClassIds = [found.id];
+    } else if (session.classrooms && Array.isArray(session.classrooms) && session.classrooms.length > 0) {
+      loadedClassIds = session.classrooms.map((c) => (typeof c === 'object' && c !== null ? c.id : c));
+    }
+
+    // Jika loadedClassIds masih kosong dan bukan mode Semua Kelas, parse dari string nama kelas (misal: "IX, IXD, IXH")
+    if (loadedClassIds.length === 0 && !isAll) {
+      const classStr = session.classroom || session.classroom_name || session.classroom_display || '';
+      if (classStr && typeof classStr === 'string' && classStr !== 'Semua Kelas') {
+        const splitted = classStr.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+        loadedClassIds = classroomsList
+          .filter((c) => splitted.includes((c.name || '').trim().toLowerCase()))
+          .map((c) => c.id);
+        if (loadedClassIds.length === 0) {
+          const found = classroomsList.find((c) => (c.name || '').trim().toLowerCase() === classStr.trim().toLowerCase());
+          if (found) loadedClassIds = [found.id];
+        }
       }
-    } else if (session.classroomId) {
-      loadedClassIds = [session.classroomId];
-    } else if (session.classroom_id) {
-      loadedClassIds = [session.classroom_id];
+    }
+
+    if (loadedClassIds.length === 0 && !isAll && (session.classroomId || session.classroom_id)) {
+      loadedClassIds = [session.classroomId || session.classroom_id];
     }
 
     if (isAll) {
       setSelectedClassroomIds(classroomsList.map((c) => c.id));
       setClassroom('Semua Kelas');
     } else {
-      const finalIds = loadedClassIds.length > 0 ? loadedClassIds : (classroomsList.length > 0 ? [classroomsList[0].id] : []);
-      setSelectedClassroomIds(finalIds);
-      const names = classroomsList.filter(c => finalIds.includes(c.id)).map(c => c.name).join(', ');
-      setClassroom(names || 'Semua Kelas');
+      setSelectedClassroomIds(loadedClassIds);
+      const names = classroomsList
+        .filter((c) => loadedClassIds.some((id) => String(id) === String(c.id)))
+        .map((c) => c.name)
+        .join(', ');
+      setClassroom(names || (classroomsList[0]?.name || 'Semua Kelas'));
     }
 
     const today = new Date().toISOString().split('T')[0];
@@ -817,7 +827,7 @@ export default function ExamSessionSetup() {
               {classroomsList.length > 0 ? (
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 max-h-40 overflow-y-auto p-1.5 bg-white rounded-lg border border-zinc-200">
                   {classroomsList.map((c) => {
-                    const isChecked = allowAllClasses || selectedClassroomIds.includes(c.id);
+                    const isChecked = allowAllClasses || selectedClassroomIds.some((id) => String(id) === String(c.id));
                     return (
                       <label
                         key={c.id}

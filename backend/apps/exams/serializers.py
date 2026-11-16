@@ -184,7 +184,7 @@ class ExamSessionSerializer(serializers.ModelSerializer):
         required=False
     )
     classroom_ids = serializers.ListField(
-        child=serializers.UUIDField(), 
+        child=serializers.CharField(), 
         required=False, 
         write_only=True
     )
@@ -237,7 +237,7 @@ class ExamSessionSerializer(serializers.ModelSerializer):
         else:
             target_classrooms = []
             if classroom_ids:
-                target_classrooms = list(ClassRoom.objects.filter(id__in=classroom_ids))
+                target_classrooms = list(ClassRoom.objects.filter(id__in=[str(x) for x in classroom_ids if x is not None]))
             elif classrooms_data:
                 target_classrooms = list(classrooms_data)
             
@@ -268,7 +268,7 @@ class ExamSessionSerializer(serializers.ModelSerializer):
                 instance.allow_all_classes = allow_all
             target_classrooms = []
             if classroom_ids is not None:
-                target_classrooms = list(ClassRoom.objects.filter(id__in=classroom_ids))
+                target_classrooms = list(ClassRoom.objects.filter(id__in=[str(x) for x in classroom_ids if x is not None]))
             elif classrooms_data is not None:
                 target_classrooms = list(classrooms_data)
 
@@ -296,9 +296,14 @@ class ExamSessionSerializer(serializers.ModelSerializer):
 
         data['allow_all_classes'] = instance.allow_all_classes
         data['allowAllClasses'] = instance.allow_all_classes
-        data['classrooms'] = [{'id': str(c.id), 'name': c.name} for c in instance.classrooms.all()]
-        data['classroom_ids'] = [str(c.id) for c in instance.classrooms.all()]
-        data['classroomIds'] = [str(c.id) for c in instance.classrooms.all()]
+        
+        active_classrooms = list(instance.classrooms.all())
+        if not active_classrooms and not instance.allow_all_classes and instance.classroom:
+            active_classrooms = [instance.classroom]
+
+        data['classrooms'] = [{'id': c.id, 'name': c.name} for c in active_classrooms]
+        data['classroom_ids'] = [c.id for c in active_classrooms]
+        data['classroomIds'] = [c.id for c in active_classrooms]
 
         # Regenerasi Otomatis Token Masuk & PIN Pengawas setiap 10 menit
         tokens = get_session_tokens(instance.id)
