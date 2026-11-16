@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useExamStore } from '../../store/useExamStore';
 import StatusBadge from '../../components/common/StatusBadge';
+import { getSessionTokens, formatTimeRemaining } from '../../utils/tokenGenerator';
 import { 
   FolderKanban, 
   Users, 
@@ -37,6 +38,16 @@ export default function DashboardTeacher() {
     fetchPackages?.();
     fetchSessions?.();
   }, [fetchPackages, fetchSessions]);
+
+  // Live Timer State untuk Sinkronisasi Rotasi Token 10 Menit
+  const [tickTime, setTickTime] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTickTime(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const activeSessions = examSessions.filter((s) => s.isActive || s.is_active);
   const lockedStudents = proctoringStudents.filter((s) => s.status === 'LOCKED_VIOLATION');
@@ -232,8 +243,10 @@ export default function DashboardTeacher() {
                 const sessionTitle = session.title || session.package_title || 'Sesi Ujian';
                 const classroomName = session.classroom_name || session.classroom || 'Semua Kelas';
                 const duration = session.duration_minutes || session.durationMinutes || 60;
-                const entryPw = session.entry_password || session.entryPassword || '-';
-                const exitPw = session.exit_password || session.exitPassword || '-';
+                const dynamicTokens = getSessionTokens(session.id, tickTime / 1000);
+                const entryPw = dynamicTokens.entryToken || session.entry_password || session.entryPassword || '-';
+                const pinPw = dynamicTokens.pinToken || session.supervisor_pin || session.supervisorPin || 'PIN-1234';
+                const countdownStr = formatTimeRemaining(dynamicTokens.expiresInSeconds);
                 const examType = session.exam_type || session.examType || 'NATIVE_QUESTIONS';
 
                 return (
@@ -261,12 +274,17 @@ export default function DashboardTeacher() {
                       </div>
                       <h3 className="font-semibold text-zinc-900 text-sm tracking-tight">{sessionTitle}</h3>
                       <div className="text-[11px] text-zinc-500 flex flex-wrap items-center gap-2.5">
-                        <span>
+                        <span className="flex items-center gap-1">
                           Token Masuk: <strong className="text-zinc-900 font-mono font-bold">{entryPw}</strong>
                         </span>
                         <span className="text-zinc-300">•</span>
-                        <span>
-                          PIN Pengawas: <strong className="text-zinc-900 font-mono font-bold">{session.supervisor_pin || session.supervisorPin || 'PIN-1234'}</strong>
+                        <span className="flex items-center gap-1">
+                          PIN Pengawas: <strong className="text-zinc-900 font-mono font-bold">{pinPw}</strong>
+                        </span>
+                        <span className="text-zinc-300">•</span>
+                        <span className="text-[10px] font-mono text-emerald-700 bg-emerald-100/80 border border-emerald-200/80 px-1.5 py-0.2 rounded font-semibold flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          Rotasi: {countdownStr}
                         </span>
                       </div>
                     </div>

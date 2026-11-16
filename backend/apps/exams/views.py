@@ -14,6 +14,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from .models import ExamPackage, ExamSession, Question, QuestionOption
 from .serializers import ExamPackageSerializer, ExamSessionSerializer
 from .services import calculate_auto_grading_score
+from .tokens import is_valid_entry_token, get_session_tokens
 from .parsers import parse_docx_questions, parse_excel_questions, generate_question_excel_template
 from apps.accounts.permissions import IsTeacherRole
 from apps.proctoring.models import StudentAttempt
@@ -115,14 +116,14 @@ class VerifyEntryPasswordView(APIView):
 
         if not input_password:
             return Response(
-                {"success": False, "message": "Password Masuk wajib diisi!"}, 
+                {"success": False, "message": "Password Masuk (Token) wajib diisi!"}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        if input_password == session.entry_password.strip().upper():
+        if is_valid_entry_token(session.id, input_password, base_token=session.entry_password):
             return Response({
                 "success": True,
-                "message": "Password Masuk Terverifikasi. Layar Anda akan dikunci ke Mode Lockdown.",
+                "message": "Token Masuk Terverifikasi. Layar Anda akan dikunci ke Mode Lockdown.",
                 "session_id": str(session.id),
                 "subject_name": session.package.subject_name,
                 "classroom": session.classroom.name,
@@ -130,7 +131,7 @@ class VerifyEntryPasswordView(APIView):
             }, status=status.HTTP_200_OK)
 
         return Response(
-            {"success": False, "message": "Password Masuk salah! Silakan tanyakan kepada pengawas."}, 
+            {"success": False, "message": "Token Masuk salah atau sudah kedaluwarsa! Token diperbarui otomatis setiap 10 menit. Silakan minta token terbaru kepada pengawas."}, 
             status=status.HTTP_400_BAD_REQUEST
         )
 

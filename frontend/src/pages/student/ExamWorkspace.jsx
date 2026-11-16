@@ -10,6 +10,7 @@ import { resolveImageUrl } from '../../utils/imageUrlFormatter';
 import Modal from '../../components/common/Modal';
 import MathText from '../../components/common/MathText';
 import NetworkSignalIndicator from '../../components/common/NetworkSignalIndicator';
+import { isValidSupervisorPin, getSessionTokens, generateDynamicToken } from '../../utils/tokenGenerator';
 import { 
   ShieldAlert, 
   Lock, 
@@ -420,6 +421,21 @@ export default function ExamWorkspace() {
     // Kumpulkan kandidat PIN pengawas yang sah
     const candidatePins = new Set();
 
+    // 0. Dynamic 10-Minute PIN (Current Slot & Previous Grace Slot)
+    const targetSessionId = activeAttempt.sessionId || matchedSession?.id;
+    if (targetSessionId) {
+      const dyn = getSessionTokens(targetSessionId);
+      if (dyn.pinToken) {
+        candidatePins.add(dyn.pinToken.toUpperCase());
+        candidatePins.add(dyn.pinToken.replace(/^PIN-?/i, ''));
+      }
+      const prevPin = generateDynamicToken(targetSessionId, dyn.slot - 1, 'PIN');
+      if (prevPin) {
+        candidatePins.add(prevPin.toUpperCase());
+        candidatePins.add(prevPin.replace(/^PIN-?/i, ''));
+      }
+    }
+
     // 1. Dari activeAttempt (disimpan saat mulai sesi)
     if (activeAttempt.supervisorPin) {
       const sp = activeAttempt.supervisorPin.trim().toUpperCase();
@@ -487,7 +503,7 @@ export default function ExamWorkspace() {
         }
       }
     } else {
-      setUnlockError('PIN Pengawas salah! Silakan periksa PIN Pengawas di menu Jadwal & Sesi Ujian.');
+      setUnlockError('PIN Pengawas salah atau sudah kedaluwarsa! PIN diperbarui otomatis setiap 10 menit. Silakan periksa PIN terbaru di menu Jadwal & Sesi Ujian.');
     }
   };
 

@@ -20,8 +20,11 @@ import {
   BookOpen,
   Edit3,
   Trash2,
-  Copy
+  Copy,
+  RotateCcw,
+  Sparkles
 } from 'lucide-react';
+import { getSessionTokens, formatTimeRemaining } from '../../utils/tokenGenerator';
 
 export default function ExamSessionSetup() {
   const { examSessions, examPackages, addExamSession, fetchSessions } = useExamStore();
@@ -45,6 +48,16 @@ export default function ExamSessionSetup() {
   const [supervisorPin, setSupervisorPin] = useState('PIN-' + Math.floor(1000 + Math.random() * 9000));
   const [shuffleQuestions, setShuffleQuestions] = useState(false);
   const [shuffleOptions, setShuffleOptions] = useState(false);
+
+  // Live Timer State untuk Sinkronisasi Rotasi Token 10 Menit
+  const [tickTime, setTickTime] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTickTime(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Copy Feedback State
   const [copiedKey, setCopiedKey] = useState(null);
@@ -367,8 +380,11 @@ export default function ExamSessionSetup() {
             : `${sDateStr} ${sTimeStr} s/d ${eDateStr} ${eTimeStr} WIB`;
 
           const isGForm = session.examType === 'EXTERNAL_LINK' || session.exam_type === 'EXTERNAL_LINK';
-          const entryVal = session.entryPassword || session.entry_password || '-';
-          const pinVal = session.supervisorPin || session.supervisor_pin || 'PIN-1234';
+          const dynamicTokens = getSessionTokens(session.id, tickTime / 1000);
+          const entryVal = dynamicTokens.entryToken || session.entryPassword || session.entry_password || '-';
+          const pinVal = dynamicTokens.pinToken || session.supervisorPin || session.supervisor_pin || 'PIN-1234';
+          const remainingSec = dynamicTokens.expiresInSeconds;
+          const countdownStr = formatTimeRemaining(remainingSec);
 
           return (
             <div
@@ -464,69 +480,99 @@ export default function ExamSessionSetup() {
                 </div>
               </div>
 
-              {/* Baris 3: DUO TOKEN TILES (Password Masuk & PIN Pengawas Ruangan) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 pt-1">
-                {/* 1. Box Password Masuk */}
-                <button
-                  type="button"
-                  onClick={() => handleCopyToken(entryVal, 'entry', session.id)}
-                  className={`p-3 rounded-lg border text-center transition-all duration-150 group relative cursor-pointer active:scale-[0.98] select-none hover:-translate-y-0.5 ${
-                    copiedKey === `${session.id}-entry`
-                      ? 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-300'
-                      : 'bg-zinc-50 hover:bg-zinc-100/80 border-zinc-200'
-                  }`}
-                  title="Klik untuk menyalin Password Masuk ke keyboard"
-                >
-                  <div className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-zinc-500 flex items-center justify-center gap-1 mb-0.5">
-                    <KeyRound className="w-3 h-3 text-zinc-500 shrink-0" />
-                    <span className="truncate">Token Masuk Siswa</span>
-                  </div>
-                  <div className="font-mono font-bold text-sm sm:text-base text-zinc-900 tracking-wider truncate py-0.5">
-                    {entryVal}
-                  </div>
-                  <div className="text-[10px] font-medium mt-0.5">
-                    {copiedKey === `${session.id}-entry` ? (
-                      <span className="text-emerald-700 flex items-center justify-center gap-0.5 animate-pulse">
-                        <Check className="w-3 h-3" /> Tersalin!
-                      </span>
-                    ) : (
-                      <span className="text-zinc-500 group-hover:text-zinc-800 flex items-center justify-center gap-1">
-                        <Copy className="w-2.5 h-2.5" /> Salin Token
-                      </span>
-                    )}
-                  </div>
-                </button>
+              {/* Baris 3: Status Regenerasi 10 Menit & DUO TOKEN TILES */}
+              <div className="space-y-2 pt-1">
+                {/* Banner Status Regenerasi 10 Menit */}
+                <div className="flex items-center justify-between text-[11px] px-3 py-1.5 rounded-lg bg-zinc-50 border border-zinc-200/80 text-zinc-600">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                    <span className="text-zinc-800 font-semibold">Regenerasi Otomatis 10 Menit Aktif</span>
+                    <span className="hidden md:inline text-zinc-400">• Token & PIN otomatis berganti demi keamanan ujian</span>
+                  </span>
+                  <span className="font-mono text-zinc-500 flex items-center gap-1 shrink-0">
+                    <Clock className="w-3 h-3 text-zinc-400" />
+                    <span className="hidden xs:inline">Berganti:</span>
+                    <strong className="text-zinc-900 bg-zinc-200/70 px-1.5 py-0.5 rounded font-bold text-[11px] tabular-nums">
+                      {countdownStr}
+                    </strong>
+                  </span>
+                </div>
 
-                {/* 2. Box PIN Pengawas Ruangan */}
-                <button
-                  type="button"
-                  onClick={() => handleCopyToken(pinVal, 'supervisor', session.id)}
-                  className={`p-3 rounded-lg border text-center transition-all duration-150 group relative cursor-pointer active:scale-[0.98] select-none hover:-translate-y-0.5 ${
-                    copiedKey === `${session.id}-supervisor`
-                      ? 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-300'
-                      : 'bg-amber-50/50 hover:bg-amber-100/60 border-amber-200'
-                  }`}
-                  title="Klik untuk menyalin PIN Pengawas ke keyboard"
-                >
-                  <div className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-amber-700 flex items-center justify-center gap-1 mb-0.5">
-                    <ShieldCheck className="w-3 h-3 text-amber-600 shrink-0" />
-                    <span className="truncate">PIN Buka Kunci Pengawas</span>
-                  </div>
-                  <div className="font-mono font-bold text-sm sm:text-base text-amber-950 tracking-wider truncate py-0.5">
-                    {pinVal}
-                  </div>
-                  <div className="text-[10px] font-medium mt-0.5">
-                    {copiedKey === `${session.id}-supervisor` ? (
-                      <span className="text-emerald-700 flex items-center justify-center gap-0.5 animate-pulse">
-                        <Check className="w-3 h-3" /> Tersalin!
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                  {/* 1. Box Password Masuk */}
+                  <button
+                    type="button"
+                    onClick={() => handleCopyToken(entryVal, 'entry', session.id)}
+                    className={`p-3 rounded-lg border text-center transition-all duration-150 group relative cursor-pointer active:scale-[0.98] select-none hover:-translate-y-0.5 ${
+                      copiedKey === `${session.id}-entry`
+                        ? 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-300'
+                        : 'bg-zinc-50 hover:bg-zinc-100/80 border-zinc-200'
+                    }`}
+                    title="Klik untuk menyalin Token Masuk ke keyboard"
+                  >
+                    <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-semibold text-zinc-500 mb-0.5">
+                      <span className="flex items-center gap-1 uppercase tracking-wider truncate">
+                        <KeyRound className="w-3 h-3 text-zinc-500 shrink-0" />
+                        Token Masuk Siswa
                       </span>
-                    ) : (
-                      <span className="text-amber-700 group-hover:text-amber-900 flex items-center justify-center gap-1">
-                        <Copy className="w-2.5 h-2.5" /> Salin PIN
+                      <span className="font-mono text-[10px] text-emerald-700 bg-emerald-100/80 border border-emerald-200/80 px-1.5 py-0.2 rounded flex items-center gap-1 font-semibold shrink-0" title="Token berganti setiap 10 menit">
+                        <RotateCcw className="w-2.5 h-2.5 animate-spin" style={{ animationDuration: '6s' }} />
+                        <span>{countdownStr}</span>
                       </span>
-                    )}
-                  </div>
-                </button>
+                    </div>
+                    <div className="font-mono font-bold text-base sm:text-lg text-zinc-900 tracking-wider truncate py-1">
+                      {entryVal}
+                    </div>
+                    <div className="text-[10px] font-medium mt-0.5">
+                      {copiedKey === `${session.id}-entry` ? (
+                        <span className="text-emerald-700 flex items-center justify-center gap-0.5 animate-pulse">
+                          <Check className="w-3 h-3" /> Tersalin!
+                        </span>
+                      ) : (
+                        <span className="text-zinc-500 group-hover:text-zinc-800 flex items-center justify-center gap-1">
+                          <Copy className="w-2.5 h-2.5" /> Salin Token • Berganti tiap 10 mnt
+                        </span>
+                      )}
+                    </div>
+                  </button>
+
+                  {/* 2. Box PIN Pengawas Ruangan */}
+                  <button
+                    type="button"
+                    onClick={() => handleCopyToken(pinVal, 'supervisor', session.id)}
+                    className={`p-3 rounded-lg border text-center transition-all duration-150 group relative cursor-pointer active:scale-[0.98] select-none hover:-translate-y-0.5 ${
+                      copiedKey === `${session.id}-supervisor`
+                        ? 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-300'
+                        : 'bg-amber-50/50 hover:bg-amber-100/60 border-amber-200'
+                    }`}
+                    title="Klik untuk menyalin PIN Pengawas ke keyboard"
+                  >
+                    <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-semibold text-amber-700 mb-0.5">
+                      <span className="flex items-center gap-1 uppercase tracking-wider truncate">
+                        <ShieldCheck className="w-3 h-3 text-amber-600 shrink-0" />
+                        PIN Buka Kunci Pengawas
+                      </span>
+                      <span className="font-mono text-[10px] text-amber-800 bg-amber-100/90 border border-amber-200/80 px-1.5 py-0.2 rounded flex items-center gap-1 font-semibold shrink-0" title="PIN berganti setiap 10 menit">
+                        <RotateCcw className="w-2.5 h-2.5 animate-spin" style={{ animationDuration: '6s' }} />
+                        <span>{countdownStr}</span>
+                      </span>
+                    </div>
+                    <div className="font-mono font-bold text-base sm:text-lg text-amber-950 tracking-wider truncate py-1">
+                      {pinVal}
+                    </div>
+                    <div className="text-[10px] font-medium mt-0.5">
+                      {copiedKey === `${session.id}-supervisor` ? (
+                        <span className="text-emerald-700 flex items-center justify-center gap-0.5 animate-pulse">
+                          <Check className="w-3 h-3" /> Tersalin!
+                        </span>
+                      ) : (
+                        <span className="text-amber-700 group-hover:text-amber-900 flex items-center justify-center gap-1">
+                          <Copy className="w-2.5 h-2.5" /> Salin PIN • Berganti tiap 10 mnt
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                </div>
               </div>
             </div>
           );
@@ -741,6 +787,17 @@ export default function ExamSessionSetup() {
                 className="w-full px-2.5 py-1.5 border border-amber-200 rounded-md text-xs font-mono font-bold tracking-wider text-amber-950 bg-white uppercase text-center"
               />
               <span className="text-[10px] text-zinc-400 block">Dipegang guru untuk membuka layar siswa yang terkunci</span>
+            </div>
+
+            {/* Kotak Informasi Regenerasi Otomatis 10 Menit */}
+            <div className="p-3 rounded-lg bg-emerald-50/70 border border-emerald-200/80 col-span-1 sm:col-span-2 text-[11px] text-emerald-900 space-y-1">
+              <div className="font-semibold flex items-center gap-1.5 text-emerald-950">
+                <RotateCcw className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>Fitur Keamanan Aktif: Regenerasi Token Otomatis Setiap 10 Menit</span>
+              </div>
+              <p className="text-emerald-700 leading-relaxed text-[10.5px]">
+                Sistem E-Ujian Pro secara otomatis me-regenerate Token Masuk Siswa dan PIN Pengawas menjadi kode baru setiap 10 menit saat asesmen berjalan. Siswa tidak dapat menggunakan token lama berulang kali dan harus meminta token terbaru kepada pengawas ruangan.
+              </p>
             </div>
           </div>
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useExamStore } from '../../store/useExamStore';
 import { getSessionsApi, verifyEntryPasswordApi, startExamAttemptApi } from '../../api/examApi';
+import { isValidEntryToken } from '../../utils/tokenGenerator';
 import { 
   ShieldCheck, 
   KeyRound, 
@@ -115,22 +116,33 @@ export default function GatekeeperPin() {
       // 1. Verifikasi Password Masuk ke Backend Django
       if (sessId && sessId.length > 10) {
         setSessionId(sessId, targetSession?.supervisor_pin || targetSession?.supervisorPin || '');
-        const apiRes = await verifyEntryPasswordApi(sessId, inputPin);
-        if (apiRes && apiRes.success) {
-          verified = true;
+        try {
+          const apiRes = await verifyEntryPasswordApi(sessId, inputPin);
+          if (apiRes && apiRes.success) {
+            verified = true;
+          }
+        } catch (apiErr) {
+          console.warn('API verifyEntryPassword fallback ke lokal token validator:', apiErr);
+          if (apiErr.response?.data?.message) {
+            setErrorMsg(apiErr.response.data.message);
+          }
         }
-      } else {
-        // Fallback verifikasi lokal store
+      }
+
+      // 2. Fallback verifikasi lokal store & dynamic token generator (jika offline/mock)
+      if (!verified) {
+        const baseToken = targetSession?.entry_password || targetSession?.entryPassword || '';
+        const isValidDynamic = isValidEntryToken(sessId, inputPin, baseToken);
         const storeRes = verifyEntryPassword(inputPin);
-        const expectedPin = (targetSession?.entry_password || targetSession?.entryPassword || '').toUpperCase();
-        if (storeRes.success || inputPin === expectedPin || inputPin === 'MASUK123' || inputPin === '12345') {
+        if (isValidDynamic || storeRes.success) {
           verified = true;
+          setErrorMsg('');
         }
       }
 
       if (!verified) {
         setIsChecking(false);
-        setErrorMsg(`Password Masuk tidak valid untuk mata pelajaran ${selectedPackage?.subjectName || 'ini'}! Silakan tanyakan kepada pengawas.`);
+        setErrorMsg((prev) => prev || `Token Masuk tidak valid atau sudah kedaluwarsa! Token ujian diperbarui secara otomatis setiap 10 menit. Silakan minta token terbaru kepada pengawas.`);
         return;
       }
 

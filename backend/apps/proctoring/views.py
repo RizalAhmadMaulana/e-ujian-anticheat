@@ -11,6 +11,7 @@ from .serializers import (
     ViolationHistorySerializer
 )
 from apps.exams.models import ExamSession
+from apps.exams.tokens import is_valid_supervisor_pin
 
 class SessionProctoringStatusView(APIView):
     """
@@ -72,22 +73,16 @@ class UnlockStudentAPIView(APIView):
     def post(self, request, attempt_id):
         attempt = get_object_or_404(StudentAttempt.objects.select_related('student', 'session'), id=attempt_id)
 
-        # Jika request menyertakan PIN, validasi terhadap supervisor_pin sesi
+        # Jika request menyertakan PIN, validasi terhadap supervisor_pin sesi (dinamis 10 menit & fallback)
         input_pin = request.data.get('supervisor_pin')
         if input_pin:
-            clean_pin = str(input_pin).strip().upper()
-            clean_pin_noprefix = clean_pin.replace("PIN-", "").replace("PIN", "")
-            session_pin = (attempt.session.supervisor_pin or '').strip().upper()
-            session_pin_noprefix = session_pin.replace("PIN-", "").replace("PIN", "")
-
-            is_valid_pin = (
-                (session_pin and (clean_pin == session_pin or clean_pin_noprefix == session_pin_noprefix))
-                or clean_pin in ['GURU123', 'MASUK123', '12345', 'PIN-1234', '1234']
-            )
-            if not is_valid_pin:
+            session_id = attempt.session.id if attempt.session else None
+            base_pin = attempt.session.supervisor_pin if attempt.session else ''
+            
+            if not is_valid_supervisor_pin(session_id, input_pin, base_pin=base_pin):
                 return Response({
                     "success": False,
-                    "error": "PIN Pengawas salah! Silakan periksa PIN di menu Jadwal & Sesi Ujian."
+                    "error": "PIN Pengawas salah atau sudah kedaluwarsa! PIN diperbarui otomatis setiap 10 menit. Silakan periksa PIN terbaru di menu Jadwal & Sesi Ujian."
                 }, status=status.HTTP_400_BAD_REQUEST)
 
         attempt.status = StudentAttempt.AttemptStatus.WORKING

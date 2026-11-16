@@ -24,8 +24,12 @@ import {
   Send,
   X,
   Volume2,
-  CheckCircle2
+  CheckCircle2,
+  KeyRound,
+  Copy,
+  RotateCcw
 } from 'lucide-react';
+import { getSessionTokens, formatTimeRemaining } from '../../utils/tokenGenerator';
 
 export default function LiveProctoring() {
   const { 
@@ -55,6 +59,35 @@ export default function LiveProctoring() {
   const [isUnlockAllModalOpen, setIsUnlockAllModalOpen] = useState(false);
   const [isUnlockingAll, setIsUnlockingAll] = useState(false);
   const [unlockAllSuccessToast, setUnlockAllSuccessToast] = useState('');
+
+  // Live Timer State untuk Sinkronisasi Rotasi Token 10 Menit
+  const [tickTime, setTickTime] = useState(Date.now());
+  const [copiedToken, setCopiedToken] = useState(null);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTickTime(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleCopyLiveToken = (text, type) => {
+    if (!text) return;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+    } catch (_) {}
+    setCopiedToken(type);
+    setTimeout(() => setCopiedToken(null), 2000);
+  };
 
   // 1. Ambil daftar sesi ujian dari backend
   useEffect(() => {
@@ -468,6 +501,67 @@ export default function LiveProctoring() {
             </div>
           </div>
         </div>
+
+        {/* DUO TOKEN AKTIF PENGAWAS (ROTASI 10 MENIT) */}
+        {(() => {
+          const selectedSession = availableSessions.find(s => s.id === selectedSessionId) || availableSessions[0];
+          if (!selectedSession) return null;
+          const dynamicTokens = getSessionTokens(selectedSession.id, tickTime / 1000);
+          const entryToken = dynamicTokens.entryToken || selectedSession.entry_password || selectedSession.entryPassword || '-';
+          const pinToken = dynamicTokens.pinToken || selectedSession.supervisor_pin || selectedSession.supervisorPin || 'PIN-1234';
+          const countdownStr = formatTimeRemaining(dynamicTokens.expiresInSeconds);
+
+          return (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-xl bg-zinc-950 text-zinc-100 border border-zinc-800 shadow-xs">
+              <div className="flex items-center gap-2 flex-wrap text-xs">
+                <span className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-300 font-mono text-[11px]">
+                  <RotateCcw className="w-3 h-3 text-emerald-400 animate-spin" style={{ animationDuration: '6s' }} />
+                  <span>Rotasi: <strong className="text-white font-bold">{countdownStr}</strong></span>
+                </span>
+                <span className="text-zinc-400 hidden md:inline">|</span>
+                <span className="text-zinc-300 font-medium text-[11px] hidden md:inline">
+                  Token berganti otomatis tiap 10 menit
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Token Masuk Siswa */}
+                <button
+                  type="button"
+                  onClick={() => handleCopyLiveToken(entryToken, 'entry')}
+                  className="px-2.5 py-1 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 text-zinc-200 text-xs flex items-center gap-1.5 transition active:scale-[0.98]"
+                  title="Salin Token Masuk Siswa"
+                >
+                  <KeyRound className="w-3.5 h-3.5 text-zinc-400" />
+                  <span className="text-zinc-400 text-[11px]">Token Masuk:</span>
+                  <strong className="text-white font-mono font-bold">{entryToken}</strong>
+                  {copiedToken === 'entry' ? (
+                    <span className="text-emerald-400 text-[10px] font-semibold animate-pulse ml-0.5">Tersalin!</span>
+                  ) : (
+                    <Copy className="w-3 h-3 text-zinc-500 hover:text-zinc-300 ml-0.5" />
+                  )}
+                </button>
+
+                {/* PIN Pengawas */}
+                <button
+                  type="button"
+                  onClick={() => handleCopyLiveToken(pinToken, 'pin')}
+                  className="px-2.5 py-1 rounded-lg bg-amber-950/40 hover:bg-amber-950/60 border border-amber-600/40 text-amber-200 text-xs flex items-center gap-1.5 transition active:scale-[0.98]"
+                  title="Salin PIN Buka Kunci Pengawas"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="text-amber-300 text-[11px]">PIN Pengawas:</span>
+                  <strong className="text-white font-mono font-bold">{pinToken}</strong>
+                  {copiedToken === 'pin' ? (
+                    <span className="text-emerald-400 text-[10px] font-semibold animate-pulse ml-0.5">Tersalin!</span>
+                  ) : (
+                    <Copy className="w-3 h-3 text-amber-400/80 hover:text-amber-200 ml-0.5" />
+                  )}
+                </button>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* 4 Tombol Filter Tab Status */}
         <div className="flex items-center gap-1.5 pt-2 border-t border-zinc-100 overflow-x-auto pb-1 sm:flex-wrap">

@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import ExamPackage, Question, QuestionOption, ExamSession
 from .services import sanitize_and_format_embed_url
+from .tokens import get_session_tokens
 
 class QuestionOptionSerializer(serializers.ModelSerializer):
     image_url = serializers.CharField(required=False, allow_blank=True, allow_null=True)
@@ -213,9 +214,20 @@ class ExamSessionSerializer(serializers.ModelSerializer):
         data['examType'] = instance.package.exam_type if instance.package else "NATIVE_QUESTIONS"
         data['classroom'] = instance.classroom.name if instance.classroom else "Semua Kelas"
         data['durationMinutes'] = instance.duration_minutes
-        data['entryPassword'] = instance.entry_password
+
+        # Regenerasi Otomatis Token Masuk & PIN Pengawas setiap 10 menit
+        tokens = get_session_tokens(instance.id)
+        data['entry_password'] = tokens['entry_token']
+        data['entryPassword'] = tokens['entry_token']
+        data['supervisor_pin'] = tokens['pin_token']
+        data['supervisorPin'] = tokens['pin_token']
+        data['token_expires_in_seconds'] = tokens['expires_in_seconds']
+        data['tokenExpiresIn'] = tokens['expires_in_seconds']
+        data['token_rotation_interval'] = tokens['rotation_interval']
+        data['base_entry_password'] = instance.entry_password
+        data['base_supervisor_pin'] = instance.supervisor_pin
+
         data['exitPassword'] = instance.exit_password
-        data['supervisorPin'] = instance.supervisor_pin or 'PIN-1234'
         data['strictLockdown'] = instance.strict_lockdown
         data['shuffleQuestions'] = instance.shuffle_questions
         data['shuffleOptions'] = instance.shuffle_options

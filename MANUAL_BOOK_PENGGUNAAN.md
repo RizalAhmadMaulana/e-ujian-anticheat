@@ -38,9 +38,10 @@ Platform ini mengintegrasikan perlindungan berlapis di sisi klien (*client-side 
    - Pengawas memantau status seluruh peserta secara langsung melalui koneksi WebSocket port 8001.
    - Dilengkapi tombol **Remote Unlock 1-Klik** untuk membuka kembali layar siswa yang terblokir langsung dari meja guru tanpa memuat ulang (*refresh*) halaman siswa.
 
-4. **🔐 Keamanan Token Terpadu (Token Masuk & PIN Pengawas):**
-   - **Password Masuk (Token Masuk):** Memverifikasi siswa sebelum masuk ke arena ujian. Dilengkapi tombol **One-Click Copy ke keyboard** pada kartu sesi pengawas.
-   - **PIN Pengawas Ruangan:** PIN darurat bagi pengawas untuk membuka kembali layar siswa yang terkena pembekuan penalti secara mandiri.
+4. **🔐 Keamanan Token Terpadu & Regenerasi Otomatis Setiap 10 Menit:**
+   - **Regenerasi Otomatis 10 Menit (Zero-Reuse Security):** Token Masuk Siswa (`entry_password`) dan PIN Pengawas Ruangan (`supervisor_pin`) berganti otomatis menjadi token baru setiap 10 menit (600 detik). Sistem ini memastikan siswa tidak dapat masuk berulang kali atau membocorkan token ke rombel lain.
+   - **Password Masuk (Token Masuk):** Memverifikasi siswa sebelum masuk ke arena ujian dengan format `MSK-XXXX`. Dilengkapi tombol **One-Click Copy ke keyboard** dan live countdown timer pada kartu sesi pengawas.
+   - **PIN Pengawas Ruangan:** PIN darurat (format `PIN-YYYY`) bagi pengawas untuk membuka kembali layar siswa yang terkena pembekuan penalti secara mandiri langsung di gawai siswa.
    *(Catatan: Sistem tidak lagi memerlukan Password Keluar manual; siswa menyelesaikan ujian lewat dialog konfirmasi aman yang otomatis memicu alarm keluar resmi).*
 
 5. **🏫 Pengaturan Identitas Sekolah Dinamis (School Settings):**
@@ -285,11 +286,18 @@ Ruang ujian harus dibuka terlebih dahulu agar siswa dapat mulai mengerjakan sesu
      - Centang **"Acak Urutan Butir Soal"**: Urutan soal diacak secara deterministik per-siswa sehingga nomor 1 pada siswa A berbeda dengan siswa B.
      - Centang **"Acak Urutan Pilihan (A-E)"**: Posisi pilihan ganda (A, B, C, D) diacak posisinya antar-siswa untuk mematikan potensi menyontek *"nomor 5 jawabannya B"*. Penilaian otomatis backend tetap 100% akurat dan kebal pengacakan.
   7. Atur **Password Masuk (Token Masuk)**:
-     - Dibuat otomatis atau klik acak (contoh: `MSK-2JM4`). Berikan token ini kepada siswa saat ujian dimulai.
+     - Dibuat otomatis atau klik acak (contoh: `MSK-2JM4`). Sistem secara otomatis mengaktifkan fitur **Regenerasi Token Otomatis Setiap 10 Menit** saat ujian berjalan demi mencegah kebocoran token.
   8. Atur **PIN Pengawas Ruangan**:
-     - Dibuat otomatis atau klik acak (contoh: `PIN-9378`).
+     - Dibuat otomatis atau klik acak (contoh: `PIN-9378`). PIN pembuka kunci darurat ini juga otomatis berganti setiap 10 menit.
      - **Fungsi:** Dipegang khusus oleh guru pengawas untuk membuka kunci layar siswa yang terblokir secara mandiri langsung di gawai siswa.
   9. Klik **"Buka Ruang Ujian Sekarang"**.
+
+- **Sistem Regenerasi Otomatis Token & PIN Setiap 10 Menit:**
+  - Token Masuk Siswa (`MSK-XXXX`) dan PIN Buka Kunci Pengawas (`PIN-YYYY`) secara otomatis berganti setiap 10 menit (600 detik) menggunakan algoritma berbasis waktu yang deterministik dan presisi antara backend dan frontend.
+  - Kartu sesi guru menampilkan penghitung waktu mundur (*live countdown timer*) waktu rotasi (misal: `Rotasi: 08:42`).
+  - Saat hitungan mundur mencapai 00:00, token langsung berganti ke kode baru secara otomatis tanpa perlu refresh halaman.
+  - Siswa yang terlambat masuk atau layarnya terblokir penalti wajib meminta token aktif terbaru dari pengawas ruangan.
+  - Tersedia toleransi masa tenggang (*grace period*) 1 siklus slot untuk mengantisipasi siswa yang memasukkan token tepat pada detik pergantian menit ke-10.
 
 - **Status Jadwal Real-Time pada Kartu Sesi Guru:**
   - 🟢 **Sedang Berjalan:** Sesi aktif dalam rentang tanggal dan jam saat ini.
@@ -297,8 +305,9 @@ Ruang ujian harus dibuka terlebih dahulu agar siswa dapat mulai mengerjakan sesu
   - ⚪ **Telah Berakhir:** Batas waktu pengerjaan telah lewat (sesi otomatis terkunci).
 
 - **Fitur Salin Password Instan (One-Click Copy ke Keyboard):**
-  - **Salin Password Masuk:** Cukup **klik langsung kotak Token Masuk** pada kartu sesi. Token ujian otomatis langsung tersalin ke clipboard/keyboard perangkat Anda (muncul indikator hijau *"Tersalin!"* dan notifikasi pop-up). Anda tinggal langsung menempelkannya (`Ctrl+V` atau *Paste*) ke grup WA kelas atau catatan pengawas.
-  - **Salin PIN Pengawas:** Cukup **klik langsung kotak PIN Pengawas** (berwarna oranye/amber) pada kartu sesi untuk menyalin PIN pembuka kunci darurat.
+  - **Salin Password Masuk:** Cukup **klik langsung kotak Token Masuk** pada kartu sesi. Token ujian aktif untuk slot 10 menit saat itu otomatis langsung tersalin ke clipboard/keyboard perangkat Anda (muncul indikator hijau *"Tersalin!"* dan notifikasi pop-up). Anda tinggal langsung menempelkannya (`Ctrl+V` atau *Paste*) ke catatan atau mengumumkannya ke kelas.
+  - **Salin PIN Pengawas:** Cukup **klik langsung kotak PIN Pengawas** (berwarna oranye/amber) pada kartu sesi untuk menyalin PIN pembuka kunci darurat aktif.
+  - **Di Menu Live Proctoring:** Pengawas juga dapat langsung melihat dan menyalin Token Masuk dan PIN Pengawas aktif di bar atas Live Proctoring tanpa perlu bolak-balik ke menu Jadwal.
   - **Edit & Hapus Sesi:** Gunakan tombol **"Edit"** untuk mengubah durasi atau waktu ujian, dan tombol **"Hapus"** untuk menghapus sesi yang sudah tidak digunakan.
 
 ---
@@ -517,7 +526,8 @@ Siswa dapat memeriksa biodata diri dan mengamankan akun asesmen mereka secara ma
 
 ### 4.4. Layar 3: Kredensial Password Masuk Mapel & Kunci Layar Penuh (`/student/gatekeeper`)
 1. Siswa melihat kartu identitas peserta dan kartu ringkasan mata pelajaran yang dipilih (nama mapel, judul paket, durasi waktu, dan tipe soal).
-2. Masukkan **Password Masuk Ujian** yang dibagikan oleh guru pengawas khusus untuk mapel tersebut (contoh: `MSK-2JM4`). Token mapel lain tidak dapat digunakan untuk membuka mapel ini.
+2. Masukkan **Password Masuk Ujian (Token Masuk)** yang dibagikan oleh guru pengawas khusus untuk mapel tersebut (contoh format: `MSK-XXXX`). 
+   - *Catatan Keamanan:* Sistem menerapkan **Regenerasi Token Otomatis Setiap 10 Menit**. Siswa wajib memasukkan token yang masih aktif pada slot waktu tersebut. Jika token telah kedaluwarsa, sistem otomatis menampilkan notifikasi informatif agar siswa meminta token terbaru kepada pengawas.
 3. Klik tombol **"MULAI UJIAN"**.
 4. Sistem memverifikasi token ke server backend, mengunci peramban ke mode **Layar Penuh (Fullscreen API)** secara otomatis (*Zero-Tolerance Lockdown*), memunculkan notifikasi *"Aplikasi Dipasangi Pin"*, dan langsung membuka lembar pengerjaan di **Arena Ujian Terkunci**.
 *(Jika siswa ingin membatalkan atau mengganti mapel, tersedia tombol "Kembali ke Pilihan Mata Pelajaran").*
@@ -575,8 +585,8 @@ Sistem menerapkan protokol **Zero-Tolerance Lockdown**. Jika siswa melakukan sal
 **Cara Membuka Kunci (Dual-Mode):**
 1. Siswa wajib melapor kepada Guru Pengawas di ruang kelas.
 2. Pengawas dapat membuka kunci melalui 2 opsi:
-   - **Opsi 1 (Mandiri Siswa dengan PIN Pengawas):** Siswa memasukkan **PIN Pengawas Ruangan** (contoh: `PIN-2114` atau `2114`) yang diberikan oleh guru pengawas pada kartu Jadwal & Sesi Ujian, lalu klik tombol **"Buka Kunci"**. Keyboard virtual Android akan langsung ditutup dan layar seketika kembali ke mode Fullscreen. Jika peramban memerlukan sentuhan konfirmasi, sistem memunculkan tombol aktivasi 1-tap untuk mengunci kembali layar penuh.
-   - **Opsi 2 (Dari Laptop Guru - Remote 1-Click via Live Proctoring):** Guru membuka menu *Live Proctoring* di laptopnya dan mengklik tombol hijau **"Buka Kunci Layar Siswa"** (atau *"Buka Kunci Seluruh Siswa"*). Pada layar HP/Laptop siswa, seketika muncul modal interaktif: *"Akses Ujian Berhasil Dibuka! Sentuh Kunci Layar Penuh & Lanjutkan Ujian"*. Saat siswa menyentuh tombol tersebut (sebagai aktivasi resmi browser), layar otomatis kembali terkunci penuh (Fullscreen) dengan bilah alamat peramban tersembunyi rapi.
+   - **Opsi 1 (Mandiri Siswa dengan PIN Pengawas):** Siswa memasukkan **PIN Pengawas Ruangan** yang sedang aktif pada slot 10 menit tersebut (contoh: `PIN-YYYY` atau tanpa prefix `YYYY`) yang dapat dilihat guru pengawas pada kartu Jadwal Sesi maupun bilah atas Live Proctoring, lalu klik tombol **"Buka Kunci"**. Keyboard virtual Android akan langsung ditutup dan siswa langsung kembali melanjutkan pengerjaan soal dengan seluruh jawaban tersimpan aman.
+   - **Opsi 2 (Dari Laptop Guru - Remote 1-Click via Live Proctoring):** Guru membuka menu *Live Proctoring* di laptopnya dan mengklik tombol hijau **"Buka Kunci Layar Siswa"** (atau tombol *"Buka Kunci Seluruh Siswa"*). Layar siswa seketika terbuka kembali dan status siswa dipulihkan ke mode pengerjaan aktif secara instan tanpa perlu reload.
 3. **Masa Imunitas & Tombol Layar Penuh Cadangan:** Setelah kunci terbuka, sensor memberikan masa tenggang agar siswa dapat kembali fokus tanpa memicu sirene palsu. Di bilah atas (Security Bar) juga disediakan tombol darurat **"Layar Penuh"** (amber pulse) jika sewaktu-waktu fullscreen terlepas.
 
 ---
@@ -610,6 +620,9 @@ Sistem menerapkan protokol **Zero-Tolerance Lockdown**. Jika siswa melakukan sal
 
 ### Q4: Apakah format ekspor PDF dan Excel E-Jurnal sudah sesuai standar dinas pendidikan?
 > **Jawaban:** **Ya.** Generator PDF menggunakan ReportLab dengan tata letak kop resmi dinas pendidikan, ringkasan kehadiran 4 kotak, tabel nilai siswa, tabel log pelanggaran, dan kolom tanda tangan pengawas. Berkas Excel menggunakan OpenPyXL multi-sheet yang siap diolah untuk rekapitulasi rapor asesmen.
+
+### Q5: Mengapa Token Masuk dan PIN Pengawas otomatis berganti setiap 10 menit?
+> **Jawaban:** Fitur ini dirancang sebagai lapisan pertahanan aktif untuk mencegah siswa membocorkan token ujian ke teman rombel lain atau mencoba mengerjakan ulang asesmen dari gawai lain tanpa izin. Pengawas dapat melihat dan menyalin token aktif kapan saja dari kartu menu **Jadwal & Sesi Ujian** maupun bilah atas **Live Proctoring**. Sistem juga menyertakan masa tenggang (*grace window*) 1 siklus untuk mengantisipasi siswa yang memasukkan token tepat pada detik pergantian menit ke-10.
 
 ---
 *Manual Book ini disusun secara komprehensif untuk memastikan kelancaran dan integritas pelaksanaan asesmen digital sekolah.*

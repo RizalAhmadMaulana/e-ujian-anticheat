@@ -3,6 +3,7 @@ import { examApi } from '../api/examApi';
 import { authApi } from '../api/authApi';
 import { proctoringApi } from '../api/proctoringApi';
 import { ejournalApi } from '../api/ejournalApi';
+import { isValidEntryToken } from '../utils/tokenGenerator';
 
 /**
  * Mock Data Pengguna Awal
@@ -336,8 +337,11 @@ export const useExamStore = create((set, get) => ({
   verifyEntryPassword: (inputPassword) => {
     const { activeAttempt, examSessions } = get();
     const currentSession = examSessions.find((s) => s.id === activeAttempt.sessionId) || examSessions[0];
+    const basePassword = currentSession?.entryPassword || currentSession?.entry_password || '';
+
+    const isValid = isValidEntryToken(currentSession?.id, inputPassword, basePassword);
     
-    if (inputPassword && inputPassword.trim().toUpperCase() === currentSession.entryPassword.toUpperCase()) {
+    if (isValid) {
       set((state) => {
         const updated = {
           ...state.activeAttempt,
@@ -349,7 +353,10 @@ export const useExamStore = create((set, get) => ({
       });
       return { success: true };
     }
-    return { success: false, message: 'Password Masuk salah! Silakan tanyakan kepada pengawas.' };
+    return { 
+      success: false, 
+      message: 'Token Masuk salah atau sudah kedaluwarsa! Token diperbarui otomatis setiap 10 menit. Silakan minta token terbaru kepada pengawas.' 
+    };
   },
 
   setStudentAnswer: (questionId, answer) => {

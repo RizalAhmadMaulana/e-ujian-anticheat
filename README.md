@@ -96,9 +96,10 @@ Asesmen daring konvensional kerap menghadapi tantangan integritas: siswa mudah m
    - Indikator status dinamis: 🟢 **Fokus Mengerjakan**, 🔴 **Layar Terkunci (Pelanggaran)**, dan 🔵 **Selesai Terkirim**.
    - **Remote 1-Click Unlock:** Guru dapat membuka kunci layar siswa yang terblokir langsung dari layar laptop pengawas.
 
-4. **🔐 Sistem Token Keamanan Terpadu (Duo-Token Security):**
-   - **Password Masuk (Token Masuk):** Token unik untuk membuka akses pengerjaan soal per mata pelajaran. Dilengkapi fitur **One-Click Copy ke keyboard** pada kartu sesi pengawas.
-   - **PIN Pengawas Ruangan:** PIN darurat bagi guru pengawas untuk membuka kembali layar siswa yang terblokir penalti secara mandiri.
+4. **🔐 Sistem Token Keamanan Terpadu & Regenerasi Otomatis 10 Menit (Duo-Token Security):**
+   - **Regenerasi Otomatis Setiap 10 Menit (Dynamic Time-Window):** Token Masuk Siswa (`entry_password`) dan PIN Pengawas Ruangan (`supervisor_pin`) secara otomatis berganti menjadi token baru setiap 10 menit (600 detik). Hal ini mencegah siswa mengerjakan soal berkali-kali menggunakan token yang sama atau membocorkan token antar-kelas. Siswa yang terlambat atau terkena penalti wajib meminta token aktif terbaru kepada pengawas ruangan.
+   - **Password Masuk (Token Masuk):** Token unik (format `MSK-XXXX`) untuk membuka gerbang ujian per mata pelajaran dengan toleransi masa tenggang (grace period). Dilengkapi fitur **One-Click Copy ke keyboard** dan countdown timer langsung pada kartu sesi guru.
+   - **PIN Pengawas Ruangan:** PIN darurat (format `PIN-YYYY`) bagi guru pengawas untuk membuka kembali layar siswa yang terblokir penalti secara mandiri langsung di gawai siswa.
    *(Catatan: Sistem tidak lagi memerlukan Password Keluar; siswa cukup menekan tombol konfirmasi selesai ujian yang aman dan ramah pengguna).*
 
 5. **🏫 Pengaturan Identitas Sekolah Dinamis:**
@@ -340,17 +341,18 @@ Setelah masuk melalui portal login terpadu (`/login`) menggunakan **NIP** dan ka
      - Toggle **"Acak Urutan Butir Soal"**: Nomor soal siswa A berbeda urutannya dengan siswa B.
      - Toggle **"Acak Urutan Pilihan (A-E)"**: Posisi pilihan diacak sehingga mematikan potensi menyontek nomor & opsi.
      - Sistem auto-grading backend terintegrasi evaluasi ID opsi kebal terhadap pengacakan posisi pilihan.
-  5. Sistem otomatis menghasilkan **Duo Token Keamanan**:
-     - 🔑 **Token Masuk (Password Masuk)** (contoh: `MSK-2JM4`): Token gerbang gatekeeper untuk memulai ujian.
-     - 🛡️ **PIN Pengawas Ruangan** (contoh: `PIN-9378`): PIN darurat bagi guru untuk membuka layar merah siswa jika terkunci.
+  5. Sistem otomatis menerapkan **Duo Token Keamanan (Regenerasi Otomatis 10 Menit)**:
+     - 🔑 **Token Masuk (Password Masuk)** (format: `MSK-XXXX`): Token gerbang gatekeeper untuk memulai ujian. Token ini berganti otomatis setiap 10 menit.
+     - 🛡️ **PIN Pengawas Ruangan** (format: `PIN-YYYY`): PIN darurat bagi guru untuk membuka layar merah siswa jika terkunci. PIN ini juga berganti otomatis setiap 10 menit.
+     - ⏱️ **Live Countdown Timer Rotasi Token:** Kartu sesi menampilkan sisa waktu (contoh: `Berganti: 08:42`) dan otomatis berganti saat hitungan mundur mencapai 00:00 tanpa perlu refresh halaman.
      *(Tanpa password keluar: siswa dapat langsung mengonfirmasi selesai ujian saat telah selesai).*
-  5. **Status Sinkronisasi Jadwal Real-Time pada Kartu Sesi:**
+  6. **Status Sinkronisasi Jadwal Real-Time pada Kartu Sesi:**
      - 🟢 **Sedang Berjalan:** Sesi aktif dalam rentang tanggal dan jam saat ini.
      - 🟡 **Belum Dimulai:** Jadwal mulai ujian belum tercapai.
      - ⚪ **Telah Berakhir:** Batas waktu pengerjaan telah lewat (sesi otomatis terkunci).
-  6. **Fitur Salin Cepat (One-Click Copy):**
-     - Klik langsung salah satu kotak token di kartu sesi: token seketika tersalin ke clipboard/keyboard (muncul label *"Tersalin!"* dan pop-up konfirmasi).
-  7. Tersedia tombol **Edit** untuk mengubah durasi/jadwal/PIN dan tombol **Hapus** untuk menghapus sesi.
+  7. **Fitur Salin Cepat (One-Click Copy):**
+     - Klik langsung salah satu kotak token di kartu sesi: token aktif untuk slot waktu tersebut seketika tersalin ke clipboard/keyboard (muncul label *"Tersalin!"* dan notifikasi pop-up).
+  8. Tersedia tombol **Edit** untuk mengubah durasi/jadwal/PIN dan tombol **Hapus** untuk menghapus sesi.
 
 ---
 
