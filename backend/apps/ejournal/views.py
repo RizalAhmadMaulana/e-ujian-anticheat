@@ -32,7 +32,15 @@ def get_or_create_journal_with_stats(session, teacher):
         }
     )
 
-    total_scheduled = User.objects.filter(role='STUDENT', classroom=session.classroom).count()
+    if getattr(session, 'allow_all_classes', False):
+        total_scheduled = User.objects.filter(role='STUDENT').count()
+    elif hasattr(session, 'classrooms') and session.classrooms.exists():
+        total_scheduled = User.objects.filter(role='STUDENT', classroom__in=session.classrooms.all()).distinct().count()
+    elif session.classroom:
+        total_scheduled = User.objects.filter(role='STUDENT', classroom=session.classroom).count()
+    else:
+        total_scheduled = User.objects.filter(role='STUDENT').count()
+
     total_present = session.attempts.count()
     total_absent = max(0, total_scheduled - total_present)
     total_violations = sum(att.violation_count for att in session.attempts.all())
@@ -90,8 +98,18 @@ class ExamJournalExportPDFView(APIView):
             session.attempts.all().select_related('student').order_by('student__full_name')
         )
         attempted_student_ids = [a.student_id for a in attempts]
+
+        if getattr(session, 'allow_all_classes', False):
+            scheduled_students_qs = User.objects.filter(role='STUDENT')
+        elif hasattr(session, 'classrooms') and session.classrooms.exists():
+            scheduled_students_qs = User.objects.filter(role='STUDENT', classroom__in=session.classrooms.all()).distinct()
+        elif session.classroom:
+            scheduled_students_qs = User.objects.filter(role='STUDENT', classroom=session.classroom)
+        else:
+            scheduled_students_qs = User.objects.filter(role='STUDENT')
+
         absent_students = list(
-            User.objects.filter(role='STUDENT', classroom=session.classroom)
+            scheduled_students_qs
             .exclude(id__in=attempted_student_ids)
             .order_by('full_name')
         )
@@ -104,7 +122,7 @@ class ExamJournalExportPDFView(APIView):
         pdf_bytes = generate_ejournal_pdf(session, journal, attempts, absent_students, violations)
 
         clean_subject = slugify(session.package.subject_name)
-        clean_class = slugify(session.classroom.name)
+        clean_class = slugify(session.get_classrooms_display())
         date_str = session.start_time.strftime("%Y%m%d")
         filename = f"E-Jurnal_{clean_subject}_{clean_class}_{date_str}.pdf"
 
@@ -128,8 +146,18 @@ class ExamJournalExportExcelView(APIView):
             session.attempts.all().select_related('student').order_by('student__full_name')
         )
         attempted_student_ids = [a.student_id for a in attempts]
+
+        if getattr(session, 'allow_all_classes', False):
+            scheduled_students_qs = User.objects.filter(role='STUDENT')
+        elif hasattr(session, 'classrooms') and session.classrooms.exists():
+            scheduled_students_qs = User.objects.filter(role='STUDENT', classroom__in=session.classrooms.all()).distinct()
+        elif session.classroom:
+            scheduled_students_qs = User.objects.filter(role='STUDENT', classroom=session.classroom)
+        else:
+            scheduled_students_qs = User.objects.filter(role='STUDENT')
+
         absent_students = list(
-            User.objects.filter(role='STUDENT', classroom=session.classroom)
+            scheduled_students_qs
             .exclude(id__in=attempted_student_ids)
             .order_by('full_name')
         )
@@ -142,7 +170,7 @@ class ExamJournalExportExcelView(APIView):
         excel_bytes = generate_ejournal_excel(session, journal, attempts, absent_students, violations)
 
         clean_subject = slugify(session.package.subject_name)
-        clean_class = slugify(session.classroom.name)
+        clean_class = slugify(session.get_classrooms_display())
         date_str = session.start_time.strftime("%Y%m%d")
         filename = f"E-Jurnal_{clean_subject}_{clean_class}_{date_str}.xlsx"
 

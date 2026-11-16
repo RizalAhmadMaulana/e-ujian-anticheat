@@ -110,9 +110,21 @@ class ExamSession(models.Model):
     )
     classroom = models.ForeignKey(
         ClassRoom, 
-        on_delete=models.CASCADE, 
+        on_delete=models.SET_NULL, 
+        null=True,
+        blank=True,
         related_name='sessions',
-        verbose_name="Kelas Peserta"
+        verbose_name="Kelas Peserta (Utama/Legacy)"
+    )
+    allow_all_classes = models.BooleanField(
+        default=False, 
+        verbose_name="Berlaku untuk Semua Kelas"
+    )
+    classrooms = models.ManyToManyField(
+        ClassRoom, 
+        blank=True, 
+        related_name='multi_sessions', 
+        verbose_name="Daftar Kelas Peserta"
     )
     start_time = models.DateTimeField(verbose_name="Waktu Mulai")
     end_time = models.DateTimeField(verbose_name="Waktu Selesai")
@@ -132,6 +144,17 @@ class ExamSession(models.Model):
         verbose_name_plural = 'Daftar Sesi Ujian'
         ordering = ['-start_time']
 
+    def get_classrooms_display(self):
+        if self.allow_all_classes:
+            return "Semua Kelas"
+        cls_names = list(self.classrooms.values_list('name', flat=True)) if hasattr(self, 'classrooms') else []
+        if cls_names:
+            return ", ".join(cls_names)
+        if self.classroom:
+            return self.classroom.name
+        return "Semua Kelas"
+
     def __str__(self):
-        return f"{self.package.subject_name} - {self.classroom.name} ({self.start_time.strftime('%Y-%m-%d %H:%M')})"
+        start_str = self.start_time.strftime('%Y-%m-%d %H:%M') if self.start_time else '-'
+        return f"{self.package.subject_name} - {self.get_classrooms_display()} ({start_str})"
 

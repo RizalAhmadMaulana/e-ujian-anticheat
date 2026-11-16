@@ -56,7 +56,7 @@ def generate_ejournal_excel(session, journal, attempts, absent_students, violati
     teacher_name = session.package.teacher.full_name if session.package and session.package.teacher else "Guru Pengawas"
     meta_info = [
         ("Mata Pelajaran", session.package.subject_name, "Hari / Tanggal", session.start_time.strftime("%d %B %Y")),
-        ("Kelas / Rombel", session.classroom.name, "Waktu Sesi", f"{session.start_time.strftime('%H:%M')} - {session.end_time.strftime('%H:%M')} WIB"),
+        ("Kelas / Rombel", session.get_classrooms_display(), "Waktu Sesi", f"{session.start_time.strftime('%H:%M')} - {session.end_time.strftime('%H:%M')} WIB"),
         ("Judul Paket", session.package.title, "Guru Pengawas", teacher_name),
         ("Mode Asesmen", "Zero-Tolerance Lockdown (Anti-Cheat)", "Durasi", f"{session.duration_minutes} Menit"),
     ]
@@ -190,7 +190,7 @@ def generate_ejournal_excel(session, journal, attempts, absent_students, violati
 
     ws2["A1"] = "LOG REKAM JEJAK INTEGRITAS & PELANGGARAN SISWA"
     ws2["A1"].font = font_title
-    ws2["A2"] = f"Sesi: {session.package.subject_name} ({session.classroom.name}) — Sensor Keamanan Real-Time"
+    ws2["A2"] = f"Sesi: {session.package.subject_name} ({session.get_classrooms_display()}) — Sensor Keamanan Real-Time"
     ws2["A2"].font = font_subtitle
 
     headers2 = [

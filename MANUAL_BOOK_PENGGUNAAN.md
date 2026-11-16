@@ -269,14 +269,17 @@ Guru dapat menyusun bank soal menggunakan ragam format butir soal Kurikulum Merd
 
 ---
 
-### 3.7. Menu 7: Jadwal & Sesi Ujian (Sinkronisasi Tanggal/Waktu & One-Click Copy)
-Ruang ujian harus dibuka terlebih dahulu agar siswa dapat mulai mengerjakan sesuai rentang jadwal yang valid.
+### 3.7. Menu 7: Jadwal & Sesi Ujian (Multi-Kelas, Semua Kelas & One-Click Copy)
+Ruang ujian harus dibuka terlebih dahulu agar siswa dapat mulai mengerjakan sesuai rentang jadwal yang valid. Kini mendukung konfigurasi multi-kelas dan semua kelas sekaligus dalam 1 sesi.
 
 - **Membuka Menu:** Klik menu **"Jadwal & Sesi Ujian"** (`/teacher/sessions`).
 - **Membuka Sesi Ujian Baru:**
   1. Klik tombol **"+ Buka Sesi Ujian Baru"**.
   2. Pilih **Paket Soal Ujian** yang telah disusun di Bank Soal.
-  3. Pilih **Kelas Peserta** yang akan melaksanakan ujian.
+  3. **Pilih Kelas Peserta (Mendukung Multi-Kelas & Semua Kelas):**
+     - **Opsi A: Buka untuk Semua Kelas:** Klik kartu *"🌟 Buka untuk Semua Kelas (Seluruh Siswa Sekolah)"*. Sesi ini otomatis terbuka untuk seluruh siswa dari semua rombel kelas yang terdaftar.
+     - **Opsi B: Pilih Beberapa Kelas (Multi-Select):** Centang satu atau beberapa kelas rombel pada grid daftar kelas yang tersedia (misal: kelas IXD dan IXH saja).
+     - **Tombol Cepat:** Gunakan tombol *"Pilih Semua Kelas"*, *"Centang Semua"*, atau *"Bersihkan"* untuk mempermudah pemilihan kelas secara cepat.
   4. Tentukan **Durasi Ujian** dalam menit (contoh: `60` menit) dan Judul Sesi.
   5. Konfigurasikan rentang jadwal asesmen (4 input):
      - **Jadwal Mulai Ujian:** Tanggal Mulai dan Waktu Mulai (jam:menit).

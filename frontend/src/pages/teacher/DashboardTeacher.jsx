@@ -257,7 +257,7 @@ export default function DashboardTeacher() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-zinc-100 text-zinc-800 border border-zinc-200/70">
-                          Kelas {classroomName}
+                          {classroomName === 'Semua Kelas' ? '🌟 Semua Kelas' : `Kelas ${classroomName}`}
                         </span>
                         <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-zinc-100 text-zinc-600 border border-zinc-200/50">
                           {duration} Menit

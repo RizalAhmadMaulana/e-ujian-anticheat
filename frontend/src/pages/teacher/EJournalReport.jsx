@@ -107,10 +107,12 @@ export default function EJournalReport() {
         ses.packageId === selectedPackageFilter || 
         ses.package_id === selectedPackageFilter;
 
-      const sessionClass = ses.classroom || ses.classroom_name;
+      const sessionClass = ses.classroom || ses.classroom_name || '';
       const matchClass = 
         selectedClassFilter === 'ALL' || 
-        sessionClass === selectedClassFilter;
+        ses.allow_all_classes ||
+        sessionClass === selectedClassFilter ||
+        sessionClass.split(',').map(s => s.trim().toLowerCase()).includes(selectedClassFilter.trim().toLowerCase());
 
       return matchPackage && matchClass;
     });

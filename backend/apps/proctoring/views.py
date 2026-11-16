@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.db.models import Q
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -26,7 +27,7 @@ class SessionProctoringStatusView(APIView):
         serializer = StudentAttemptDetailSerializer(attempts, many=True)
         return Response({
             "session_id": str(session.id),
-            "classroom": session.classroom.name,
+            "classroom": session.get_classrooms_display(),
             "subject_name": session.package.subject_name,
             "total_participants": attempts.count(),
             "students": serializer.data
@@ -81,7 +82,13 @@ class UnlockStudentAPIView(APIView):
             
             is_valid = is_valid_supervisor_pin(session_id, input_pin, base_pin=base_pin)
             if not is_valid and attempt.session:
-                other_sessions = ExamSession.objects.filter(classroom=attempt.session.classroom, is_active=True)
+                other_sessions = ExamSession.objects.filter(is_active=True).prefetch_related('classrooms')
+                if hasattr(attempt.student, 'classroom') and attempt.student.classroom:
+                    other_sessions = other_sessions.filter(
+                        Q(allow_all_classes=True) |
+                        Q(classrooms=attempt.student.classroom) |
+                        Q(classroom=attempt.student.classroom)
+                    ).distinct()
                 for oses in other_sessions:
                     if is_valid_supervisor_pin(oses.id, input_pin, base_pin=oses.supervisor_pin):
                         is_valid = True

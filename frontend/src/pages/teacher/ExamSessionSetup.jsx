@@ -22,7 +22,8 @@ import {
   Trash2,
   Copy,
   RotateCcw,
-  Sparkles
+  Sparkles,
+  Users
 } from 'lucide-react';
 import { getSessionTokens, formatTimeRemaining } from '../../utils/tokenGenerator';
 
@@ -37,6 +38,8 @@ export default function ExamSessionSetup() {
   // Form State
   const [selectedPackageId, setSelectedPackageId] = useState('');
   const [classroom, setClassroom] = useState('');
+  const [selectedClassroomIds, setSelectedClassroomIds] = useState([]);
+  const [allowAllClasses, setAllowAllClasses] = useState(false);
   const [sessionTitle, setSessionTitle] = useState('');
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [startTime, setStartTime] = useState('08:00');
@@ -121,6 +124,7 @@ export default function ExamSessionSetup() {
         if (cls && cls.length > 0) {
           setClassroomsList(cls);
           setClassroom(cls[0].name);
+          setSelectedClassroomIds([cls[0].id]);
         }
       } catch (err) {
         console.warn('Gagal ambil daftar kelas:', err);
@@ -153,12 +157,80 @@ export default function ExamSessionSetup() {
     setSupervisorPin(res);
   };
 
+  // Helper Pemilihan Kelas Multi-Select & Semua Kelas
+  const handleToggleClassroom = (clsId) => {
+    setAllowAllClasses(false);
+    setSelectedClassroomIds((prev) => {
+      const exists = prev.includes(clsId);
+      const next = exists ? prev.filter((id) => id !== clsId) : [...prev, clsId];
+      
+      const pkg = examPackages.find((p) => p.id === selectedPackageId);
+      if (pkg && next.length > 0) {
+        const names = classroomsList
+          .filter((c) => next.includes(c.id))
+          .map((c) => c.name)
+          .join(', ');
+        setSessionTitle(`Ujian ${pkg.subjectName || pkg.subject_name || 'Mapel'} Kelas ${names}`);
+      }
+      return next;
+    });
+  };
+
+  const handleToggleAllClasses = () => {
+    if (allowAllClasses) {
+      setAllowAllClasses(false);
+      const defaultIds = classroomsList.length > 0 ? [classroomsList[0].id] : [];
+      setSelectedClassroomIds(defaultIds);
+      const pkg = examPackages.find((p) => p.id === selectedPackageId);
+      if (pkg) {
+        const name = classroomsList[0]?.name || 'Kelas';
+        setSessionTitle(`Ujian ${pkg.subjectName || pkg.subject_name || 'Mapel'} Kelas ${name}`);
+      }
+    } else {
+      setAllowAllClasses(true);
+      setSelectedClassroomIds(classroomsList.map((c) => c.id));
+      const pkg = examPackages.find((p) => p.id === selectedPackageId);
+      if (pkg) {
+        setSessionTitle(`Ujian ${pkg.subjectName || pkg.subject_name || 'Mapel'} Semua Kelas`);
+      }
+    }
+  };
+
+  const handleSelectAllIndividual = () => {
+    setAllowAllClasses(false);
+    setSelectedClassroomIds(classroomsList.map((c) => c.id));
+    const pkg = examPackages.find((p) => p.id === selectedPackageId);
+    if (pkg) {
+      setSessionTitle(`Ujian ${pkg.subjectName || pkg.subject_name || 'Mapel'} Semua Kelas`);
+    }
+  };
+
+  const handleDeselectAll = () => {
+    setAllowAllClasses(false);
+    setSelectedClassroomIds([]);
+  };
+
+  const getSelectedClassroomNames = () => {
+    if (allowAllClasses) return 'Semua Kelas (Seluruh Siswa)';
+    if (!selectedClassroomIds || selectedClassroomIds.length === 0) return 'Belum ada kelas yang dipilih';
+    return classroomsList
+      .filter((c) => selectedClassroomIds.includes(c.id))
+      .map((c) => c.name)
+      .join(', ');
+  };
+
   const handleOpenAddSession = () => {
     setIsEditing(false);
     setEditingSessionId(null);
+    setAllowAllClasses(false);
+    const initialCls = classroomsList.length > 0 ? [classroomsList[0].id] : [];
+    setSelectedClassroomIds(initialCls);
+    setClassroom(classroomsList[0]?.name || 'Semua Kelas');
+
     if (examPackages.length > 0) {
       setSelectedPackageId(examPackages[0].id);
-      setSessionTitle(`Ujian ${examPackages[0].subjectName || examPackages[0].subject_name || 'Mapel'} Kelas ${classroom || 'IX'}`);
+      const firstClsName = classroomsList[0]?.name || 'Semua Kelas';
+      setSessionTitle(`Ujian ${examPackages[0].subjectName || examPackages[0].subject_name || 'Mapel'} Kelas ${firstClsName}`);
     } else {
       setSessionTitle('');
     }
@@ -180,9 +252,49 @@ export default function ExamSessionSetup() {
     setIsEditing(true);
     setEditingSessionId(session.id);
     setSelectedPackageId(session.package || session.packageId || (examPackages[0]?.id || ''));
-    setClassroom(session.classroom || session.classroom_name || (classroomsList[0]?.name || ''));
     setSessionTitle(session.title || '');
     setDurationMinutes(session.durationMinutes || session.duration_minutes || 60);
+
+    const isAll = Boolean(
+      session.allow_all_classes || 
+      session.allowAllClasses || 
+      session.classroom === 'Semua Kelas' || 
+      session.classroom_name === 'Semua Kelas'
+    );
+    setAllowAllClasses(isAll);
+
+    // Ambil ID kelas terpilih
+    let loadedClassIds = [];
+    if (session.classroom_ids && Array.isArray(session.classroom_ids) && session.classroom_ids.length > 0) {
+      loadedClassIds = session.classroom_ids;
+    } else if (session.classroomIds && Array.isArray(session.classroomIds) && session.classroomIds.length > 0) {
+      loadedClassIds = session.classroomIds;
+    } else if (session.classrooms && Array.isArray(session.classrooms)) {
+      loadedClassIds = session.classrooms.map((c) => (typeof c === 'object' ? c.id : c));
+    } else if (session.classroom && typeof session.classroom === 'string' && session.classroom !== 'Semua Kelas') {
+      const splitted = session.classroom.split(',').map((s) => s.trim().toLowerCase());
+      loadedClassIds = classroomsList
+        .filter((c) => splitted.includes(c.name.toLowerCase()))
+        .map((c) => c.id);
+      if (loadedClassIds.length === 0) {
+        const found = classroomsList.find((c) => c.name.toLowerCase() === session.classroom.trim().toLowerCase());
+        if (found) loadedClassIds = [found.id];
+      }
+    } else if (session.classroomId) {
+      loadedClassIds = [session.classroomId];
+    } else if (session.classroom_id) {
+      loadedClassIds = [session.classroom_id];
+    }
+
+    if (isAll) {
+      setSelectedClassroomIds(classroomsList.map((c) => c.id));
+      setClassroom('Semua Kelas');
+    } else {
+      const finalIds = loadedClassIds.length > 0 ? loadedClassIds : (classroomsList.length > 0 ? [classroomsList[0].id] : []);
+      setSelectedClassroomIds(finalIds);
+      const names = classroomsList.filter(c => finalIds.includes(c.id)).map(c => c.name).join(', ');
+      setClassroom(names || 'Semua Kelas');
+    }
 
     const today = new Date().toISOString().split('T')[0];
     if (session.start_time) {
@@ -237,6 +349,11 @@ export default function ExamSessionSetup() {
       return;
     }
 
+    if (!allowAllClasses && selectedClassroomIds.length === 0) {
+      alert('Mohon pilih minimal 1 kelas peserta atau pilih "Semua Kelas"!');
+      return;
+    }
+
     if (!startDate || !startTime || !endDate || !endTime) {
       alert('Tanggal dan Waktu Mulai serta Berakhir wajib diisi lengkap!');
       return;
@@ -256,10 +373,12 @@ export default function ExamSessionSetup() {
     }
 
     try {
-      const targetCls = classroomsList.find(c => c.name === classroom) || classroomsList[0];
       const payload = {
         package: selectedPkg?.id,
-        classroom: targetCls?.id,
+        allow_all_classes: Boolean(allowAllClasses),
+        classroom_ids: allowAllClasses ? [] : selectedClassroomIds,
+        classrooms: allowAllClasses ? [] : selectedClassroomIds,
+        classroom: allowAllClasses ? null : (selectedClassroomIds[0] || null),
         title: sessionTitle,
         duration_minutes: Number(durationMinutes),
         start_time: startDateTime,
@@ -394,8 +513,12 @@ export default function ExamSessionSetup() {
               {/* Baris 1: Header Kartu (Kelas, Tipe Soal, Status Jadwal, & Tombol Aksi) */}
               <div className="flex items-center justify-between gap-2 border-b border-zinc-100 pb-3">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-zinc-900 text-white uppercase">
-                    {session.classroom || session.classroom_name || 'Semua Kelas'}
+                  <span className={`text-[11px] font-mono px-2 py-0.5 rounded font-semibold uppercase ${
+                    (session.allow_all_classes || session.allowAllClasses || session.classroom === 'Semua Kelas' || session.classroom_name === 'Semua Kelas')
+                      ? 'bg-purple-900 text-purple-200 border border-purple-700'
+                      : 'bg-zinc-900 text-white'
+                  }`} title={session.classroom || session.classroom_name || 'Semua Kelas'}>
+                    {session.classroom || session.classroom_name || (session.allow_all_classes ? 'Semua Kelas' : 'Semua Kelas')}
                   </span>
                   {isGForm ? (
                     <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200 flex items-center gap-1">
@@ -612,32 +735,141 @@ export default function ExamSessionSetup() {
             </select>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                Pilih Kelas Peserta:
+          {/* PILIH KELAS PESERTA (BISA BEBERAPA ATAU SEMUA KELAS) */}
+          <div className="space-y-2 bg-zinc-50/90 p-3 sm:p-4 rounded-xl border border-zinc-200">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pb-2 border-b border-zinc-200/80">
+              <label className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5 text-blue-600" />
+                Pilih Kelas Peserta Ujian:
               </label>
-              <select
-                value={classroom}
-                onChange={(e) => {
-                  setClassroom(e.target.value);
-                  const pkg = examPackages.find((p) => p.id === selectedPackageId);
-                  if (pkg) {
-                    setSessionTitle(`Ujian ${pkg.subjectName || pkg.subject_name} Kelas ${e.target.value}`);
-                  }
-                }}
-                className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-xs sm:text-sm font-medium focus:outline-none focus:border-zinc-400 bg-white"
-              >
-                {classroomsList.length > 0 ? (
-                  classroomsList.map((c) => (
-                    <option key={c.id} value={c.name}>
-                      {c.name}
-                    </option>
-                  ))
-                ) : (
-                  <option value="Semua Kelas">Semua Kelas</option>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={handleToggleAllClasses}
+                  className={`text-[11px] font-semibold px-2 py-0.5 rounded transition-all active:scale-95 ${
+                    allowAllClasses 
+                      ? 'bg-purple-100 text-purple-900 border border-purple-300 ring-1 ring-purple-300' 
+                      : 'bg-white hover:bg-zinc-100 text-blue-700 border border-zinc-200 shadow-2xs'
+                  }`}
+                >
+                  {allowAllClasses ? '✓ Mode Semua Kelas Aktif' : 'Pilih Semua Kelas'}
+                </button>
+                {!allowAllClasses && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleSelectAllIndividual}
+                      className="text-[11px] text-zinc-600 hover:text-zinc-900 underline"
+                    >
+                      Centang Semua
+                    </button>
+                    <span className="text-zinc-300">•</span>
+                    <button
+                      type="button"
+                      onClick={handleDeselectAll}
+                      className="text-[11px] text-zinc-500 hover:text-rose-600 underline"
+                    >
+                      Bersihkan
+                    </button>
+                  </>
                 )}
-              </select>
+              </div>
+            </div>
+
+            {/* Tombol Opsi Cepat: Semua Kelas */}
+            <div
+              onClick={handleToggleAllClasses}
+              className={`p-2.5 rounded-lg border transition-all cursor-pointer flex items-center justify-between select-none ${
+                allowAllClasses
+                  ? 'bg-purple-50/90 border-purple-400 ring-2 ring-purple-300/60 shadow-2xs'
+                  : 'bg-white border-zinc-200 hover:border-zinc-300'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={allowAllClasses}
+                  onChange={handleToggleAllClasses}
+                  className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 cursor-pointer"
+                />
+                <div>
+                  <div className="text-xs font-bold text-zinc-900">
+                    🌟 Buka untuk Semua Kelas (Seluruh Siswa Sekolah)
+                  </div>
+                  <div className="text-[10px] text-zinc-500">
+                    Siswa dari seluruh kelas terdaftar dapat mengakses dan mengerjakan sesi ini.
+                  </div>
+                </div>
+              </div>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                allowAllClasses ? 'bg-purple-600 text-white' : 'bg-zinc-100 text-zinc-600'
+              }`}>
+                Semua Kelas
+              </span>
+            </div>
+
+            {/* Grid Checkbox Kelas Spesifik (Multi-Select) */}
+            <div className="pt-1">
+              <div className="text-[11px] font-medium text-zinc-500 mb-1.5 flex items-center justify-between">
+                <span>Atau pilih satu / beberapa kelas di bawah:</span>
+                <span className="text-[10px] text-zinc-400">({classroomsList.length} kelas tersedia)</span>
+              </div>
+              {classroomsList.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 max-h-40 overflow-y-auto p-1.5 bg-white rounded-lg border border-zinc-200">
+                  {classroomsList.map((c) => {
+                    const isChecked = allowAllClasses || selectedClassroomIds.includes(c.id);
+                    return (
+                      <label
+                        key={c.id}
+                        className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-xs font-semibold cursor-pointer transition-all select-none ${
+                          isChecked
+                            ? 'bg-blue-50 border-blue-400 text-blue-900 shadow-2xs'
+                            : 'bg-zinc-50/50 border-zinc-200/80 text-zinc-700 hover:bg-zinc-100/80'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          disabled={allowAllClasses}
+                          onChange={() => handleToggleClassroom(c.id)}
+                          className="w-3.5 h-3.5 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        />
+                        <span className="truncate">{c.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="p-2.5 text-xs text-zinc-500 italic bg-white rounded border border-zinc-200">
+                  Belum ada data kelas di sistem. Silakan tambah data kelas di menu Data Kelas / Rombel.
+                </div>
+              )}
+            </div>
+
+            {/* Ringkasan Kelas Terpilih */}
+            <div className="text-[11px] pt-1 flex items-center justify-between text-zinc-600 bg-white/60 px-2.5 py-1.5 rounded border border-zinc-200/60">
+              <span className="font-medium text-zinc-500">Kelas Terpilih:</span>
+              <span className={`font-bold truncate max-w-[260px] sm:max-w-md text-right ${
+                allowAllClasses ? 'text-purple-700' : selectedClassroomIds.length > 0 ? 'text-blue-700' : 'text-rose-600'
+              }`}>
+                {getSelectedClassroomNames()}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                Judul Sesi Ujian:
+              </label>
+              <input
+                type="text"
+                required
+                value={sessionTitle}
+                onChange={(e) => setSessionTitle(e.target.value)}
+                placeholder="Contoh: PH Pewarisan Sifat Kelas IX"
+                className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-xs sm:text-sm font-medium focus:outline-none focus:border-zinc-400"
+              />
             </div>
 
             <div>
@@ -654,20 +886,6 @@ export default function ExamSessionSetup() {
                 className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-xs sm:text-sm font-medium focus:outline-none focus:border-zinc-400"
               />
             </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-zinc-700 mb-1">
-              Judul Sesi Ujian:
-            </label>
-            <input
-              type="text"
-              required
-              value={sessionTitle}
-              onChange={(e) => setSessionTitle(e.target.value)}
-              placeholder="Contoh: Ujian Tengah Semester TLJ"
-              className="w-full px-3 py-2 border border-zinc-200 rounded-lg text-xs sm:text-sm font-medium focus:outline-none focus:border-zinc-400"
-            />
           </div>
 
           {/* Rentang Tanggal & Waktu Mulai serta Berakhir */}

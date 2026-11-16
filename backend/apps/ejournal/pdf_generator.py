@@ -113,7 +113,8 @@ def generate_ejournal_pdf(session, journal, attempts, absent_students, violation
 
     # 2. JUDUL BERITA ACARA
     story.append(Paragraph("BERITA ACARA & E-JURNAL PELAKSANAAN ASESMEN SEKOLAH", title_style))
-    story.append(Paragraph(f"Tahun Ajaran {school_setting.academic_year or session.classroom.academic_year}", sub_header_style))
+    academic_yr = school_setting.academic_year or (session.classroom.academic_year if session.classroom else "2026/2027")
+    story.append(Paragraph(f"Tahun Ajaran {academic_yr}", sub_header_style))
     story.append(Spacer(1, 8))
 
     # 3. INFORMASI SESI
@@ -124,7 +125,7 @@ def generate_ejournal_pdf(session, journal, attempts, absent_students, violation
     info_data = [
         [Paragraph("<b>Mata Pelajaran:</b>", cell_style), Paragraph(session.package.subject_name, cell_style),
          Paragraph("<b>Hari / Tanggal:</b>", cell_style), Paragraph(session.start_time.strftime("%d %B %Y"), cell_style)],
-        [Paragraph("<b>Kelas / Rombel:</b>", cell_style), Paragraph(session.classroom.name, cell_style),
+        [Paragraph("<b>Kelas / Rombel:</b>", cell_style), Paragraph(session.get_classrooms_display(), cell_style),
          Paragraph("<b>Waktu Sesi:</b>", cell_style), Paragraph(f"{session.start_time.strftime('%H:%M')} - {session.end_time.strftime('%H:%M')} WIB ({session.duration_minutes} Menit)", cell_style)],
         [Paragraph("<b>Judul Paket:</b>", cell_style), Paragraph(session.package.title, cell_style),
          Paragraph("<b>Guru Pengawas:</b>", cell_style), Paragraph(teacher_name, cell_style)],

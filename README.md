@@ -328,32 +328,36 @@ Setelah masuk melalui portal login terpadu (`/login`) menggunakan **NIP** dan ka
 
 ---
 
-### Menu 7: Jadwal & Sesi Ujian (Sinkronisasi Tanggal/Waktu & One-Click Copy)
+### Menu 7: Jadwal & Sesi Ujian (Multi-Kelas, Semua Kelas & One-Click Copy)
 - **Rute:** `/teacher/sessions`
-- **Fungsi:** Membuka ruangan asesmen untuk kelas tertentu dengan pembatasan rentang waktu pengerjaan otomatis.
+- **Fungsi:** Membuka ruangan asesmen untuk satu kelas, beberapa kelas paralel (*multi-class*), atau seluruh siswa sekolah (*all classes*) dengan pembatasan rentang waktu pengerjaan otomatis.
 - **Langkah-langkah:**
-  1. Klik **"+ Buka Sesi Ujian Baru"**, pilih Paket Soal dan Kelas Peserta.
-  2. Tentukan Durasi Ujian (menit) dan Judul Sesi.
-  3. Konfigurasikan rentang waktu asesmen secara presisi:
+  1. Klik **"+ Buka Sesi Ujian Baru"**, pilih Paket Soal yang akan diujikan.
+  2. **Pilih Kelas Peserta (Mendukung Multi-Kelas & Semua Kelas):**
+     - **Mode Semua Kelas:** Klik opsi **"🌟 Buka untuk Semua Kelas (Seluruh Siswa Sekolah)"**. Seluruh siswa terdaftar di sekolah dapat mengakses dan mengerjakan ujian ini secara serentak.
+     - **Mode Multi-Kelas (Spesifik):** Centang satu atau beberapa kelas rombel pada grid checkbox yang tersedia (misal: IXD dan IXH secara bersamaan).
+     - **Tombol Pintas:** Tersedia tombol *"Pilih Semua Kelas"*, *"Centang Semua"*, dan *"Bersihkan"* untuk memudahkan seleksi kelas.
+  3. Tentukan Durasi Ujian (menit) dan Judul Sesi.
+  4. Konfigurasikan rentang waktu asesmen secara presisi:
      - **Jadwal Mulai Ujian:** Tanggal Mulai dan Waktu Mulai (jam:menit).
      - **Jadwal Berakhir Ujian:** Tanggal Berakhir dan Waktu Berakhir (jam:menit).
      - *Validasi Otomatis:* Waktu berakhir wajib lebih lambat dari waktu mulai.
-  4. **Pengacakan Soal & Pilihan Jawaban Deterministik:**
+  5. **Pengacakan Soal & Pilihan Jawaban Deterministik:**
      - Toggle **"Acak Urutan Butir Soal"**: Nomor soal siswa A berbeda urutannya dengan siswa B.
      - Toggle **"Acak Urutan Pilihan (A-E)"**: Posisi pilihan diacak sehingga mematikan potensi menyontek nomor & opsi.
      - Sistem auto-grading backend terintegrasi evaluasi ID opsi kebal terhadap pengacakan posisi pilihan.
-  5. Sistem otomatis menerapkan **Duo Token Keamanan (Regenerasi Otomatis 10 Menit)**:
+  6. Sistem otomatis menerapkan **Duo Token Keamanan (Regenerasi Otomatis 10 Menit)**:
      - 🔑 **Token Masuk (Password Masuk)** (format: `MSK-XXXX`): Token gerbang gatekeeper untuk memulai ujian. Token ini berganti otomatis setiap 10 menit.
      - 🛡️ **PIN Pengawas Ruangan** (format: `PIN-YYYY`): PIN darurat bagi guru untuk membuka layar merah siswa jika terkunci. PIN ini juga berganti otomatis setiap 10 menit.
      - ⏱️ **Live Countdown Timer Rotasi Token:** Kartu sesi menampilkan sisa waktu (contoh: `Berganti: 08:42`) dan otomatis berganti saat hitungan mundur mencapai 00:00 tanpa perlu refresh halaman.
      *(Tanpa password keluar: siswa dapat langsung mengonfirmasi selesai ujian saat telah selesai).*
-  6. **Status Sinkronisasi Jadwal Real-Time pada Kartu Sesi:**
+  7. **Status Sinkronisasi Jadwal Real-Time pada Kartu Sesi:**
      - 🟢 **Sedang Berjalan:** Sesi aktif dalam rentang tanggal dan jam saat ini.
      - 🟡 **Belum Dimulai:** Jadwal mulai ujian belum tercapai.
      - ⚪ **Telah Berakhir:** Batas waktu pengerjaan telah lewat (sesi otomatis terkunci).
-  7. **Fitur Salin Cepat (One-Click Copy):**
+  8. **Fitur Salin Cepat (One-Click Copy):**
      - Klik langsung salah satu kotak token di kartu sesi: token aktif untuk slot waktu tersebut seketika tersalin ke clipboard/keyboard (muncul label *"Tersalin!"* dan notifikasi pop-up).
-  8. Tersedia tombol **Edit** untuk mengubah durasi/jadwal/PIN dan tombol **Hapus** untuk menghapus sesi.
+  9. Tersedia tombol **Edit** untuk mengubah durasi/jadwal/kelas/PIN dan tombol **Hapus** untuk menghapus sesi.
 
 ---
 

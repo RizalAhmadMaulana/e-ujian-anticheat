@@ -3,6 +3,7 @@ import uuid
 import random
 from io import BytesIO
 from django.conf import settings
+from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -33,12 +34,20 @@ class ExamPackageListCreateView(generics.ListCreateAPIView):
         if getattr(user, 'role', None) == 'TEACHER' or user.is_staff:
             return ExamPackage.objects.all().prefetch_related('questions__options')
         
-        # Jika siswa, tampilkan paket yang sedang aktif untuk kelas siswa
-        if hasattr(user, 'classroom') and user.classroom:
-            return ExamPackage.objects.filter(
-                sessions__classroom=user.classroom, 
-                sessions__is_active=True
-            ).distinct().prefetch_related('questions__options')
+        # Jika siswa, tampilkan paket yang sedang aktif untuk kelas siswa atau semua kelas
+        if getattr(user, 'role', None) == 'STUDENT':
+            if hasattr(user, 'classroom') and user.classroom:
+                return ExamPackage.objects.filter(
+                    Q(sessions__allow_all_classes=True) |
+                    Q(sessions__classrooms=user.classroom) |
+                    Q(sessions__classroom=user.classroom), 
+                    sessions__is_active=True
+                ).distinct().prefetch_related('questions__options')
+            else:
+                return ExamPackage.objects.filter(
+                    sessions__allow_all_classes=True, 
+                    sessions__is_active=True
+                ).distinct().prefetch_related('questions__options')
         return ExamPackage.objects.none()
 
 
@@ -63,11 +72,19 @@ class ExamSessionListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        qs = ExamSession.objects.all().select_related('package', 'classroom')
+        qs = ExamSession.objects.all().select_related('package', 'classroom').prefetch_related('classrooms')
 
         # Filter kelas untuk role Siswa
-        if getattr(user, 'role', None) == 'STUDENT' and hasattr(user, 'classroom') and user.classroom:
-            qs = qs.filter(classroom=user.classroom, is_active=True)
+        if getattr(user, 'role', None) == 'STUDENT':
+            if hasattr(user, 'classroom') and user.classroom:
+                qs = qs.filter(
+                    Q(allow_all_classes=True) |
+                    Q(classrooms=user.classroom) |
+                    Q(classroom=user.classroom),
+                    is_active=True
+                ).distinct()
+            else:
+                qs = qs.filter(allow_all_classes=True, is_active=True)
 
         return qs
 
@@ -111,11 +128,15 @@ class VerifyEntryPasswordView(APIView):
         # periksa apakah token ini cocok dengan sesi aktif lain milik siswa / kelas yang sama
         if not is_valid:
             user = request.user
-            base_qs = ExamSession.objects.filter(is_active=True).select_related('package', 'classroom')
+            base_qs = ExamSession.objects.filter(is_active=True).select_related('package', 'classroom').prefetch_related('classrooms')
             
             # Prioritaskan sesi di kelas siswa
             if hasattr(user, 'classroom') and user.classroom:
-                for cand in base_qs.filter(classroom=user.classroom):
+                for cand in base_qs.filter(
+                    Q(allow_all_classes=True) |
+                    Q(classrooms=user.classroom) |
+                    Q(classroom=user.classroom)
+                ).distinct():
                     if cand.id != session.id and is_valid_entry_token(cand.id, input_password, base_token=cand.entry_password):
                         session = cand
                         is_valid = True
@@ -157,7 +178,7 @@ class VerifyEntryPasswordView(APIView):
             "package_id": str(session.package.id),
             "title": session.package.title,
             "subject_name": session.package.subject_name,
-            "classroom": session.classroom.name,
+            "classroom": session.get_classrooms_display(),
             "duration_minutes": session.duration_minutes
         }, status=status.HTTP_200_OK)
 

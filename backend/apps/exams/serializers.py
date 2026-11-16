@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from apps.accounts.models import ClassRoom
 from .models import ExamPackage, Question, QuestionOption, ExamSession
 from .services import sanitize_and_format_embed_url
 from .tokens import get_session_tokens
@@ -177,6 +178,17 @@ class ExamSessionSerializer(serializers.ModelSerializer):
     subject_name = serializers.CharField(source='package.subject_name', read_only=True)
     exam_type = serializers.CharField(source='package.exam_type', read_only=True)
     classroom_name = serializers.CharField(source='classroom.name', read_only=True)
+    classrooms = serializers.PrimaryKeyRelatedField(
+        many=True, 
+        queryset=ClassRoom.objects.all(), 
+        required=False
+    )
+    classroom_ids = serializers.ListField(
+        child=serializers.UUIDField(), 
+        required=False, 
+        write_only=True
+    )
+    allow_all_classes = serializers.BooleanField(required=False, default=False)
     exit_password = serializers.CharField(required=False, allow_blank=True, default='')
 
     class Meta:
@@ -188,7 +200,10 @@ class ExamSessionSerializer(serializers.ModelSerializer):
             'subject_name',
             'exam_type',
             'classroom',
+            'classrooms',
+            'classroom_ids',
             'classroom_name',
+            'allow_all_classes',
             'start_time',
             'end_time',
             'duration_minutes',
@@ -203,17 +218,87 @@ class ExamSessionSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at']
         extra_kwargs = {
+            'classroom': {'required': False, 'allow_null': True},
             'exit_password': {'required': False, 'allow_blank': True}
         }
 
+    def create(self, validated_data):
+        classrooms_data = validated_data.pop('classrooms', None)
+        classroom_ids = validated_data.pop('classroom_ids', None)
+        allow_all = validated_data.get('allow_all_classes', False)
+
+        instance = super().create(validated_data)
+
+        if allow_all:
+            instance.allow_all_classes = True
+            instance.classrooms.clear()
+            instance.classroom = None
+            instance.save(update_fields=['allow_all_classes', 'classroom'])
+        else:
+            target_classrooms = []
+            if classroom_ids:
+                target_classrooms = list(ClassRoom.objects.filter(id__in=classroom_ids))
+            elif classrooms_data:
+                target_classrooms = list(classrooms_data)
+            
+            if target_classrooms:
+                instance.classrooms.set(target_classrooms)
+                if not instance.classroom:
+                    instance.classroom = target_classrooms[0]
+                    instance.save(update_fields=['classroom'])
+            elif instance.classroom:
+                instance.classrooms.set([instance.classroom])
+
+        return instance
+
+    def update(self, instance, validated_data):
+        classrooms_data = validated_data.pop('classrooms', None)
+        classroom_ids = validated_data.pop('classroom_ids', None)
+        allow_all = validated_data.get('allow_all_classes', None)
+
+        instance = super().update(instance, validated_data)
+
+        if allow_all is True:
+            instance.allow_all_classes = True
+            instance.classrooms.clear()
+            instance.classroom = None
+            instance.save(update_fields=['allow_all_classes', 'classroom'])
+        elif allow_all is False or classrooms_data is not None or classroom_ids is not None:
+            if allow_all is not None:
+                instance.allow_all_classes = allow_all
+            target_classrooms = []
+            if classroom_ids is not None:
+                target_classrooms = list(ClassRoom.objects.filter(id__in=classroom_ids))
+            elif classrooms_data is not None:
+                target_classrooms = list(classrooms_data)
+
+            if target_classrooms:
+                instance.classrooms.set(target_classrooms)
+                instance.classroom = target_classrooms[0]
+            elif allow_all is False and instance.classroom:
+                instance.classrooms.set([instance.classroom])
+            instance.save()
+
+        return instance
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        classroom_disp = instance.get_classrooms_display()
+
         # Sediakan kompatibilitas atribut camelCase untuk UI Frontend
         data['title'] = instance.package.title if instance.package else "Sesi Ujian"
         data['subjectName'] = instance.package.subject_name if instance.package else ""
         data['examType'] = instance.package.exam_type if instance.package else "NATIVE_QUESTIONS"
-        data['classroom'] = instance.classroom.name if instance.classroom else "Semua Kelas"
+        data['classroom'] = classroom_disp
+        data['classroom_name'] = classroom_disp
+        data['classroom_display'] = classroom_disp
         data['durationMinutes'] = instance.duration_minutes
+
+        data['allow_all_classes'] = instance.allow_all_classes
+        data['allowAllClasses'] = instance.allow_all_classes
+        data['classrooms'] = [{'id': str(c.id), 'name': c.name} for c in instance.classrooms.all()]
+        data['classroom_ids'] = [str(c.id) for c in instance.classrooms.all()]
+        data['classroomIds'] = [str(c.id) for c in instance.classrooms.all()]
 
         # Regenerasi Otomatis Token Masuk & PIN Pengawas setiap 10 menit
         tokens = get_session_tokens(instance.id)

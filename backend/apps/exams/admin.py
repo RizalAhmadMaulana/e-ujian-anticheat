@@ -44,6 +44,7 @@ class ExamSessionAdmin(admin.ModelAdmin):
     list_display = (
         'package_title', 
         'classroom_name', 
+        'allow_all_classes',
         'duration_minutes', 
         'entry_password', 
         'exit_password', 
@@ -51,15 +52,16 @@ class ExamSessionAdmin(admin.ModelAdmin):
         'is_active', 
         'start_time'
     )
-    list_filter = ('is_active', 'classroom', 'package__subject_name')
+    list_filter = ('is_active', 'allow_all_classes', 'package__subject_name')
     search_fields = ('package__title', 'classroom__name', 'entry_password', 'exit_password', 'supervisor_pin')
     ordering = ('-created_at',)
+    filter_horizontal = ('classrooms',)
 
     def package_title(self, obj):
         return obj.package.title
     package_title.short_description = "Paket Ujian"
 
     def classroom_name(self, obj):
-        return obj.classroom.name
-    classroom_name.short_description = "Kelas"
+        return obj.get_classrooms_display()
+    classroom_name.short_description = "Kelas Peserta"
 
