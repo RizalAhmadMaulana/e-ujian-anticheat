@@ -175,6 +175,7 @@
 - [x] Eksekusi **Tahap 5.58 — Resolusi Preservasi Pilihan Kelas pada Modal Edit Sesi Ujian (Checkbox Auto-Check & Serializer Type Coercion)**.
 - [x] Eksekusi **Tahap 5.59 — Modal Skor Hasil Ujian Siswa (Rahasia Kunci), Menu Baru Rekap Nilai Siswa (`/teacher/results`) dengan Filter 3-Level & Analisis Butir Soal, Serta Perbaikan Bug Koreksi Esai**.
 - [x] Eksekusi **Tahap 5.60 — Fitur Export Rekap Nilai Siswa ke Excel (.xlsx) dengan Analisis Butir Soal, Auto-Close Modal Import Excel Siswa/Guru, Penegasan Desain Kartu (Bank Soal & Jadwal Sesi), dan Resolusi Ramah Empty State Rekap Nilai**.
+- [x] Eksekusi **Tahap 5.61 — Perapihan UI Halaman Rekap Nilai Siswa: Eliminasi 3 Tombol Aksesibilitas Duplikat pada Header Halaman**.
 - [x] Seluruh sistem E-Ujian Anti-Cheat & E-Jurnal Asesmen Sekolah SIAP PRODUKSI MURNI DENGAN DATA NYATA!
 
 ---
@@ -213,5 +214,6 @@
 - [x] Eksekusi **Tahap 5.58 — Resolusi Preservasi Pilihan Kelas pada Modal Edit Sesi Ujian (Checkbox Auto-Check & Serializer Type Coercion)**.
 - [x] Eksekusi **Tahap 5.59 — Modal Skor Hasil Ujian Siswa (Rahasia Kunci), Menu Baru Rekap Nilai Siswa (`/teacher/results`) dengan Filter 3-Level & Analisis Butir Soal, Serta Perbaikan Bug Koreksi Esai**.
 - [x] Eksekusi **Tahap 5.60 — Fitur Export Rekap Nilai Siswa ke Excel (.xlsx) dengan Analisis Butir Soal, Auto-Close Modal Import Excel Siswa/Guru, Penegasan Desain Kartu (Bank Soal & Jadwal Sesi), dan Resolusi Ramah Empty State Rekap Nilai**.
+- [x] Eksekusi **Tahap 5.61 — Perapihan UI Halaman Rekap Nilai Siswa: Eliminasi 3 Tombol Aksesibilitas Duplikat pada Header Halaman**.
 - [x] Seluruh sistem E-Ujian Anti-Cheat & E-Jurnal Asesmen Sekolah SIAP PRODUKSI MURNI DENGAN DATA NYATA!
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { 
   Award, 
   Search, 
@@ -41,7 +41,6 @@ import MathText from '../../components/common/MathText';
 import { resolveImageUrl } from '../../utils/imageUrlFormatter';
 
 export default function StudentResults() {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   // Master Filter Data
@@ -267,52 +266,16 @@ export default function StudentResults() {
           </div>
         </div>
 
-        {/* Quick Action Navigation Links */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Tombol Unduh Rekap Excel */}
-          <button
-            type="button"
-            onClick={handleDownloadExcel}
-            disabled={isExportingExcel || !selectedSessionId}
-            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shadow-2xs active:scale-[0.98] cursor-pointer disabled:cursor-not-allowed"
-            title="Unduh seluruh rekapitulasi nilai dan rincian jawaban per butir soal ke format Excel (.xlsx)"
-          >
-            <FileSpreadsheet className={`w-3.5 h-3.5 ${isExportingExcel ? 'animate-bounce' : ''}`} />
-            <span>{isExportingExcel ? 'Mengunduh...' : 'Unduh Rekap Excel'}</span>
-          </button>
-
-          {/* Link ke Koreksi Esai */}
-          <button
-            type="button"
-            onClick={() => navigate('/teacher/grading')}
-            className="px-3.5 py-2 bg-white hover:bg-zinc-50 text-zinc-700 border border-zinc-200 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shadow-2xs active:scale-[0.98]"
-            title="Buka menu penilaian esai manual guru"
-          >
-            <FileText className="w-3.5 h-3.5 text-zinc-500" />
-            <span>Koreksi Esai</span>
-          </button>
-
-          {/* Link ke E-Jurnal Berita Acara */}
-          <button
-            type="button"
-            onClick={() => navigate(`/teacher/ejournal${selectedSessionId ? `?session=${selectedSessionId}` : ''}`)}
-            className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100/80 text-emerald-700 border border-emerald-300/80 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shadow-2xs active:scale-[0.98]"
-            title="Buka Berita Acara & Absensi E-Jurnal Sesi Ini"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-            <span>E-Jurnal & Berita Acara</span>
-            <ExternalLink className="w-3 h-3 ml-0.5 opacity-70" />
-          </button>
-
-          {/* Refresh Data */}
+        {/* Tombol Segarkan Data */}
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => fetchSessionResults(selectedSessionId)}
             disabled={isLoadingResults || !selectedSessionId}
-            className="p-2 bg-white hover:bg-zinc-50 text-zinc-700 border border-zinc-200 rounded-lg text-xs font-medium transition disabled:opacity-50 shadow-2xs active:scale-[0.98]"
+            className="p-2.5 bg-white hover:bg-zinc-50 text-zinc-700 border border-zinc-200 rounded-lg text-xs font-medium transition disabled:opacity-50 shadow-2xs active:scale-[0.98] cursor-pointer"
             title="Segarkan Rekap Nilai"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoadingResults ? 'animate-spin text-emerald-600' : 'text-zinc-600'}`} />
+            <RefreshCw className={`w-4 h-4 ${isLoadingResults ? 'animate-spin text-emerald-600' : 'text-zinc-600'}`} />
           </button>
         </div>
       </div>
