@@ -20,7 +20,8 @@ import {
   GraduationCap, 
   ShieldAlert, 
   Bell,
-  FileCheck 
+  FileCheck,
+  Award 
 } from 'lucide-react';
 import WelcomeProfileModal from '../components/modals/WelcomeProfileModal';
 
@@ -101,6 +102,11 @@ export default function TeacherLayout() {
       to: '/teacher/grading', 
       label: 'Koreksi Esai', 
       icon: FileCheck 
+    },
+    { 
+      to: '/teacher/results', 
+      label: 'Rekap Nilai Siswa', 
+      icon: Award 
     },
     { 
       to: '/teacher/violations', 

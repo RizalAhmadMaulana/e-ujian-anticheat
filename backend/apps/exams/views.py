@@ -620,7 +620,7 @@ class SessionEssaySubmissionsView(APIView):
                 "student_id": att.student.id,
                 "student_name": att.student.full_name,
                 "nisn": att.student.nisn,
-                "classroom": att.student.classroom.name if getattr(att.student, 'classroom', None) else session.classroom.name,
+                "classroom": att.student.classroom.name if getattr(att.student, 'classroom', None) else session.get_classrooms_display(),
                 "status": att.status,
                 "status_label": att.get_status_display(),
                 "total_score": float(att.total_score) if att.total_score is not None else 0.0,
@@ -632,10 +632,11 @@ class SessionEssaySubmissionsView(APIView):
             "session_id": str(session.id),
             "session_title": session.title,
             "subject_name": session.package.subject_name,
-            "classroom": session.classroom.name,
+            "classroom": session.get_classrooms_display(),
             "total_essay_questions": len(questions_data),
             "essay_questions": questions_data,
-            "submissions": submissions
+            "submissions": submissions,
+            "students": submissions
         }, status=status.HTTP_200_OK)
 
 
@@ -699,6 +700,319 @@ class GradeEssaySubmissionView(APIView):
             "score": score,
             "feedback": feedback,
             "total_score": float(recalculated_total) if recalculated_total is not None else float(attempt.total_score or 0)
+        }, status=status.HTTP_200_OK)
+
+
+class SessionStudentResultsView(APIView):
+    """
+    GET /api/exams/sessions/<uuid:session_id>/student-results/
+    Mengambil ringkasan rekapitulasi nilai seluruh siswa pada sesi ujian tertentu
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, session_id):
+        session = get_object_or_404(ExamSession.objects.select_related('package', 'classroom'), id=session_id)
+        package = session.package
+        questions = list(Question.objects.filter(package=package).prefetch_related('options').order_by('order_number'))
+        total_questions_count = len(questions)
+        total_max_points = sum(q.points for q in questions)
+
+        attempts = StudentAttempt.objects.filter(session=session).select_related('student', 'student__classroom').order_by('student__full_name')
+
+        students_data = []
+        scores_list = []
+
+        for att in attempts:
+            answers = att.answers_json or {}
+            essay_scores = att.essay_scores or {}
+
+            # Hitung butir soal yang benar untuk pilihan ganda & objektif
+            correct_count = 0
+            for q in questions:
+                ans = answers.get(str(q.id)) or answers.get(f"q_{q.order_number}")
+                if ans is None:
+                    continue
+                if q.question_type == Question.QuestionTypeChoices.MULTIPLE_CHOICE:
+                    correct_opt = next((o for o in q.options.all() if o.is_correct), None)
+                    if correct_opt:
+                        raw_str = str(ans).strip()
+                        if raw_str == str(correct_opt.id) or raw_str.upper() == correct_opt.option_label.strip().upper():
+                            correct_count += 1
+                elif q.question_type == Question.QuestionTypeChoices.SHORT_ANSWER:
+                    extra = q.extra_data or {}
+                    accepted = extra.get('exact_keys') or extra.get('accepted_answers') or extra.get('keys') or []
+                    if isinstance(accepted, str):
+                        accepted = [x.strip() for x in accepted.split('/') if x.strip()]
+                    if any(str(ans).strip().lower() == str(acc).strip().lower() for acc in accepted):
+                        correct_count += 1
+                elif q.question_type == Question.QuestionTypeChoices.ESSAY:
+                    e_info = essay_scores.get(str(q.id), {})
+                    if e_info.get('score', 0) > 0:
+                        correct_count += 1
+
+            score_val = float(att.total_score) if att.total_score is not None else (0.0 if att.status == StudentAttempt.AttemptStatus.SUBMITTED else None)
+            if score_val is not None:
+                scores_list.append(score_val)
+
+            students_data.append({
+                "attempt_id": str(att.id),
+                "student_id": str(att.student.id),
+                "nisn": att.student.nisn or "-",
+                "student_name": att.student.full_name,
+                "classroom_name": att.student.classroom.name if getattr(att.student, 'classroom', None) else session.get_classrooms_display(),
+                "status": att.status,
+                "status_label": att.get_status_display(),
+                "total_score": score_val,
+                "correct_count": correct_count,
+                "total_questions": total_questions_count,
+                "violation_count": att.violation_count,
+                "started_at": att.started_at.isoformat() if att.started_at else None,
+                "finished_at": att.finished_at.isoformat() if att.finished_at else None,
+            })
+
+        avg_score = round(sum(scores_list) / len(scores_list), 1) if scores_list else 0.0
+        max_score = max(scores_list) if scores_list else 0.0
+        min_score = min(scores_list) if scores_list else 0.0
+
+        return Response({
+            "success": True,
+            "session_id": str(session.id),
+            "session_title": session.title,
+            "subject_name": package.subject_name,
+            "classroom_display": session.get_classrooms_display(),
+            "exam_type": package.exam_type,
+            "total_questions": total_questions_count,
+            "total_max_points": total_max_points,
+            "statistics": {
+                "total_students": len(students_data),
+                "submitted_count": len(scores_list),
+                "average_score": avg_score,
+                "highest_score": max_score,
+                "lowest_score": min_score,
+            },
+            "students": students_data
+        }, status=status.HTTP_200_OK)
+
+
+class StudentAttemptDetailBreakdownView(APIView):
+    """
+    GET /api/exams/attempts/<uuid:attempt_id>/breakdown/
+    Mengambil rincian lembar jawaban siswa per nomor butir soal (soal, jawaban siswa, kunci, status benar/salah, perolehan poin)
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, attempt_id):
+        attempt = get_object_or_404(
+            StudentAttempt.objects.select_related('session', 'session__package', 'student', 'student__classroom'),
+            id=attempt_id
+        )
+        session = attempt.session
+        package = session.package
+        questions = Question.objects.filter(package=package).prefetch_related('options').order_by('order_number')
+
+        answers = attempt.answers_json or {}
+        essay_scores = attempt.essay_scores or {}
+
+        items = []
+        total_correct_count = 0
+        total_incorrect_count = 0
+
+        for q in questions:
+            student_ans = answers.get(str(q.id)) or answers.get(f"q_{q.order_number}")
+            q_points = q.points or 10
+
+            status_item = "UNANSWERED"
+            earned_points = 0.0
+            student_display = "-"
+            key_display = "-"
+            options_data = []
+
+            # 1. Pilihan Ganda Biasa
+            if q.question_type == Question.QuestionTypeChoices.MULTIPLE_CHOICE:
+                correct_opt = q.options.filter(is_correct=True).first()
+                key_display = f"Opsi {correct_opt.option_label}. {correct_opt.option_text}" if correct_opt else "-"
+
+                for opt in q.options.all():
+                    is_chosen = False
+                    if student_ans is not None:
+                        raw_str = str(student_ans).strip()
+                        if raw_str == str(opt.id) or raw_str.upper() == opt.option_label.strip().upper():
+                            is_chosen = True
+                            student_display = f"Opsi {opt.option_label}. {opt.option_text}"
+
+                    options_data.append({
+                        "id": str(opt.id),
+                        "label": opt.option_label,
+                        "text": opt.option_text,
+                        "is_correct": opt.is_correct,
+                        "is_chosen": is_chosen
+                    })
+
+                if student_ans is None or str(student_ans).strip() == "":
+                    status_item = "UNANSWERED"
+                    student_display = "(Tidak dijawab)"
+                    total_incorrect_count += 1
+                elif correct_opt and (str(student_ans).strip() == str(correct_opt.id) or str(student_ans).strip().upper() == correct_opt.option_label.strip().upper()):
+                    status_item = "CORRECT"
+                    earned_points = float(q_points)
+                    total_correct_count += 1
+                else:
+                    status_item = "INCORRECT"
+                    total_incorrect_count += 1
+
+            # 2. Pilihan Ganda Kompleks
+            elif q.question_type == Question.QuestionTypeChoices.MULTIPLE_CHOICE_COMPLEX:
+                correct_opts = q.options.filter(is_correct=True)
+                correct_labels = set(correct_opts.values_list('option_label', flat=True))
+                key_display = ", ".join(sorted(correct_labels)) or "-"
+
+                student_items = set()
+                if isinstance(student_ans, list):
+                    student_items = {str(x).strip().upper() for x in student_ans if x}
+                elif isinstance(student_ans, str):
+                    student_items = {str(x).strip().upper() for x in student_ans.replace(';', ',').split(',') if x.strip()}
+
+                student_display = ", ".join(sorted(student_items)) if student_items else "(Tidak dijawab)"
+
+                for opt in q.options.all():
+                    is_chosen = opt.option_label.upper() in student_items or str(opt.id) in student_items
+                    options_data.append({
+                        "id": str(opt.id),
+                        "label": opt.option_label,
+                        "text": opt.option_text,
+                        "is_correct": opt.is_correct,
+                        "is_chosen": is_chosen
+                    })
+
+                if not student_items:
+                    status_item = "UNANSWERED"
+                    total_incorrect_count += 1
+                elif student_items == correct_labels:
+                    status_item = "CORRECT"
+                    earned_points = float(q_points)
+                    total_correct_count += 1
+                elif student_items.issubset(correct_labels) and len(student_items) > 0:
+                    status_item = "PARTIAL"
+                    ratio = len(student_items) / len(correct_labels)
+                    earned_points = round(float(q_points) * ratio, 2)
+                    total_correct_count += 1
+                else:
+                    status_item = "INCORRECT"
+                    total_incorrect_count += 1
+
+            # 3. Isian Singkat
+            elif q.question_type == Question.QuestionTypeChoices.SHORT_ANSWER:
+                extra = q.extra_data or {}
+                accepted = extra.get('exact_keys') or extra.get('accepted_answers') or extra.get('keys') or []
+                if isinstance(accepted, str):
+                    accepted = [x.strip() for x in accepted.split('/') if x.strip()]
+                key_display = " / ".join(accepted) if accepted else "-"
+
+                clean_ans = str(student_ans).strip().lower() if student_ans else ""
+                student_display = str(student_ans) if student_ans else "(Tidak dijawab)"
+
+                if not clean_ans:
+                    status_item = "UNANSWERED"
+                    total_incorrect_count += 1
+                elif any(clean_ans == str(acc).strip().lower() for acc in accepted):
+                    status_item = "CORRECT"
+                    earned_points = float(q_points)
+                    total_correct_count += 1
+                else:
+                    status_item = "INCORRECT"
+                    total_incorrect_count += 1
+
+            # 4. Matriks Benar / Salah
+            elif q.question_type == Question.QuestionTypeChoices.TRUE_FALSE_MATRIX:
+                extra = q.extra_data or {}
+                rows = extra.get('rows', [])
+                key_display = "; ".join([f"Brs {i+1}: {'Benar' if (r.get('correct') or r.get('is_correct')) else 'Salah'}" for i, r in enumerate(rows)])
+                if isinstance(student_ans, dict) and student_ans:
+                    student_display = "; ".join([f"Brs {int(k)+1}: {'Benar' if v else 'Salah'}" for k, v in student_ans.items()])
+                    correct_sub = sum(1 for i, r in enumerate(rows) if student_ans.get(str(i)) == bool(r.get('correct') or r.get('is_correct')))
+                    if correct_sub == len(rows):
+                        status_item = "CORRECT"
+                        earned_points = float(q_points)
+                        total_correct_count += 1
+                    elif correct_sub > 0:
+                        status_item = "PARTIAL"
+                        earned_points = round(float(q_points) * (correct_sub / len(rows)), 2)
+                        total_correct_count += 1
+                    else:
+                        status_item = "INCORRECT"
+                        total_incorrect_count += 1
+                else:
+                    status_item = "UNANSWERED"
+                    student_display = "(Tidak dijawab)"
+                    total_incorrect_count += 1
+
+            # 5. Menjodohkan
+            elif q.question_type == Question.QuestionTypeChoices.MATCHING_PAIR:
+                extra = q.extra_data or {}
+                pairs = extra.get('pairs', [])
+                key_display = "; ".join([f"{p.get('left')} ➔ {p.get('right')}" for p in pairs])
+                if isinstance(student_ans, dict) and student_ans:
+                    student_display = "; ".join([f"{k} ➔ {v}" for k, v in student_ans.items() if v])
+                    matched_sub = sum(1 for p in pairs if str(student_ans.get(p.get('left'), '')).strip().lower() == str(p.get('right', '')).strip().lower())
+                    if matched_sub == len(pairs):
+                        status_item = "CORRECT"
+                        earned_points = float(q_points)
+                        total_correct_count += 1
+                    elif matched_sub > 0:
+                        status_item = "PARTIAL"
+                        earned_points = round(float(q_points) * (matched_sub / len(pairs)), 2)
+                        total_correct_count += 1
+                    else:
+                        status_item = "INCORRECT"
+                        total_incorrect_count += 1
+                else:
+                    status_item = "UNANSWERED"
+                    student_display = "(Tidak dijawab)"
+                    total_incorrect_count += 1
+
+            # 6. Esai
+            elif q.question_type == Question.QuestionTypeChoices.ESSAY:
+                key_display = "(Rubrik Penilaian Esai Guru)"
+                student_display = str(student_ans) if student_ans else "(Tidak ada jawaban tertulis)"
+                e_info = essay_scores.get(str(q.id), {})
+                if e_info and e_info.get('score') is not None:
+                    status_item = "ESSAY_GRADED"
+                    earned_points = float(e_info.get('score', 0))
+                    if earned_points > 0:
+                        total_correct_count += 1
+                    else:
+                        total_incorrect_count += 1
+                else:
+                    status_item = "ESSAY_PENDING"
+
+            items.append({
+                "question_id": str(q.id),
+                "order_number": q.order_number,
+                "question_text": q.question_text,
+                "question_type": q.question_type,
+                "points": q_points,
+                "earned_points": earned_points,
+                "status": status_item,
+                "student_answer_display": student_display,
+                "correct_answer_display": key_display,
+                "options": options_data,
+                "feedback": essay_scores.get(str(q.id), {}).get('feedback', '')
+            })
+
+        return Response({
+            "success": True,
+            "attempt_id": str(attempt.id),
+            "student_name": attempt.student.full_name,
+            "nisn": attempt.student.nisn,
+            "classroom": attempt.student.classroom.name if getattr(attempt.student, 'classroom', None) else session.get_classrooms_display(),
+            "session_title": session.title,
+            "subject_name": package.subject_name,
+            "total_score": float(attempt.total_score) if attempt.total_score is not None else 0.0,
+            "total_max_points": sum(q.points for q in questions),
+            "total_correct": total_correct_count,
+            "total_incorrect": total_incorrect_count,
+            "total_questions": len(questions),
+            "items": items
         }, status=status.HTTP_200_OK)
 
 

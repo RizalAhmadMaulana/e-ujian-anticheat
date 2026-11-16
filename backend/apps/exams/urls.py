@@ -15,6 +15,8 @@ from .views import (
     ImportExcelQuestionsView,
     SessionEssaySubmissionsView,
     GradeEssaySubmissionView,
+    SessionStudentResultsView,
+    StudentAttemptDetailBreakdownView,
 )
 
 urlpatterns = [
@@ -46,5 +48,9 @@ urlpatterns = [
     # Koreksi Esai Guru
     path('sessions/<uuid:session_id>/essay-submissions/', SessionEssaySubmissionsView.as_view(), name='session_essay_submissions'),
     path('sessions/<uuid:session_id>/grade-essay/', GradeEssaySubmissionView.as_view(), name='session_grade_essay'),
+
+    # Rekap Nilai & Analisis Lembar Jawaban Siswa
+    path('sessions/<uuid:session_id>/student-results/', SessionStudentResultsView.as_view(), name='session_student_results'),
+    path('attempts/<uuid:attempt_id>/breakdown/', StudentAttemptDetailBreakdownView.as_view(), name='attempt_detail_breakdown'),
 ]
 

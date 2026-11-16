@@ -28,8 +28,10 @@
    - [Menu 7: Jadwal & Sesi Ujian (One-Click Copy Password & PIN Pengawas)](#menu-7-jadwal--sesi-ujian-one-click-copy-password--pin-pengawas)
    - [Menu 8: Ruang Pengawas Real-Time (Live Proctoring & Dual Unlock)](#menu-8-ruang-pengawas-real-time-live-proctoring--dual-unlock)
    - [Menu 9: Koreksi Jawaban Esai Guru & Rubrik Penilaian Manual](#menu-9-koreksi-jawaban-esai-guru--rubrik-penilaian-manual-teachergrading)
-   - [Menu 10: Riwayat Pelanggaran Siswa & Sinkronisasi Dua Arah E-Jurnal](#menu-10-riwayat-pelanggaran-siswa--sinkronisasi-dua-arah-e-jurnal)
-   - [Menu 11: E-Jurnal & Rekapitulasi Berita Acara (Ekspor PDF/Excel)](#menu-11-e-jurnal--rekapitulasi-berita-acara-ekspor-pdfexcel)
+   - [Menu 10: Rekap Nilai Siswa & Analisis Butir Soal](#menu-10-rekap-nilai-siswa--analisis-butir-soal-teacherresults)
+   - [Menu 11: Riwayat Pelanggaran Siswa & Sinkronisasi Dua Arah E-Jurnal](#menu-11-riwayat-pelanggaran-siswa--sinkronisasi-dua-arah-e-jurnal)
+   - [Menu 12: E-Jurnal & Rekapitulasi Berita Acara (Ekspor PDF/Excel)](#menu-12-e-jurnal--rekapitulasi-berita-acara-ekspor-pdfexcel)
+   - [Menu 13: Pengaturan Profil Akun Guru & Pop-Up Keamanan Login](#menu-13-pengaturan-profil-akun-guru--pop-up-keamanan-login)
 ### Menu 12: Pengaturan Profil Akun Guru & Pop-Up Keamanan Login
 - **Rute:** `/teacher/profile`
 - **Fungsi:** Mengelola biodata diri (Nama Lengkap, NIP/Username, Email), mengganti kata sandi secara aman, dan menjamin **Sinkronisasi Otomatis 2-Arah** dengan Manajemen Pengguna & Data Guru.
@@ -398,7 +400,19 @@ Setelah masuk melalui portal login terpadu (`/login`) menggunakan **NIP** dan ka
 
 ---
 
-### Menu 10: Riwayat Pelanggaran Siswa & Sinkronisasi Dua Arah E-Jurnal
+### Menu 10: Rekap Nilai Siswa & Analisis Butir Soal (/teacher/results)
+- **Rute:** `/teacher/results`
+- **Fungsi:** Menampilkan rekapitulasi nilai komprehensif, capaian kelas, dan analisis lembar jawaban per butir soal siswa (kunci jawaban sistem vs pilihan siswa, rumus KaTeX, dan perolehan poin per butir).
+- **Fitur Utama:**
+  1. **Filter Terpadu 3-Level:** Filter Paket Soal, Filter Kelas/Rombel, dan Sesi Ujian Aktif.
+  2. **4 Kartu KPI:** Total Peserta, Selesai/Terkirim, Rata-Rata Nilai Kelas, serta Nilai Tertinggi & Terendah.
+  3. **Tabel Rekapitulasi Nilai:** No, NISN, Nama Siswa, Kelas, Durasi Pengerjaan, Butir Benar, Sensor Anti-Cheat, Status, Nilai Akhir, dan tombol **"Lihat Jawaban"**.
+  4. **Modal Rincian Lembar Jawaban Siswa:** Bedah butir soal 1 s/d N (status Benar/Sebagian/Salah/Esai, perolehan poin, opsi pilihan siswa vs kunci jawaban sistem).
+  5. **Integrasi Dua Arah:** Tombol pintas ke Berita Acara E-Jurnal (`/teacher/ejournal`) dan menu Koreksi Esai (`/teacher/grading`).
+
+---
+
+### Menu 11: Riwayat Pelanggaran Siswa & Sinkronisasi Dua Arah E-Jurnal
 - **Rute:** `/teacher/violations`
 - **Fungsi:** Memonitor dan meninjau riwayat pelanggaran sensor anti-cheat dari rombel kelas dan sesi ujian terbuka, serta memberikan wewenang kepada guru/pengawas untuk menghapus data riwayat tersebut jika insiden terjadi tanpa disengaja oleh siswa (misalnya sentuhan tidak sengaja, notifikasi sistem HP, atau false positive) sebelum dokumen Berita Acara E-Jurnal dicetak.
 - **Fitur Utama:**
@@ -410,7 +424,7 @@ Setelah masuk melalui portal login terpadu (`/login`) menggunakan **NIP** dan ka
 
 ---
 
-### Menu 11: E-Jurnal & Rekapitulasi Berita Acara (Ekspor PDF/Excel)
+### Menu 12: E-Jurnal & Rekapitulasi Berita Acara (Ekspor PDF/Excel)
 - **Rute:** `/teacher/ejournal`
 - **Fungsi:** Merekap nilai, kehadiran, log pelanggaran, dan mencetak berita acara resmi standar dinas.
 - **Langkah-langkah:**
@@ -493,11 +507,16 @@ Jika siswa mencoba:
   2. **Remote Guru:** Guru menekan tombol hijau **"Buka Kunci Layar Siswa"** di menu Live Proctoring. Layar siswa otomatis terbuka seketika via WebSocket Daphne Channels.
   3. Sistem memberikan **5-Second Grace Period** (masa imunitas 5 detik) agar browser dapat masuk kembali ke fullscreen dengan stabil tanpa memicu alarm palsu.
 
-### Penyelesaian Ujian & Konfirmasi Selesai Ujian (Alarm Resmi)
+### Penyelesaian Ujian & Kartu Skor Hasil Ujian Siswa (Rahasia Kunci)
 1. Setelah menyelesaikan seluruh butir soal atau mengirimkan formulir Google Form, siswa dapat langsung mengklik tombol **"Selesai Ujian"** di Security Bar atas atau tombol **"Selesai & Kirim Ujian"** di butir soal terakhir.
 2. Sistem memunculkan **Modal Konfirmasi Selesai Ujian** yang menampilkan rincian progres pengerjaan (jumlah butir soal terjawab, ragu-ragu, dan belum diisi) serta peringatan jika masih ada butir soal yang kosong.
 3. Siswa mengklik tombol konfirmasi **"Ya, Selesaikan Ujian"**.
-4. Sistem secara otomatis menyimpan seluruh rekaman jawaban ke server E-Jurnal, membunyikan **alarm selesai resmi (~2.5 detik)**, melepaskan mode layar penuh (*exit fullscreen*), dan mengarahkan siswa kembali ke beranda dengan aman. Tidak diperlukan password keluar manual.
+4. Sistem secara otomatis:
+   - Menyimpan seluruh rekaman jawaban ke server E-Jurnal.
+   - Membunyikan **alarm selesai resmi (~2.5 detik)**.
+   - Melepaskan mode layar penuh (*exit fullscreen*).
+   - **Menampilkan Modal Kartu Skor Hasil Ujian:** Memperlihatkan capaian nilai asesmen siswa (misal: `80 / 100 Poin`), identitas peserta, dan waktu pengiriman. **Kunci jawaban dan rincian butir benar/salah 100% dirahasiakan** demi menjaga integritas materi ujian sekolah.
+   - Siswa mengklik tombol **"Selesai & Kembali ke Lobby"** untuk kembali ke beranda siswa secara aman dan tenang.
 
 ---
 

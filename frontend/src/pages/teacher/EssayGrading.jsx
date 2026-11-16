@@ -63,10 +63,15 @@ export default function EssayGrading() {
     setSaveErrorMsg('');
     try {
       const res = await getEssaySubmissionsApi(sessionId);
-      setSubmissionData(res);
+      const studentList = res.students || res.submissions || [];
+      setSubmissionData({
+        ...res,
+        students: studentList,
+        essay_questions: res.essay_questions || []
+      });
       // Auto select first student if available and not selected yet
-      if (res.students && res.students.length > 0) {
-        setSelectedStudentId(res.students[0].student_id);
+      if (studentList.length > 0) {
+        setSelectedStudentId(studentList[0].student_id || studentList[0].studentId);
       } else {
         setSelectedStudentId(null);
       }

@@ -376,7 +376,40 @@ Untuk paket ujian yang memiliki butir pertanyaan uraian / esai (`ESSAY`), sistem
 
 ---
 
-### 3.7. Menu 6: E-Jurnal & Berita Acara Ujian (Rekap Nilai, Filter Paket & Kelas, Ekspor PDF/Excel)
+### 3.8. Menu Baru: Rekap Nilai Siswa & Analisis Butir Soal (/teacher/results)
+Menu ini didesain khusus bagi guru mata pelajaran dan wali kelas untuk membedah hasil evaluasi siswa secara mendalam per butir soal:
+
+- **Membuka Menu:** Klik menu **"Rekap Nilai Siswa"** (`/teacher/results`) berikon piala (`Award`) pada navigasi bilah samping (*sidebar*).
+- **Alur & Fitur Lengkap:**
+  1. **Filter Terpadu 3-Level:**
+     - **Filter 1 (Paket Soal):** Memilih paket asesmen mandiri tertentu atau semua paket.
+     - **Filter 2 (Kelas / Rombel):** Menyaring rombel kelas spesifik atau seluruh kelas.
+     - **Filter 3 (Sesi Ujian Aktif):** Menampilkan sesi-sesi ujian yang relevan dengan paket dan kelas yang dipilih.
+  2. **4 Kartu Metrik KPI Kelas:**
+     - **Total Peserta:** Jumlah siswa yang terdaftar dalam sesi ujian.
+     - **Selesai / Terkirim:** Jumlah lembar jawaban yang telah masuk ke server beserta persentase kelulusan/pengiriman.
+     - **Rata-Rata Kelas:** Nilai mean (rerata) perolehan kelas ($0$ s/d $100$).
+     - **Tertinggi / Terendah:** Nilai maksimal dan nilai minimal pada sesi tersebut.
+  3. **Tabel Rekapitulasi Siswa:**
+     - Menampilkan No, NISN, Nama Lengkap Siswa, Kelas/Rombel, Durasi Pengerjaan (misal: `35 Menit`), Rasio Butir Benar (misal: `8/10 Soal`), Sensor Anti-Cheat (lencana hijau `0 Bersih` atau merah `Pelanggaran`), Status Ujian (Selesai/Mengerjakan), dan Nilai Akhir Angka Tebal.
+     - Dilengkapi live search nama siswa atau NISN, serta tab penyaring (*Semua Peserta*, *Selesai*, *Sedang Mengerjakan*).
+  4. **Modal Rincian Lembar Jawaban Siswa per Butir Soal (Tombol "Lihat Jawaban"):**
+     - Klik tombol **"Lihat Jawaban"** di baris siswa yang bersangkutan.
+     - Sistem memunculkan lembar analisis komparasi komprehensif:
+       * Skor total siswa, capaian persentase, jumlah benar, dan jumlah salah.
+       * Tab filter: *Semua Soal*, *Benar Saja*, *Salah Saja*, *Esai*.
+       * Kartu per-nomor soal (1 s/d N): nomor urut, jenis soal (Pilihan Ganda, Pilihan Ganda Kompleks, Isian Singkat, Matriks B/S, Menjodohkan, Esai), dan bobot poin.
+       * Lencana status hasil: `✓ Benar` (hijau), `⚡ Sebagian` (kuning), `✕ Salah` (merah), `★ Esai Dinilai` (biru), atau `⏳ Esai Menunggu Koreksi` (ungu).
+       * Teks butir soal lengkap dengan rumus matematika KaTeX.
+       * Opsi jawaban visual (hijau untuk kunci jawaban, penanda pilihan siswa).
+       * Komparasi teks eksplisit: **Jawaban Siswa** vs **Kunci Jawaban Sistem**.
+       * Komentar umpan balik (*feedback*) guru jika ada.
+  5. **Integrasi Dua Arah:**
+     - Tersedia tombol pintas instan menuju **Berita Acara E-Jurnal** (`/teacher/ejournal`) dan tombol pintas ke **Koreksi Esai** (`/teacher/grading`).
+
+---
+
+### 3.9. Menu: E-Jurnal & Berita Acara Ujian (Rekap Nilai, Filter Paket & Kelas, Ekspor PDF/Excel)
 Setelah sesi ujian selesai atau saat monitoring nilai berlangsung, guru dapat melihat rekapitulasi nilai dan mengunduh berita acara resmi.
 
 - **Membuka Menu:** Klik menu **"E-Jurnal Ujian"** (`/teacher/ejournal`).
@@ -596,7 +629,7 @@ Sistem menerapkan protokol **Zero-Tolerance Lockdown**. Jika siswa melakukan sal
 
 ---
 
-### 4.7. Prosedur Selesai Ujian & Konfirmasi Pengiriman Lembar Jawaban
+### 4.7. Prosedur Selesai Ujian & Kartu Skor Hasil Ujian Siswa (Rahasia Kunci)
 1. Setelah siswa selesai menjawab seluruh butir soal (atau menekan tombol *Kirim / Submit* pada Google Form):
 2. Siswa dapat mengklik tombol **"Selesai Ujian"** di Security Bar atas atau tombol **"Selesai & Kirim Ujian"** pada butir soal terakhir.
 3. Muncul **Modal Konfirmasi Selesai Ujian** yang menampilkan ringkasan pengerjaan:
@@ -605,10 +638,16 @@ Sistem menerapkan protokol **Zero-Tolerance Lockdown**. Jika siswa melakukan sal
    - Jumlah butir soal yang **Belum Diisi** (merah), disertai peringatan jika masih ada butir soal yang belum dikerjakan.
 4. Siswa mengklik tombol konfirmasi **"Ya, Selesaikan Ujian"**.
 5. Sistem akan:
-   - Menyimpan seluruh jawaban dan mengakhiri status pengerjaan siswa.
+   - Menyimpan seluruh jawaban dan mengakhiri status pengerjaan siswa secara resmi ke basis data.
    - Membunyikan **alarm notifikasi keluar ujian yang besar dan khas (~2.5 detik)**.
    - Melepaskan mode penguncian layar penuh (*exit fullscreen*) secara otomatis.
-   - Mengarahkan siswa kembali ke beranda asesmen dengan aman tanpa memerlukan password keluar manual yang membebani siswa.
+   - **Menampilkan Modal Kartu Skor Hasil Ujian Siswa (Post-Exam Score Card):**
+     * Menampilkan lencana piala dan ucapan selamat *"Ujian Berhasil Diselesaikan!"*.
+     * Menampilkan skor angka besar (contoh: **`80`** dari `100 Poin Maksimal` beserta persentase capaian).
+     * Menampilkan ringkasan identitas siswa: Nama Siswa, NISN, Kelas/Rombel, Mata Pelajaran, dan Jam Pengiriman.
+     * **Kerahasiaan Kunci Jawaban Terjaga:** Sistem **TIDAK menampilkan rincian kunci jawaban atau butir mana yang benar/salah** ke siswa demi menjaga kerahasiaan materi dan mencegah kebocoran soal antar-sesi atau antar-kelas.
+     * Jika paket ujian memuat butir soal esai/uraian, muncul catatan informatif: *"Nilai di atas adalah hasil penilaian butir objektif/AKM. Butir soal esai akan diperiksa manual oleh guru pengawas"*.
+   - Siswa mengklik tombol **"Selesai & Kembali ke Lobby"** untuk kembali ke beranda siswa secara tenang dan elegan tanpa `window.alert()` peramban yang mengganggu.
 
 ---
 

@@ -32,7 +32,11 @@ import {
   GitCompare,
   ListOrdered,
   Save,
-  Megaphone
+  Megaphone,
+  Trophy,
+  Award,
+  Sparkles,
+  ChevronRight
 } from 'lucide-react';
 
 export default function ExamWorkspace() {
@@ -51,6 +55,8 @@ export default function ExamWorkspace() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [doubtQuestions, setDoubtQuestions] = useState({}); // { [qId]: boolean }
   const [showExitConfirmModal, setShowExitConfirmModal] = useState(false);
+  const [showScoreResultModal, setShowScoreResultModal] = useState(false);
+  const [studentFinalScoreData, setStudentFinalScoreData] = useState(null);
   const [isSubmittingExam, setIsSubmittingExam] = useState(false);
   const [iframeKey, setIframeKey] = useState(1);
   const [screenshotToast, setScreenshotToast] = useState('');
@@ -372,16 +378,24 @@ export default function ExamWorkspace() {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  // Konfirmasi Selesai & Keluar Ujian (Tanpa Password Keluar)
+  // Konfirmasi Selesai & Keluar Ujian (Merekam Nilai & Membuka Modal Skor Hasil Ujian)
   const handleFinishAndExitExam = async () => {
     setIsSubmittingExam(true);
+
+    let calculatedScore = null;
 
     try {
       if (activeAttempt.sessionId && activeAttempt.sessionId.length > 10) {
         if (selectedPackage?.examType === 'NATIVE_QUESTIONS') {
-          await submitExamAnswersApi(activeAttempt.sessionId, activeAttempt.studentAnswers);
+          const subRes = await submitExamAnswersApi(activeAttempt.sessionId, activeAttempt.studentAnswers);
+          if (subRes && (subRes.calculated_score !== undefined || subRes.total_score !== undefined)) {
+            calculatedScore = subRes.calculated_score ?? subRes.total_score;
+          }
         }
-        await finishExamAttemptApi(activeAttempt.sessionId, activeAttempt.studentAnswers);
+        const finRes = await finishExamAttemptApi(activeAttempt.sessionId, activeAttempt.studentAnswers);
+        if (finRes && finRes.score !== undefined && finRes.score !== null) {
+          calculatedScore = finRes.score;
+        }
       }
     } catch (err) {
       console.warn('Backend finish attempt error fallback ke local store:', err);
@@ -398,10 +412,52 @@ export default function ExamWorkspace() {
       document.exitFullscreen().catch(() => {});
     }
 
+    const questions = selectedPackage?.questions || [];
+    const maxPoints = questions.reduce((sum, q) => sum + (Number(q.points) || 10), 0) || 100;
+    const hasEssay = questions.some((q) => q.questionType === 'ESSAY');
+
+    // Fallback hitung skor offline/lokal jika backend belum mengembalikan skor numerik
+    if (calculatedScore === null && selectedPackage?.examType === 'NATIVE_QUESTIONS') {
+      let localScore = 0;
+      questions.forEach((q) => {
+        const studentAns = activeAttempt.studentAnswers?.[q.id];
+        if (q.questionType === 'MULTIPLE_CHOICE') {
+          const correctOpt = (q.options || []).find((o) => o.isCorrect || o.is_correct);
+          const correctVal = correctOpt ? (correctOpt.optionLabel || correctOpt.label) : q.correctOption;
+          const correctId = correctOpt?.id;
+          if (studentAns !== undefined && studentAns !== null) {
+            if (String(studentAns) === String(correctId) || String(studentAns).toUpperCase() === String(correctVal).toUpperCase()) {
+              localScore += (Number(q.points) || 10);
+            }
+          }
+        }
+      });
+      calculatedScore = localScore;
+    }
+
+    const userName = currentUser?.fullName || currentUser?.full_name || 'Peserta Ujian';
+    const userClass = currentUser?.classroom_name || (typeof currentUser?.classroom === 'object' ? currentUser?.classroom?.name : currentUser?.classroom) || 'Kelas';
+
+    setStudentFinalScoreData({
+      score: calculatedScore !== null ? Number(calculatedScore) : (selectedPackage?.examType === 'NATIVE_QUESTIONS' ? 0 : null),
+      maxPoints,
+      hasEssay,
+      studentName: userName,
+      nisn: currentUser?.nisn || currentUser?.username || '-',
+      classroom: userClass,
+      subjectName: selectedPackage?.subjectName || selectedPackage?.subject_name || 'Mata Pelajaran',
+      packageTitle: selectedPackage?.title || 'Asesmen Mandiri',
+      finishedAt: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
+      isForm: selectedPackage?.examType !== 'NATIVE_QUESTIONS'
+    });
+
     setShowExitConfirmModal(false);
     setIsSubmittingExam(false);
+    setShowScoreResultModal(true);
+  };
 
-    alert('Selamat! Ujian Anda telah selesai dan seluruh rekaman jawaban tersimpan aman di E-Jurnal Guru.');
+  const handleAcknowledgeScoreAndExit = () => {
+    setShowScoreResultModal(false);
     if (activeAttempt.isSimulation) {
       useExamStore.getState().loginAsTeacher();
       navigate('/teacher/dashboard');
@@ -1392,6 +1448,121 @@ export default function ExamWorkspace() {
                     <span>Ya, Selesaikan Ujian</span>
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL KARTU SKOR HASIL UJIAN SISWA (POST-EXAM RESULT)   */}
+      {/* HANYA MENAMPILKAN NILAI TANPA KUNCI/LEMBAR JAWABAN       */}
+      {/* ======================================================== */}
+      {showScoreResultModal && studentFinalScoreData && (
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in select-none">
+          <div className="bg-[#0e131f] border border-zinc-700/80 rounded-2xl max-w-lg w-full p-6 sm:p-7 shadow-2xl relative space-y-6 text-zinc-100">
+            {/* Header / Celebration Icon */}
+            <div className="text-center space-y-2">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-500/30 text-emerald-400 mb-1 shadow-lg shadow-emerald-950/50">
+                <Trophy className="w-8 h-8 text-emerald-400 animate-pulse" />
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center justify-center gap-2">
+                <span>Ujian Berhasil Diselesaikan!</span>
+              </h2>
+              <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+                Seluruh jawaban telah berhasil disimpan dan disinkronkan secara permanen ke server portal guru pengawas.
+              </p>
+            </div>
+
+            {/* Kartu Skor Nilai Utama */}
+            <div className="bg-zinc-950/90 border border-zinc-800 rounded-xl p-5 text-center relative overflow-hidden">
+              <div className="absolute top-0 right-0 transform translate-x-2 -translate-y-2 opacity-5 pointer-events-none">
+                <Award className="w-32 h-32 text-emerald-400" />
+              </div>
+
+              <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 mb-1">
+                Perolehan Nilai Asesmen
+              </div>
+
+              {studentFinalScoreData.isForm ? (
+                <div className="py-3 space-y-1">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-semibold">
+                    <CheckCircle className="w-4 h-4" />
+                    <span>Lembar Form Berhasil Terkirim</span>
+                  </div>
+                  <p className="text-xs text-zinc-400 pt-2">
+                    Nilai dan rekap jawaban sedang diproses oleh guru mata pelajaran.
+                  </p>
+                </div>
+              ) : (
+                <div className="py-2 space-y-1">
+                  <div className="text-5xl sm:text-6xl font-black font-mono tracking-tight text-emerald-400">
+                    {studentFinalScoreData.score}
+                  </div>
+                  <div className="text-xs text-zinc-400 font-medium">
+                    dari total <span className="font-semibold text-zinc-200">{studentFinalScoreData.maxPoints}</span> Poin Maksimal
+                  </div>
+                  {studentFinalScoreData.maxPoints > 0 && (
+                    <div className="pt-2">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                        {Math.round((studentFinalScoreData.score / studentFinalScoreData.maxPoints) * 100)}% Capaian
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {studentFinalScoreData.hasEssay && (
+                <div className="mt-3 pt-3 border-t border-zinc-800 text-[11px] text-amber-300 bg-amber-500/10 p-2.5 rounded-lg flex items-center justify-center gap-1.5 text-left">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
+                  <span>
+                    <strong>Catatan:</strong> Nilai di atas adalah hasil penilaian butir objektif/AKM. Butir soal esai akan diperiksa manual oleh guru pengawas.
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Rincian Identitas Peserta & Asesmen */}
+            <div className="bg-zinc-950/60 border border-zinc-800/80 rounded-xl p-3.5 text-xs divide-y divide-zinc-800/60">
+              <div className="flex justify-between py-1.5">
+                <span className="text-zinc-400">Nama Siswa:</span>
+                <span className="font-semibold text-zinc-200">{studentFinalScoreData.studentName}</span>
+              </div>
+              <div className="flex justify-between py-1.5">
+                <span className="text-zinc-400">NISN:</span>
+                <span className="font-mono text-zinc-200">{studentFinalScoreData.nisn}</span>
+              </div>
+              <div className="flex justify-between py-1.5">
+                <span className="text-zinc-400">Kelas / Rombel:</span>
+                <span className="font-semibold text-zinc-200">{studentFinalScoreData.classroom}</span>
+              </div>
+              <div className="flex justify-between py-1.5">
+                <span className="text-zinc-400">Mata Pelajaran:</span>
+                <span className="font-semibold text-zinc-200">{studentFinalScoreData.subjectName}</span>
+              </div>
+              <div className="flex justify-between py-1.5">
+                <span className="text-zinc-400">Waktu Pengiriman:</span>
+                <span className="font-mono text-emerald-400 font-medium">{studentFinalScoreData.finishedAt}</span>
+              </div>
+            </div>
+
+            {/* Peringatan Kerahasiaan Kunci Jawaban */}
+            <div className="bg-zinc-950/80 border border-zinc-800 p-3 rounded-xl flex items-start gap-2.5 text-xs text-zinc-400 leading-relaxed">
+              <Lock className="w-4 h-4 text-zinc-500 shrink-0 mt-0.5" />
+              <span>
+                <strong>Kerahasiaan Jawaban:</strong> Rincian lembar kunci jawaban dan butir soal yang benar/salah dirahasiakan oleh sistem demi integritas pelaksanaan ujian. Guru pengawas dapat memeriksa analisis jawaban melalui portal pengawas.
+              </span>
+            </div>
+
+            {/* Tombol Aksi */}
+            <div>
+              <button
+                type="button"
+                onClick={handleAcknowledgeScoreAndExit}
+                className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg shadow-emerald-950 transition active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>{activeAttempt.isSimulation ? 'Kembali ke Dashboard Guru' : 'Selesai & Kembali ke Lobby'}</span>
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>

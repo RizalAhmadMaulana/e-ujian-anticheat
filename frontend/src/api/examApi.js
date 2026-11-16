@@ -171,6 +171,19 @@ export const saveEssayGradeApi = async (sessionId, payload) => {
   return response.data;
 };
 
+// -------------------------------------------------------------
+// REKAP NILAI & ANALISIS LEMBAR JAWABAN SISWA (ROLE GURU)
+// -------------------------------------------------------------
+export const getSessionStudentResultsApi = async (sessionId) => {
+  const response = await axiosInstance.get(`/exams/sessions/${sessionId}/student-results/`);
+  return response.data;
+};
+
+export const getStudentAttemptBreakdownApi = async (attemptId) => {
+  const response = await axiosInstance.get(`/exams/attempts/${attemptId}/breakdown/`);
+  return response.data;
+};
+
 export const examApi = {
   getPackagesApi,
   getPackageDetailApi,
@@ -193,6 +206,8 @@ export const examApi = {
   verifyExitPasswordApi,
   getEssaySubmissionsApi,
   saveEssayGradeApi,
+  getSessionStudentResultsApi,
+  getStudentAttemptBreakdownApi,
 
   // Aliases for compatibility
   getPackages: getPackagesApi,
@@ -216,6 +231,8 @@ export const examApi = {
   verifyExitPassword: verifyExitPasswordApi,
   getEssaySubmissions: getEssaySubmissionsApi,
   saveEssayGrade: saveEssayGradeApi,
+  getSessionStudentResults: getSessionStudentResultsApi,
+  getStudentAttemptBreakdown: getStudentAttemptBreakdownApi,
 };
 
 export default examApi;
