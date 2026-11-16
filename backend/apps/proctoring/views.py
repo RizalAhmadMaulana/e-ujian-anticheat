@@ -79,7 +79,15 @@ class UnlockStudentAPIView(APIView):
             session_id = attempt.session.id if attempt.session else None
             base_pin = attempt.session.supervisor_pin if attempt.session else ''
             
-            if not is_valid_supervisor_pin(session_id, input_pin, base_pin=base_pin):
+            is_valid = is_valid_supervisor_pin(session_id, input_pin, base_pin=base_pin)
+            if not is_valid and attempt.session:
+                other_sessions = ExamSession.objects.filter(classroom=attempt.session.classroom, is_active=True)
+                for oses in other_sessions:
+                    if is_valid_supervisor_pin(oses.id, input_pin, base_pin=oses.supervisor_pin):
+                        is_valid = True
+                        break
+
+            if not is_valid:
                 return Response({
                     "success": False,
                     "error": "PIN Pengawas salah atau sudah kedaluwarsa! PIN diperbarui otomatis setiap 10 menit. Silakan periksa PIN terbaru di menu Jadwal & Sesi Ujian."

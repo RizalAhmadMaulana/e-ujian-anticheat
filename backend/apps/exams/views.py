@@ -97,7 +97,45 @@ class VerifyEntryPasswordView(APIView):
         session = get_object_or_404(ExamSession, id=session_id)
         now = timezone.now()
 
-        # Validasi Rentang Waktu Ujian (Sinkronisasi Jadwal Mulai & Selesai)
+        input_password = request.data.get('entry_password', '').strip().upper().replace(' ', '')
+
+        if not input_password:
+            return Response(
+                {"success": False, "message": "Password Masuk (Token) wajib diisi!"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        is_valid = is_valid_entry_token(session.id, input_password, base_token=session.entry_password)
+
+        # Smart Fallback Resolution: jika token tidak cocok dengan session_id di URL,
+        # periksa apakah token ini cocok dengan sesi aktif lain milik siswa / kelas yang sama
+        if not is_valid:
+            user = request.user
+            base_qs = ExamSession.objects.filter(is_active=True).select_related('package', 'classroom')
+            
+            # Prioritaskan sesi di kelas siswa
+            if hasattr(user, 'classroom') and user.classroom:
+                for cand in base_qs.filter(classroom=user.classroom):
+                    if cand.id != session.id and is_valid_entry_token(cand.id, input_password, base_token=cand.entry_password):
+                        session = cand
+                        is_valid = True
+                        break
+            
+            # Fallback ke seluruh sesi aktif
+            if not is_valid:
+                for cand in base_qs:
+                    if cand.id != session.id and is_valid_entry_token(cand.id, input_password, base_token=cand.entry_password):
+                        session = cand
+                        is_valid = True
+                        break
+
+        if not is_valid:
+            return Response(
+                {"success": False, "message": "Token Masuk salah atau sudah kedaluwarsa! Token diperbarui otomatis setiap 10 menit. Silakan minta token terbaru kepada pengawas."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validasi Rentang Waktu Ujian untuk sesi yang sudah terverifikasi (Sinkronisasi Jadwal Mulai & Selesai)
         if session.start_time and now < session.start_time:
             start_str = timezone.localtime(session.start_time).strftime("%d %B %Y pukul %H:%M WIB")
             return Response(
@@ -112,28 +150,16 @@ class VerifyEntryPasswordView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        input_password = request.data.get('entry_password', '').strip().upper()
-
-        if not input_password:
-            return Response(
-                {"success": False, "message": "Password Masuk (Token) wajib diisi!"}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        if is_valid_entry_token(session.id, input_password, base_token=session.entry_password):
-            return Response({
-                "success": True,
-                "message": "Token Masuk Terverifikasi. Layar Anda akan dikunci ke Mode Lockdown.",
-                "session_id": str(session.id),
-                "subject_name": session.package.subject_name,
-                "classroom": session.classroom.name,
-                "duration_minutes": session.duration_minutes
-            }, status=status.HTTP_200_OK)
-
-        return Response(
-            {"success": False, "message": "Token Masuk salah atau sudah kedaluwarsa! Token diperbarui otomatis setiap 10 menit. Silakan minta token terbaru kepada pengawas."}, 
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response({
+            "success": True,
+            "message": "Token Masuk Terverifikasi. Layar Anda akan dikunci ke Mode Lockdown.",
+            "session_id": str(session.id),
+            "package_id": str(session.package.id),
+            "title": session.package.title,
+            "subject_name": session.package.subject_name,
+            "classroom": session.classroom.name,
+            "duration_minutes": session.duration_minutes
+        }, status=status.HTTP_200_OK)
 
 
 class StartExamSessionView(APIView):

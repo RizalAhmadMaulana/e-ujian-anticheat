@@ -297,7 +297,9 @@ Ruang ujian harus dibuka terlebih dahulu agar siswa dapat mulai mengerjakan sesu
   - Kartu sesi guru menampilkan penghitung waktu mundur (*live countdown timer*) waktu rotasi (misal: `Rotasi: 08:42`).
   - Saat hitungan mundur mencapai 00:00, token langsung berganti ke kode baru secara otomatis tanpa perlu refresh halaman.
   - Siswa yang terlambat masuk atau layarnya terblokir penalti wajib meminta token aktif terbaru dari pengawas ruangan.
-  - Tersedia toleransi masa tenggang (*grace period*) 1 siklus slot untuk mengantisipasi siswa yang memasukkan token tepat pada detik pergantian menit ke-10.
+  - **Toleransi Perbedaan Waktu (Clock Drift) $\pm 1$ Slot:** Sistem mendukung toleransi pergeseran waktu $\pm 1$ slot (total rentang 20 menit) untuk mengantisipasi perbedaan detik/menit antara jam HP siswa dan jam server/laptop pengawas.
+  - **Sanitasi Input Otomatis:** Sistem secara otomatis membersihkan spasi dan tanda minus dari input siswa (`MSK-XXXX` atau `XXXX` atau `MSK - XXXX`), mencegah kegagalan akibat spasi otomatis dari keyboard virtual HP.
+  - **Smart Session Matching:** Jika terdapat beberapa sesi paralel di kelas yang sama (misalnya sesama mata pelajaran IPA), sistem secara cerdas mencocokkan token yang diketik siswa ke sesi yang tepat berdasarkan ID paket dan judul sehingga siswa dapat langsung masuk tanpa salah sambung sesi.
 
 - **Status Jadwal Real-Time pada Kartu Sesi Guru:**
   - 🟢 **Sedang Berjalan:** Sesi aktif dalam rentang tanggal dan jam saat ini.

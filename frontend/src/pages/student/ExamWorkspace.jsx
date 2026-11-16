@@ -415,63 +415,52 @@ export default function ExamWorkspace() {
     e.preventDefault();
     setUnlockError('');
 
-    const inputPin = supervisorUnlockPin.trim().toUpperCase();
-    const cleanInputPin = inputPin.replace(/^PIN-?/i, '');
+    const inputPin = supervisorUnlockPin.trim().toUpperCase().replace(/\s+/g, '');
+    const cleanInputPin = inputPin.replace(/^PIN-?/i, '').replace(/-/g, '');
 
     // Kumpulkan kandidat PIN pengawas yang sah
     const candidatePins = new Set();
+    const addCandidate = (val) => {
+      if (!val) return;
+      const clean = String(val).trim().toUpperCase().replace(/\s+/g, '');
+      const noPre = clean.replace(/^PIN-?/i, '').replace(/-/g, '');
+      candidatePins.add(clean);
+      candidatePins.add(noPre);
+    };
 
-    // 0. Dynamic 10-Minute PIN (Current Slot & Previous Grace Slot)
-    const targetSessionId = activeAttempt.sessionId || matchedSession?.id;
+    // 0. Dynamic 10-Minute PIN (Slot Saat Ini, Slot Sebelumnya, dan Toleransi Drift +1 Slot)
+    const targetSessionId = activeAttempt.sessionId;
     if (targetSessionId) {
       const dyn = getSessionTokens(targetSessionId);
-      if (dyn.pinToken) {
-        candidatePins.add(dyn.pinToken.toUpperCase());
-        candidatePins.add(dyn.pinToken.replace(/^PIN-?/i, ''));
-      }
-      const prevPin = generateDynamicToken(targetSessionId, dyn.slot - 1, 'PIN');
-      if (prevPin) {
-        candidatePins.add(prevPin.toUpperCase());
-        candidatePins.add(prevPin.replace(/^PIN-?/i, ''));
-      }
+      [-1, 0, 1].forEach(offset => {
+        const p = generateDynamicToken(targetSessionId, dyn.slot + offset, 'PIN');
+        addCandidate(p);
+      });
     }
 
     // 1. Dari activeAttempt (disimpan saat mulai sesi)
     if (activeAttempt.supervisorPin) {
-      const sp = activeAttempt.supervisorPin.trim().toUpperCase();
-      candidatePins.add(sp);
-      candidatePins.add(sp.replace(/^PIN-?/i, ''));
+      addCandidate(activeAttempt.supervisorPin);
     }
 
-    // 2. Dari examSessions yang cocok atau sesi pertama
-    const matchedSession = examSessions?.find(
-      s => s.id === activeAttempt.sessionId || 
-           s.package === selectedPackage?.id || 
-           (s.package && s.package.id === selectedPackage?.id) || 
-           s.packageId === selectedPackage?.id
-    ) || examSessions?.[0];
-
-    if (matchedSession) {
-      const sPin = (matchedSession.supervisorPin || matchedSession.supervisor_pin || '').trim().toUpperCase();
-      if (sPin) {
-        candidatePins.add(sPin);
-        candidatePins.add(sPin.replace(/^PIN-?/i, ''));
-      }
-    }
-
-    // 3. Dari seluruh daftar sesi yang tersimpan
+    // 2. Dari seluruh daftar sesi yang ada di store/local
     (examSessions || []).forEach(s => {
-      const sPin = (s.supervisorPin || s.supervisor_pin || '').trim().toUpperCase();
+      if (s.id) {
+        const d = getSessionTokens(s.id);
+        [-1, 0, 1].forEach(offset => {
+          const p = generateDynamicToken(s.id, d.slot + offset, 'PIN');
+          addCandidate(p);
+        });
+      }
+      const sPin = s.supervisorPin || s.supervisor_pin;
       if (sPin) {
-        candidatePins.add(sPin);
-        candidatePins.add(sPin.replace(/^PIN-?/i, ''));
+        addCandidate(sPin);
       }
     });
 
-    // 4. Default universal backup PIN
+    // 3. Default universal backup PIN pengawas
     ['GURU123', 'MASUK123', '12345', 'PIN-1234', '1234'].forEach(p => {
-      candidatePins.add(p);
-      candidatePins.add(p.replace(/^PIN-?/i, ''));
+      addCandidate(p);
     });
 
     const isValid = candidatePins.has(inputPin) || candidatePins.has(cleanInputPin);

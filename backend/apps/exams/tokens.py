@@ -100,22 +100,23 @@ def is_valid_entry_token(session_id, input_token: str, base_token: str = None, t
     if not input_token:
         return False
 
-    clean_input = str(input_token).strip().upper()
-    clean_input_noprefix = clean_input.replace('MSK-', '').replace('MSK', '')
+    clean_input = str(input_token).strip().upper().replace(' ', '')
+    clean_input_noprefix = clean_input.replace('MSK-', '').replace('MSK', '').replace('-', '')
 
     current_slot = get_current_slot(timestamp)
-    valid_slots = [current_slot, current_slot - 1]
+    # Cek slot aktif saat ini, 1 slot sebelumnya (grace turnover), dan 1 slot berikutnya (clock drift)
+    valid_slots = [current_slot, current_slot - 1, current_slot + 1]
 
     for s in valid_slots:
         token = generate_dynamic_token(session_id, s, 'ENTRY')
-        token_noprefix = token.replace('MSK-', '').replace('MSK', '')
+        token_noprefix = token.replace('MSK-', '').replace('MSK', '').replace('-', '')
         if clean_input == token or clean_input_noprefix == token_noprefix:
             return True
 
     # Cek base_token jika tersedia
     if base_token:
-        base_clean = str(base_token).strip().upper()
-        base_clean_noprefix = base_clean.replace('MSK-', '').replace('MSK', '')
+        base_clean = str(base_token).strip().upper().replace(' ', '')
+        base_clean_noprefix = base_clean.replace('MSK-', '').replace('MSK', '').replace('-', '')
         if clean_input == base_clean or clean_input_noprefix == base_clean_noprefix:
             return True
 
@@ -129,29 +130,28 @@ def is_valid_entry_token(session_id, input_token: str, base_token: str = None, t
 def is_valid_supervisor_pin(session_id, input_pin: str, base_pin: str = None, timestamp=None) -> bool:
     """
     Memvalidasi PIN Pengawas yang dimasukkan untuk membuka kunci layar siswa:
-    1. Mencocokkan dengan PIN slot 10 menit saat ini.
-    2. Mencocokkan dengan PIN slot 10 menit sebelumnya (Grace Period).
-    3. Mencocokkan dengan base_pin pengawas di database.
-    4. Mencocokkan dengan master PIN universal pengawas sekolah.
+    1. Mencocokkan dengan PIN slot 10 menit saat ini, sebelumnya, dan berikutnya.
+    2. Mencocokkan dengan base_pin pengawas di database.
+    3. Mencocokkan dengan master PIN universal pengawas sekolah.
     """
     if not input_pin:
         return False
 
-    clean_input = str(input_pin).strip().upper()
-    clean_input_noprefix = clean_input.replace('PIN-', '').replace('PIN', '')
+    clean_input = str(input_pin).strip().upper().replace(' ', '')
+    clean_input_noprefix = clean_input.replace('PIN-', '').replace('PIN', '').replace('-', '')
 
     current_slot = get_current_slot(timestamp)
-    valid_slots = [current_slot, current_slot - 1]
+    valid_slots = [current_slot, current_slot - 1, current_slot + 1]
 
     for s in valid_slots:
         pin = generate_dynamic_token(session_id, s, 'PIN')
-        pin_noprefix = pin.replace('PIN-', '').replace('PIN', '')
+        pin_noprefix = pin.replace('PIN-', '').replace('PIN', '').replace('-', '')
         if clean_input == pin or clean_input_noprefix == pin_noprefix:
             return True
 
     if base_pin:
-        base_clean = str(base_pin).strip().upper()
-        base_clean_noprefix = base_clean.replace('PIN-', '').replace('PIN', '')
+        base_clean = str(base_pin).strip().upper().replace(' ', '')
+        base_clean_noprefix = base_clean.replace('PIN-', '').replace('PIN', '').replace('-', '')
         if clean_input == base_clean or clean_input_noprefix == base_clean_noprefix:
             return True
 

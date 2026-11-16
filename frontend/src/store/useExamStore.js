@@ -336,15 +336,29 @@ export const useExamStore = create((set, get) => ({
 
   verifyEntryPassword: (inputPassword) => {
     const { activeAttempt, examSessions } = get();
-    const currentSession = examSessions.find((s) => s.id === activeAttempt.sessionId) || examSessions[0];
+    let currentSession = examSessions.find((s) => s.id === activeAttempt.sessionId) || examSessions[0];
     const basePassword = currentSession?.entryPassword || currentSession?.entry_password || '';
 
-    const isValid = isValidEntryToken(currentSession?.id, inputPassword, basePassword);
+    let isValid = isValidEntryToken(currentSession?.id, inputPassword, basePassword);
+
+    // Fallback: periksa seluruh sesi ujian yang tersimpan jika tidak cocok dengan currentSession
+    if (!isValid && examSessions && examSessions.length > 0) {
+      const matchInAny = examSessions.find(s => {
+        const bp = s.entryPassword || s.entry_password || '';
+        return isValidEntryToken(s.id, inputPassword, bp);
+      });
+      if (matchInAny) {
+        currentSession = matchInAny;
+        isValid = true;
+      }
+    }
     
     if (isValid) {
       set((state) => {
         const updated = {
           ...state.activeAttempt,
+          sessionId: currentSession?.id || state.activeAttempt.sessionId,
+          supervisorPin: currentSession?.supervisorPin || currentSession?.supervisor_pin || state.activeAttempt.supervisorPin,
           hasVerifiedEntryPassword: true,
           examStartedAt: new Date().toLocaleTimeString('id-ID'),
         };

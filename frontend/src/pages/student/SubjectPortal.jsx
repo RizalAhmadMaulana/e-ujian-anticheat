@@ -293,14 +293,38 @@ export default function SubjectPortal() {
             const isSelected = launchingPackageId === pkg.id;
             const isNative = pkg.examType === 'NATIVE_QUESTIONS';
 
-            const matchingSession = availableSessions.find((s) => {
-              const matchPkg = s.package === pkg.id || s.packageId === pkg.id || (s.package && s.package.id === pkg.id);
-              const matchTitle = (s.title && pkg.title && s.title.toLowerCase() === pkg.title.toLowerCase()) ||
-                                 (s.package_title && pkg.title && s.package_title.toLowerCase() === pkg.title.toLowerCase());
-              const matchSubject = (s.subject_name && pkg.subjectName && s.subject_name.toLowerCase() === pkg.subjectName.toLowerCase()) ||
-                                   (s.subjectName && pkg.subjectName && s.subjectName.toLowerCase() === pkg.subjectName.toLowerCase());
-              return matchPkg || matchTitle || matchSubject;
+            // Pencarian Sesi Ujian yang presisi (Prioritas ID Paket & Judul, cegah false-match sesama mata pelajaran)
+            let matchingSession = availableSessions.find((s) => {
+              const sPkgId = typeof s.package === 'object' ? s.package?.id : (s.package || s.packageId || s.exam_package);
+              return sPkgId && String(sPkgId) === String(pkg.id);
             });
+
+            if (!matchingSession && pkg.title) {
+              const cleanPkgTitle = pkg.title.trim().toLowerCase();
+              matchingSession = availableSessions.find((s) => {
+                const sTitle = (s.title || s.package_title || s.package?.title || '').trim().toLowerCase();
+                return sTitle && sTitle === cleanPkgTitle;
+              });
+            }
+
+            if (!matchingSession && pkg.title) {
+              const cleanPkgTitle = pkg.title.trim().toLowerCase();
+              matchingSession = availableSessions.find((s) => {
+                const sTitle = (s.title || s.package_title || s.package?.title || '').trim().toLowerCase();
+                return sTitle && (sTitle.includes(cleanPkgTitle) || cleanPkgTitle.includes(sTitle));
+              });
+            }
+
+            if (!matchingSession && pkg.subjectName) {
+              const cleanSubj = pkg.subjectName.trim().toLowerCase();
+              const sameSubjectSessions = availableSessions.filter((s) => {
+                const sSubj = (s.subject_name || s.subjectName || s.package?.subject_name || '').trim().toLowerCase();
+                return sSubj === cleanSubj;
+              });
+              if (sameSubjectSessions.length === 1) {
+                matchingSession = sameSubjectSessions[0];
+              }
+            }
 
             const schedule = getScheduleStatus(matchingSession);
 

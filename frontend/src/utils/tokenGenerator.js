@@ -100,30 +100,31 @@ export function getSessionTokens(sessionId, timestamp = null) {
 export function isValidEntryToken(sessionId, inputToken, baseToken = null, timestamp = null) {
   if (!inputToken) return false;
 
-  const cleanInput = String(inputToken).trim().toUpperCase();
-  const cleanInputNoPrefix = cleanInput.replace('MSK-', '').replace('MSK', '');
+  const cleanInput = String(inputToken).trim().toUpperCase().replace(/\s+/g, '');
+  const cleanInputNoPrefix = cleanInput.replace('MSK-', '').replace('MSK', '').replace(/-/g, '');
 
   const currentSlot = getCurrentSlot(timestamp);
-  const validSlots = [currentSlot, currentSlot - 1];
+  // Toleransi: slot aktif saat ini, 1 slot sebelumnya (grace turnover), dan 1 slot berikutnya (clock drift)
+  const validSlots = [currentSlot, currentSlot - 1, currentSlot + 1];
 
   for (const s of validSlots) {
     const token = generateDynamicToken(sessionId, s, 'ENTRY');
-    const tokenNoPrefix = token.replace('MSK-', '').replace('MSK', '');
+    const tokenNoPrefix = token.replace('MSK-', '').replace('MSK', '').replace(/-/g, '');
     if (cleanInput === token || cleanInputNoPrefix === tokenNoPrefix) {
       return true;
     }
   }
 
   if (baseToken) {
-    const baseClean = String(baseToken).trim().toUpperCase();
-    const baseCleanNoPrefix = baseClean.replace('MSK-', '').replace('MSK', '');
+    const baseClean = String(baseToken).trim().toUpperCase().replace(/\s+/g, '');
+    const baseCleanNoPrefix = baseClean.replace('MSK-', '').replace('MSK', '').replace(/-/g, '');
     if (cleanInput === baseClean || cleanInputNoPrefix === baseCleanNoPrefix) {
       return true;
     }
   }
 
   // Universal bypass demo / pengujian
-  if (['MASUK123', '12345', 'DEMO123'].includes(cleanInput)) {
+  if (['MASUK123', '12345', 'DEMO123'].includes(cleanInput) || ['12345'].includes(cleanInputNoPrefix)) {
     return true;
   }
 
@@ -132,35 +133,35 @@ export function isValidEntryToken(sessionId, inputToken, baseToken = null, times
 
 /**
  * Validasi PIN Pengawas Ruangan:
- * Cocokkan terhadap slot saat ini, slot sebelumnya (grace period), basePin, atau master PIN.
+ * Cocokkan terhadap slot saat ini, slot sebelumnya (grace period), slot berikutnya (clock drift), basePin, atau master PIN.
  */
 export function isValidSupervisorPin(sessionId, inputPin, basePin = null, timestamp = null) {
   if (!inputPin) return false;
 
-  const cleanInput = String(inputPin).trim().toUpperCase();
-  const cleanInputNoPrefix = cleanInput.replace('PIN-', '').replace('PIN', '');
+  const cleanInput = String(inputPin).trim().toUpperCase().replace(/\s+/g, '');
+  const cleanInputNoPrefix = cleanInput.replace('PIN-', '').replace('PIN', '').replace(/-/g, '');
 
   const currentSlot = getCurrentSlot(timestamp);
-  const validSlots = [currentSlot, currentSlot - 1];
+  const validSlots = [currentSlot, currentSlot - 1, currentSlot + 1];
 
   for (const s of validSlots) {
     const pin = generateDynamicToken(sessionId, s, 'PIN');
-    const pinNoPrefix = pin.replace('PIN-', '').replace('PIN', '');
+    const pinNoPrefix = pin.replace('PIN-', '').replace('PIN', '').replace(/-/g, '');
     if (cleanInput === pin || cleanInputNoPrefix === pinNoPrefix) {
       return true;
     }
   }
 
   if (basePin) {
-    const baseClean = String(basePin).trim().toUpperCase();
-    const baseCleanNoPrefix = baseClean.replace('PIN-', '').replace('PIN', '');
+    const baseClean = String(basePin).trim().toUpperCase().replace(/\s+/g, '');
+    const baseCleanNoPrefix = baseClean.replace('PIN-', '').replace('PIN', '').replace(/-/g, '');
     if (cleanInput === baseClean || cleanInputNoPrefix === baseCleanNoPrefix) {
       return true;
     }
   }
 
   // Master PIN universal pengawas
-  if (['GURU123', 'MASUK123', '12345', 'PIN-1234', '1234'].includes(cleanInput)) {
+  if (['GURU123', 'MASUK123', '12345', 'PIN-1234', '1234'].includes(cleanInput) || ['1234', '12345'].includes(cleanInputNoPrefix)) {
     return true;
   }
 

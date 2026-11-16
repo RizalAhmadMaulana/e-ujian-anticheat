@@ -84,23 +84,52 @@ export default function GatekeeperPin() {
     fetchSessions();
   }, [fetchSchoolSettings, activeAttempt?.selectedPackage, examPackages, navigate]);
 
-  // Cari sesi ujian yang cocok dengan mata pelajaran yang dipilih
-  const targetSession = availableSessions.find((s) => {
-    if (activeAttempt?.sessionId && s.id === activeAttempt.sessionId) return true;
-    const matchPkg = s.package === selectedPackage?.id || s.packageId === selectedPackage?.id || (s.package && s.package.id === selectedPackage?.id);
-    const matchTitle = (s.title && selectedPackage?.title && s.title.toLowerCase() === selectedPackage.title.toLowerCase()) ||
-                       (s.package_title && selectedPackage?.title && s.package_title.toLowerCase() === selectedPackage.title.toLowerCase());
-    const matchSubject = (s.subject_name && selectedPackage?.subjectName && s.subject_name.toLowerCase() === selectedPackage.subjectName.toLowerCase()) ||
-                         (s.subjectName && selectedPackage?.subjectName && s.subjectName.toLowerCase() === selectedPackage.subjectName.toLowerCase());
-    return matchPkg || matchTitle || matchSubject;
-  }) || examSessions[0];
+  // Cari sesi ujian yang cocok dengan mata pelajaran yang dipilih (Prioritas ID Paket & Judul)
+  const targetSession = React.useMemo(() => {
+    // 1. Cocokkan ID Paket Soal secara langsung
+    if (selectedPackage?.id) {
+      const byPkg = availableSessions.find(s => {
+        const sPkgId = typeof s.package === 'object' ? s.package?.id : (s.package || s.packageId || s.exam_package);
+        return sPkgId && String(sPkgId) === String(selectedPackage.id);
+      });
+      if (byPkg) return byPkg;
+    }
+
+    // 2. Cocokkan Judul Paket
+    if (selectedPackage?.title) {
+      const cleanPkgTitle = selectedPackage.title.trim().toLowerCase();
+      const byTitle = availableSessions.find(s => {
+        const sTitle = (s.title || s.package_title || s.package?.title || '').trim().toLowerCase();
+        return sTitle && sTitle === cleanPkgTitle;
+      });
+      if (byTitle) return byTitle;
+    }
+
+    // 3. Cocokkan activeAttempt.sessionId jika ada di availableSessions dan relevan
+    if (activeAttempt?.sessionId) {
+      const byId = availableSessions.find(s => s.id === activeAttempt.sessionId);
+      if (byId) return byId;
+    }
+
+    // 4. Fallback jika ada tepat 1 sesi dengan mata pelajaran sama
+    if (selectedPackage?.subjectName) {
+      const cleanSubj = selectedPackage.subjectName.trim().toLowerCase();
+      const sameSubj = availableSessions.filter(s => {
+        const sSubj = (s.subject_name || s.subjectName || s.package?.subject_name || '').trim().toLowerCase();
+        return sSubj === cleanSubj;
+      });
+      if (sameSubj.length === 1) return sameSubj[0];
+    }
+
+    return availableSessions[0] || examSessions[0];
+  }, [availableSessions, selectedPackage, activeAttempt?.sessionId, examSessions]);
 
   const isNative = selectedPackage?.examType === 'NATIVE_QUESTIONS';
 
   const handleVerifyAndStart = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     setErrorMsg('');
-    const inputPin = pin.trim().toUpperCase();
+    const inputPin = pin.trim().toUpperCase().replace(/\s+/g, '');
 
     if (!inputPin) {
       setErrorMsg(`Password Masuk wajib diisi untuk memulai ujian ${selectedPackage?.subjectName || ''}!`);
@@ -111,15 +140,46 @@ export default function GatekeeperPin() {
 
     try {
       let verified = false;
-      const sessId = targetSession?.id || activeAttempt?.sessionId;
+
+      // Smart Session Resolution: cari apakah token yang diketik siswa cocok dengan salah satu sesi aktif
+      let currentTargetSession = targetSession;
+      const tokenMatchedSession = availableSessions.find(s => {
+        const baseTok = s.entry_password || s.entryPassword || '';
+        return isValidEntryToken(s.id, inputPin, baseTok);
+      });
+
+      if (tokenMatchedSession) {
+        currentTargetSession = tokenMatchedSession;
+        // Sinkronkan selectedPackage bila ada paket yang sesuai sesi ini
+        const matchingPkg = examPackages.find(p => {
+          const sPkgId = typeof tokenMatchedSession.package === 'object' ? tokenMatchedSession.package?.id : (tokenMatchedSession.package || tokenMatchedSession.packageId || tokenMatchedSession.exam_package);
+          return (sPkgId && String(p.id) === String(sPkgId)) ||
+                 (tokenMatchedSession.title && p.title && tokenMatchedSession.title.toLowerCase() === p.title.toLowerCase()) ||
+                 (tokenMatchedSession.package_title && p.title && tokenMatchedSession.package_title.toLowerCase() === p.title.toLowerCase());
+        });
+        if (matchingPkg) {
+          useExamStore.getState().setSelectedPackage(matchingPkg);
+        }
+      }
+
+      let sessId = currentTargetSession?.id || activeAttempt?.sessionId;
 
       // 1. Verifikasi Password Masuk ke Backend Django
       if (sessId && sessId.length > 10) {
-        setSessionId(sessId, targetSession?.supervisor_pin || targetSession?.supervisorPin || '');
+        setSessionId(sessId, currentTargetSession?.supervisor_pin || currentTargetSession?.supervisorPin || '');
         try {
           const apiRes = await verifyEntryPasswordApi(sessId, inputPin);
           if (apiRes && apiRes.success) {
             verified = true;
+            if (apiRes.session_id) {
+              sessId = apiRes.session_id;
+            }
+            if (apiRes.package_id) {
+              const pkgFromApi = examPackages.find(p => String(p.id) === String(apiRes.package_id));
+              if (pkgFromApi) {
+                useExamStore.getState().setSelectedPackage(pkgFromApi);
+              }
+            }
           }
         } catch (apiErr) {
           console.warn('API verifyEntryPassword fallback ke lokal token validator:', apiErr);
@@ -131,7 +191,7 @@ export default function GatekeeperPin() {
 
       // 2. Fallback verifikasi lokal store & dynamic token generator (jika offline/mock)
       if (!verified) {
-        const baseToken = targetSession?.entry_password || targetSession?.entryPassword || '';
+        const baseToken = currentTargetSession?.entry_password || currentTargetSession?.entryPassword || '';
         const isValidDynamic = isValidEntryToken(sessId, inputPin, baseToken);
         const storeRes = verifyEntryPassword(inputPin);
         if (isValidDynamic || storeRes.success) {
@@ -146,13 +206,10 @@ export default function GatekeeperPin() {
         return;
       }
 
-      // 2. Berhasil diverifikasi: Daftarkan attempt siswa di backend & persist ke store/storage
+      // 3. Berhasil diverifikasi: Daftarkan attempt siswa di backend & persist ke store/storage
       const targetOrientation = activeAttempt.screenOrientation || localStorage.getItem('exam_screen_orientation') || 'PORTRAIT';
-      if (selectedPackage) {
-        useExamStore.getState().setSelectedPackage(selectedPackage);
-      }
       if (sessId) {
-        useExamStore.getState().setSessionId(sessId, targetSession?.supervisor_pin || targetSession?.supervisorPin || '');
+        useExamStore.getState().setSessionId(sessId, currentTargetSession?.supervisor_pin || currentTargetSession?.supervisorPin || '');
       }
 
       if (sessId && sessId.length > 10) {
