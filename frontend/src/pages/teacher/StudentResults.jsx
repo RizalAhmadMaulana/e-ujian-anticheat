@@ -123,8 +123,8 @@ export default function StudentResults() {
 
       // Filter Kelas
       if (selectedClassId !== 'ALL') {
-        if (s.is_all_classrooms) return true; // Sesi untuk semua kelas tetap lolos
-        const multiClassIds = Array.isArray(s.classrooms) ? s.classrooms.map((c) => String(c.id || c)) : [];
+        if (s.is_all_classrooms || s.allow_all_classes || s.allowAllClasses) return true; // Sesi untuk semua kelas tetap lolos
+        const multiClassIds = Array.isArray(s.classrooms) ? s.classrooms.map((c) => String(c?.id || c || '')) : [];
         const singleClassId = s.classroom?.id ? String(s.classroom.id) : (s.classroom_id ? String(s.classroom_id) : null);
         const matchClass = multiClassIds.includes(String(selectedClassId)) || singleClassId === String(selectedClassId);
         if (!matchClass) return false;

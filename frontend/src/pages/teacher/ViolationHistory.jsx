@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useExamStore } from '../../store/useExamStore';
 import { proctoringApi } from '../../api/proctoringApi';
@@ -101,21 +101,30 @@ export default function ViolationHistory() {
         if (ses.allow_all_classes || ses.is_all_classrooms) return true;
 
         const targetId = selectedClassObj ? String(selectedClassObj.id) : String(selectedClassFilter);
-        const targetName = (selectedClassName || selectedClassFilter).toLowerCase().trim().replace(/^(kelas|rombel)\s+/i, '');
+        const targetName = String(selectedClassName || selectedClassFilter || '').toLowerCase().trim().replace(/^(kelas|rombel)\s+/i, '');
 
         // Cek ID kelas pada sesi
         const multiClassIds = Array.isArray(ses.classrooms) 
-          ? ses.classrooms.map((c) => String(c.id || c)) 
+          ? ses.classrooms.map((c) => String(c?.id || c || '')) 
           : (Array.isArray(ses.classroom_ids) ? ses.classroom_ids.map(String) : []);
         const singleClassId = ses.classroom?.id ? String(ses.classroom.id) : (ses.classroom_id ? String(ses.classroom_id) : null);
 
         if (multiClassIds.includes(targetId) || singleClassId === targetId) return true;
 
-        // Cek Nama kelas pada sesi
+        // Cek Nama kelas pada sesi (aman terhadap tipe data object/string)
         const multiClassNames = Array.isArray(ses.classrooms)
-          ? ses.classrooms.map((c) => (c.name || String(c)).toLowerCase().trim().replace(/^(kelas|rombel)\s+/i, ''))
+          ? ses.classrooms.map((c) => {
+              const nameStr = (c && typeof c === 'object') ? (c.name || '') : String(c || '');
+              return String(nameStr).toLowerCase().trim().replace(/^(kelas|rombel)\s+/i, '');
+            })
           : [];
-        const singleClassText = (ses.classroom_display || ses.classroom_name || ses.classroom || '').toLowerCase().trim();
+        const rawSingleText = (
+          typeof ses.classroom_display === 'string' ? ses.classroom_display :
+          typeof ses.classroom_name === 'string' ? ses.classroom_name :
+          (ses.classroom && typeof ses.classroom.name === 'string') ? ses.classroom.name :
+          typeof ses.classroom === 'string' ? ses.classroom : ''
+        );
+        const singleClassText = rawSingleText.toLowerCase().trim();
         const singleClassNames = singleClassText.split(',').map((s) => s.trim().replace(/^(kelas|rombel)\s+/i, ''));
 
         if (multiClassNames.includes(targetName)) return true;
@@ -187,14 +196,19 @@ export default function ViolationHistory() {
     if (!currentSession) return [];
 
     return violations.filter((v) => {
+      if (!v) return false;
+
       // Filter Kelas Siswa jika selectedClassFilter aktif
       if (selectedClassFilter !== 'ALL') {
         const targetId = selectedClassObj ? String(selectedClassObj.id) : String(selectedClassFilter);
-        const targetName = (selectedClassName || selectedClassFilter).toLowerCase().trim().replace(/^(kelas|rombel)\s+/i, '');
+        const targetName = String(selectedClassName || selectedClassFilter || '').toLowerCase().trim().replace(/^(kelas|rombel)\s+/i, '');
 
         const matchId = v.classroom_id && String(v.classroom_id) === targetId;
-        const vCls = (v.classroom_name || v.classroom || '').toLowerCase().trim().replace(/^(kelas|rombel)\s+/i, '');
-        const matchName = vCls === targetName || vCls.includes(targetName) || targetName.includes(vCls);
+        const rawVCls = (v.classroom_name && typeof v.classroom_name === 'string') 
+          ? v.classroom_name 
+          : (typeof v.classroom === 'string' ? v.classroom : (v.classroom?.name || ''));
+        const vCls = String(rawVCls).toLowerCase().trim().replace(/^(kelas|rombel)\s+/i, '');
+        const matchName = Boolean(vCls && targetName && (vCls === targetName || vCls.includes(targetName) || targetName.includes(vCls)));
 
         if (!matchId && !matchName) {
           return false;
@@ -204,10 +218,10 @@ export default function ViolationHistory() {
       // Filter Pencarian Teks
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const matchName = v.student_name && v.student_name.toLowerCase().includes(q);
-        const matchNisn = v.nisn && v.nisn.toLowerCase().includes(q);
-        const matchDesc = v.description && v.description.toLowerCase().includes(q);
-        const matchType = v.violation_type_label && v.violation_type_label.toLowerCase().includes(q);
+        const matchName = v.student_name && String(v.student_name).toLowerCase().includes(q);
+        const matchNisn = v.nisn && String(v.nisn).toLowerCase().includes(q);
+        const matchDesc = v.description && String(v.description).toLowerCase().includes(q);
+        const matchType = v.violation_type_label && String(v.violation_type_label).toLowerCase().includes(q);
         if (!matchName && !matchNisn && !matchDesc && !matchType) return false;
       }
 
