@@ -224,11 +224,34 @@ class StartExamSessionView(APIView):
             }
         )
 
-        # Jika sudah pernah dibuat dan tidak sedang diskualifikasi/submitted, pastikan status working
-        if not created and attempt.status not in [StudentAttempt.AttemptStatus.SUBMITTED, StudentAttempt.AttemptStatus.DISQUALIFIED]:
-            attempt.status = StudentAttempt.AttemptStatus.WORKING
-            attempt.screen_orientation = orientation
-            attempt.save(update_fields=['status', 'screen_orientation'])
+        fresh_start = request.data.get('fresh_start', True)
+        # Jika attempt sudah pernah ada sebelumnya di basis data:
+        if not created:
+            # Jika siswa mulai pengerjaan baru (fresh_start), atau sesi sebelumnya berstatus SUBMITTED:
+            # Akumulasi pelanggaran sesi otomatis di-reset ke 0 dan log pelanggaran lama dibersihkan
+            if fresh_start or attempt.status == StudentAttempt.AttemptStatus.SUBMITTED:
+                attempt.status = StudentAttempt.AttemptStatus.WORKING
+                attempt.screen_orientation = orientation
+                attempt.violation_count = 0
+                attempt.started_at = timezone.now()
+                attempt.finished_at = None
+                attempt.total_score = None
+                attempt.answers_json = {}
+                attempt.save()
+                # Hapus seluruh catatan pelanggaran lama untuk attempt ini agar Riwayat Pelanggaran & E-Jurnal bersih
+                attempt.violations.all().delete()
+                try:
+                    from apps.ejournal.models import ExamJournal
+                    journal = ExamJournal.objects.filter(session=session).first()
+                    if journal:
+                        journal.total_violations_recorded = sum(att.violation_count for att in session.attempts.all())
+                        journal.save(update_fields=['total_violations_recorded'])
+                except Exception:
+                    pass
+            elif attempt.status not in [StudentAttempt.AttemptStatus.DISQUALIFIED]:
+                attempt.status = StudentAttempt.AttemptStatus.WORKING
+                attempt.screen_orientation = orientation
+                attempt.save(update_fields=['status', 'screen_orientation'])
 
         # Ambil paket soal dengan serializer yang context-aware (tanpa is_correct untuk siswa!)
         package_serializer = ExamPackageSerializer(session.package, context={'request': request})
@@ -267,6 +290,7 @@ class StartExamSessionView(APIView):
             "duration_minutes": session.duration_minutes,
             "package": package_data,
             "existing_answers": attempt.answers_json,
+            "violation_count": attempt.violation_count,
         }, status=status.HTTP_200_OK)
 
 

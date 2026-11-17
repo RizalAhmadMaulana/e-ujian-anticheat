@@ -653,6 +653,12 @@ Sistem menerapkan protokol **Zero-Tolerance Lockdown Anti-Cheat** terlengkap dan
 3. Keterangan pelanggaran dan jumlah akumulasi pelanggaran muncul di layar.
 4. Lembar soal terkunci total, clipboard dikosongkan secara paksa, dan data forensik pelanggaran langsung terkirim ke monitor guru.
 
+**Logika Perhitungan Akumulasi Pelanggaran & Auto-Reset Sesi:**
+- **Mulai dari 0:** Saat siswa pertama kali memulai ujian dalam sesi tersebut, akumulasi pelanggaran bernilai 0.
+- **Kenaikan 1-ke-1 saat Melanggar:** Pelanggaran pertama saat mengerjakan soal dihitung **1 kali pelanggaran** dan layar seketika terkunci. Saat layar sedang terkunci (overlay merah), sentuhan/gesture/screenshot yang dilakukan siswa **tidak menambah akumulasi pelanggaran**.
+- **Kenaikan Pasca Buka Kunci:** Setelah kunci dibuka pengawas dan siswa melanjutkan pengerjaan soal, pelanggaran berikutnya saat mengerjakan dihitung **2 kali**, **3 kali**, dan seterusnya secara presisi 1-ke-1.
+- **Auto-Reset saat Selesai & Ujian Baru/Ulang:** Ketika siswa selesai mengerjakan soal (`SUBMITTED`) dan kemudian memulai sesi ujian baru atau mengikuti ujian ulang, akumulasi pelanggaran **otomatis di-reset kembali ke 0** serta seluruh catatan log pelanggaran sesi sebelumnya dibersihkan di basis data. Data di **Riwayat Pelanggaran** dan **E-Jurnal Berita Acara** langsung sinkron dan bersih dari akumulasi lama.
+
 **Cara Membuka Kunci (Dual-Mode):**
 1. Siswa wajib melapor kepada Guru Pengawas di ruang kelas.
 2. Pengawas dapat membuka kunci melalui 2 opsi:

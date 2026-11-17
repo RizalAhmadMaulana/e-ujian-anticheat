@@ -247,11 +247,29 @@ export const useExamStore = create((set, get) => ({
   // ==========================================
   activeAttempt: getInitialActiveAttempt(),
 
-  setAttemptId: (attemptId) => {
+  setAttemptId: (attemptId, initialViolationCount = 0) => {
     set((state) => {
       const updated = {
         ...state.activeAttempt,
         attemptId,
+        violationCount: Number(initialViolationCount) || 0,
+        violationLogs: [],
+        isLocked: false,
+        _lastViolationLockTime: null,
+      };
+      persistActiveAttempt(updated);
+      return { activeAttempt: updated };
+    });
+  },
+
+  resetViolations: () => {
+    set((state) => {
+      const updated = {
+        ...state.activeAttempt,
+        violationCount: 0,
+        violationLogs: [],
+        isLocked: false,
+        _lastViolationLockTime: null,
       };
       persistActiveAttempt(updated);
       return { activeAttempt: updated };
@@ -260,10 +278,17 @@ export const useExamStore = create((set, get) => ({
 
   setSessionId: (sessionId, supervisorPin = '') => {
     set((state) => {
+      const isNewSession = state.activeAttempt.sessionId !== sessionId;
       const updated = {
         ...state.activeAttempt,
         sessionId,
         supervisorPin: supervisorPin || state.activeAttempt.supervisorPin || '',
+        ...(isNewSession ? {
+          violationCount: 0,
+          violationLogs: [],
+          isLocked: false,
+          _lastViolationLockTime: null,
+        } : {}),
       };
       persistActiveAttempt(updated);
       return { activeAttempt: updated };
@@ -272,9 +297,16 @@ export const useExamStore = create((set, get) => ({
 
   setSelectedPackage: (pkg) => {
     set((state) => {
+      const isNewPackage = state.activeAttempt.selectedPackage?.id !== pkg?.id;
       const updated = {
         ...state.activeAttempt,
         selectedPackage: pkg,
+        ...(isNewPackage ? {
+          violationCount: 0,
+          violationLogs: [],
+          isLocked: false,
+          _lastViolationLockTime: null,
+        } : {}),
       };
       persistActiveAttempt(updated);
       return { activeAttempt: updated };
@@ -360,6 +392,10 @@ export const useExamStore = create((set, get) => ({
           sessionId: currentSession?.id || state.activeAttempt.sessionId,
           supervisorPin: currentSession?.supervisorPin || currentSession?.supervisor_pin || state.activeAttempt.supervisorPin,
           hasVerifiedEntryPassword: true,
+          violationCount: 0,
+          violationLogs: [],
+          isLocked: false,
+          _lastViolationLockTime: null,
           examStartedAt: new Date().toLocaleTimeString('id-ID'),
         };
         persistActiveAttempt(updated);
@@ -523,6 +559,9 @@ export const useExamStore = create((set, get) => ({
         activeAttempt: {
           ...state.activeAttempt,
           isLocked: false,
+          violationCount: 0,
+          violationLogs: [],
+          _lastViolationLockTime: null,
           examSubmittedAt: now,
         },
         proctoringStudents: updatedProctoring,

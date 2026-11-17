@@ -504,6 +504,11 @@ Jika siswa mencoba:
 - Layar seketika berubah menjadi **Layar Merah Pembekuan Darurat (Penalty Freeze Overlay)**.
 - **Sirine peringatan suara keras** berbunyi berulang-ulang dari gawai siswa.
 - Lembar soal membeku total dan log forensik pelanggaran langsung terkirim secara real-time ke monitor Live Proctoring guru dan dicatat di E-Jurnal.
+- **Logika Perhitungan Akumulasi Pelanggaran & Auto-Reset Sesi:**
+  1. **Start Mulai dari 0:** Saat siswa pertama kali memulai sesi ujian, akumulasi pelanggaran bernilai 0.
+  2. **Presisi 1-ke-1 saat Mengerjakan:** Pada pelanggaran pertama saat mengerjakan soal, counter bertambah menjadi **1** dan layar terkunci. Saat berada di layar merah terkunci, sentuhan/gesture/screenshot **tidak menambah counter pelanggaran**.
+  3. **Kenaikan Pasca Buka Kunci:** Setelah kunci dibuka oleh pengawas dan siswa melanjutkan pengerjaan soal, jika terjadi pelanggaran berikutnya maka counter bertambah menjadi **2**, **3**, dan seterusnya secara presisi 1-ke-1.
+  4. **Auto-Reset saat Selesai & Ujian Lagi:** Saat siswa menyelesaikan ujian (`SUBMITTED`) dan di kemudian waktu mengikuti sesi ujian baru atau melakukan ujian ulang, akumulasi pelanggaran otomatis **direset kembali ke 0** serta rekaman log lama dibersihkan di database PostgreSQL sehingga data di **Riwayat Pelanggaran** dan **E-Jurnal Berita Acara** selalu bersih dan akurat.
 - **Prosedur Buka Kunci (Dual-Mode):**
   1. **Mandiri Siswa:** Siswa memasukkan **PIN Pengawas Ruangan** (contoh: `PIN-2114` atau `2114`) yang diberikan guru pada form buka kunci, lalu klik **"Buka Kunci"**. Layar langsung pulih ke fullscreen tanpa memunculkan dialog native atau pop-up Google Password Manager.
   2. **Remote Guru:** Guru menekan tombol hijau **"Buka Kunci Layar Siswa"** di menu Live Proctoring. Layar siswa otomatis terbuka seketika via WebSocket Daphne Channels.

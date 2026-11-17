@@ -214,9 +214,9 @@ export default function GatekeeperPin() {
 
       if (sessId && sessId.length > 10) {
         try {
-          const attemptRes = await startExamAttemptApi(sessId, targetOrientation);
+          const attemptRes = await startExamAttemptApi(sessId, targetOrientation, true);
           if (attemptRes && attemptRes.attempt_id) {
-            setAttemptId(attemptRes.attempt_id);
+            setAttemptId(attemptRes.attempt_id, attemptRes.violation_count ?? 0);
           }
         } catch (attemptErr) {
           console.warn('Backend startAttempt fallback ke lokal attempt:', attemptErr);

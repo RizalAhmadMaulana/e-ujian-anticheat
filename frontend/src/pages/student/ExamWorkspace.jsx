@@ -188,6 +188,21 @@ export default function ExamWorkspace() {
         } else if (res && res.status === 'WORKING' && activeAttempt.isLocked) {
           unlockStudent(currentUser?.id || 's-001');
         }
+        if (res && typeof res.violation_count === 'number') {
+          useExamStore.setState((state) => {
+            if (state.activeAttempt.violationCount !== res.violation_count) {
+              const updated = {
+                ...state.activeAttempt,
+                violationCount: res.violation_count,
+              };
+              try {
+                localStorage.setItem('exam_active_attempt', JSON.stringify(updated));
+              } catch (_) {}
+              return { activeAttempt: updated };
+            }
+            return state;
+          });
+        }
       }).catch(() => {});
     }
   }, [activeAttempt.attemptId]);
@@ -856,7 +871,7 @@ export default function ExamWorkspace() {
               <div>• Jenis Pelanggaran: <strong className="font-semibold text-white bg-rose-950/80 px-2 py-0.5 rounded border border-rose-500/30">{formatViolationType(activeAttempt.violationLogs?.[0]?.violationType || activeAttempt.violationLogs?.[0]?.type || 'APP_SWITCH')}</strong></div>
               <div>• Keterangan Sensor: <em className="text-zinc-300 font-normal">{activeAttempt.violationLogs?.[0]?.description || 'Pelanggaran keamanan terdeteksi sistem.'}</em></div>
               <div>• Waktu Terdeteksi: <strong className="font-mono text-zinc-100">{activeAttempt.violationLogs?.[0]?.detectedAt || 'Baru Saja'}</strong></div>
-              <div>• Total Akumulasi: <strong className="text-amber-300 font-semibold">{activeAttempt.violationCount || 1} kali pelanggaran</strong></div>
+              <div>• Total Akumulasi: <strong className="text-amber-300 font-semibold">{(activeAttempt.violationCount > 0 ? activeAttempt.violationCount : 1)} kali pelanggaran</strong></div>
             </div>
 
             {/* Form Pembukaan Kunci Pengawas (Bebas dari Google Password Manager Popup) */}

@@ -131,9 +131,10 @@ export const verifyEntryPasswordApi = async (sessionId, entryPassword) => {
   return response.data;
 };
 
-export const startExamAttemptApi = async (sessionId, orientation = 'PORTRAIT') => {
+export const startExamAttemptApi = async (sessionId, orientation = 'PORTRAIT', freshStart = true) => {
   const response = await axiosInstance.post(`/exams/sessions/${sessionId}/start/`, {
-    screen_orientation: orientation
+    screen_orientation: orientation,
+    fresh_start: freshStart
   });
   return response.data;
 };
