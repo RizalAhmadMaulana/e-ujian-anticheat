@@ -637,15 +637,15 @@ Di arena ujian ini, siswa berada dalam pengawasan ketat berteknologi tinggi:
 
 ---
 
-### 4.6. Penanganan Layar Terkunci Akibat Pelanggaran Sensor
-Sistem menerapkan protokol **Zero-Tolerance Lockdown**. Jika siswa melakukan salah satu tindakan di bawah ini:
-- Menekan tombol `Alt + Tab`, `Windows Key`, tombol `Home`, atau membuka aplikasi lain (`WINDOW_BLUR_APP_SWITCH`).
-- Membuka tab peramban lain atau me-minimize jendela ujian (`TAB_SWITCH`).
-- Menekan tombol `Esc` atau keluar dari mode layar penuh (`EXIT_FULLSCREEN`).
-- Mencoba mengambil tangkapan layar / screenshot (`PrintScreen`, `Win+Shift+S`, `Meta+Shift+S`, `Cmd+Shift+3/4`).
-- Mencoba klik kanan di lembar soal maupun di dalam formulir (`CONTEXT_MENU_ATTEMPT`).
-- Mencoba menyalin atau menempel teks (`Ctrl+C`, `Ctrl+V`, `Ctrl+X` atau event `copy`/`paste`).
-- Mencoba membuka Developer Tools atau inspect element (`F12`, `Ctrl+Shift+I/J/C`).
+### 4.6. Penanganan Layar Terkunci Akibat Pelanggaran Sensor & Fitur Anti-Contek Maksimal
+Sistem menerapkan protokol **Zero-Tolerance Lockdown Anti-Cheat** terlengkap dan paling ketat:
+- **Anti-Screenshot Multi-Jari di HP:** Mencoba screenshot dengan **swap 3 jari** maupun **swap 2 jari** di smartphone (Xiaomi, Oppo, Realme, Vivo, Samsung, Infinix, dll.) langsung dicegat (`e.preventDefault()`), memicu **Instant Blackout Shield**, dan mengunci layar (`SCREENSHOT_GESTURE`).
+- **Anti-Tombol Fisik Screenshot:** Menekan tombol kombinasi fisik Power + Volume Down / Volume Up di HP langsung dicegat dan mengunci layar (`SCREENSHOT_HARDWARE_BUTTON`).
+- **Anti-Perekaman Layar (Screen Recording di HP):** Menarik bilah notifikasi / status bar dari atas layar untuk menyalakan menu "Rekam Layar" atau "Tangkapan Layar" di Quick Settings langsung dicegat dan mengunci layar (`NOTIFICATION_BAR_PULLDOWN`). Menjalankan aplikasi perekam layar mengambang (Floating Window) juga seketika mengunci ujian.
+- **Anti-Perekaman Layar di Laptop (PC/Mac):** Menekan shortcut perekaman layar seperti Windows Game Bar (`Win+G`, `Win+Alt+R`), Windows 11 Snipping Tool Video (`Win+Shift+R`), Mac Screen Recording (`Cmd+Shift+5`), maupun shortcut perekam lain (`Alt+Shift+R`, `Ctrl+Shift+R`) seketika memicu pemadaman layar dan mengunci ujian (`SCREEN_RECORDING_ATTEMPT`). Panggilan WebRTC Screen Capture API (`getDisplayMedia`) juga 100% diblokir.
+- **Instant Screen Blackout Shield Engine (0 ms):** Pada saat gesture screenshot, tombol fisik, perekaman layar, atau perpindahan fokus terdeteksi, layar seketika dipadamkan menjadi hitam pekat (`#000000`) dalam 0 milidetik sebelum buffer grafis OS sempat merekam, sehingga seluruh tangkapan layar dan video rekaman **100% GELAP GULITA**.
+- **Dynamic Forensic Digital Watermark (Anti-Camera & Anti-Leak):** Seluruh lembar soal dilindungi oleh pola watermark digital dinamis berputar diagonal yang mencantumkan **Nama Lengkap Siswa, NISN, Rombel Kelas, dan Jam Digital Berdetik Realtime (`HH:MM:SS WIB`)**. Jika ada siswa yang mencoba memotret layar menggunakan kamera HP lain atau merekam secara diam-diam, seluruh rekaman video atau foto secara permanen membakar identitas lengkap siswa pembocor, sehingga bukti pelanggaran tidak dapat disangkal!
+- **Pencegahan Umum:** Menekan `Alt + Tab`, tombol `Windows Key`, tombol `Home`, beralih tab browser (`TAB_SWITCH`), keluar mode layar penuh (`EXIT_FULLSCREEN`), klik kanan (`CONTEXT_MENU_ATTEMPT`), menyalin/menempel teks (`COPY_ATTEMPT` / `PASTE_ATTEMPT`), atau membuka DevTools (`F12`, `Ctrl+Shift+I`).
 
 **Akibatnya:**
 1. Layar seketika berubah menjadi **Layar Merah Pembekuan Darurat (Penalty Freeze Overlay)**.

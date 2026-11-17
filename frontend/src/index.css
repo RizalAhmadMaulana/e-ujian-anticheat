@@ -71,4 +71,19 @@ html, body, #root {
   backdrop-filter: none !important;
 }
 
+/* ------------------------------------------------------------- */
+/* ANTI-PRINT & ANTI-SCREEN CAPTURE GLOBAL GUARDS               */
+/* ------------------------------------------------------------- */
+@media print {
+  html, body, #root {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}
+
+#instant-blackout-shield {
+  transition: opacity 0.05s ease-out;
+}
+
+
 

@@ -66,12 +66,29 @@ export default function ExamWorkspace() {
   const [activeAnnouncement, setActiveAnnouncement] = useState(null); // { message, urgency, senderName, timestamp }
   const [isFullscreenActive, setIsFullscreenActive] = useState(true);
 
+  // Digital Clock Real-Time untuk Watermark Forensik Anti-Camera & Anti-Recording
+  const [watermarkTime, setWatermarkTime] = useState(new Date());
+
+  useEffect(() => {
+    const wTimer = setInterval(() => setWatermarkTime(new Date()), 1000);
+    return () => clearInterval(wTimer);
+  }, []);
+
+  const watermarkTimeString = watermarkTime.toLocaleTimeString('id-ID', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+
   // Formatter Jenis Pelanggaran Human-Readable
   const formatViolationType = (type) => {
     const map = {
-      'SCREENSHOT_3FINGER_GESTURE': 'Tangkapan Layar Gesture 3 Jari HP',
+      'SCREENSHOT_GESTURE': 'Tangkapan Layar Gesture Multi-Jari (Swap Layar HP)',
+      'SCREENSHOT_3FINGER_GESTURE': 'Tangkapan Layar Gesture Multi-Jari (HP)',
       'SCREENSHOT_HARDWARE_BUTTON': 'Tombol Fisik Screenshot HP (Volume/Power)',
-      'SCREENSHOT_KEY_ATTEMPT': 'Tangkapan Layar (PrintScreen / Snipping Tool)',
+      'SCREENSHOT_KEY_ATTEMPT': 'Tangkapan Layar Keyboard (PrintScreen / Snipping Tool)',
+      'SCREEN_RECORDING_ATTEMPT': 'Perekaman Layar Terdeteksi (Screen Recording / Capture)',
+      'NOTIFICATION_BAR_PULLDOWN': 'Menarik Bilah Notifikasi / Menu Rekam Layar HP',
       'COPY_ATTEMPT': 'Menyalin Teks / Soal (Ctrl+C)',
       'PASTE_ATTEMPT': 'Menempelkan Teks (Ctrl+V)',
       'CUT_ATTEMPT': 'Memotong Teks (Ctrl+X)',
@@ -87,7 +104,6 @@ export default function ExamWorkspace() {
       'EXIT_FULLSCREEN': 'Keluar Mode Layar Penuh (ESC)',
       'FLOATING_WINDOW_ATTEMPT': 'Aplikasi Jendela Mengambang (Floating Window)',
       'SPLIT_SCREEN_ATTEMPT': 'Mode Layar Belah HP (Split Screen)',
-      'NOTIFICATION_BAR_PULLDOWN': 'Menarik Bilah Notifikasi HP',
     };
     return map[type] || type || 'Pelanggaran Keamanan';
   };
@@ -106,6 +122,10 @@ export default function ExamWorkspace() {
   const selectedPackage = activeAttempt.selectedPackage || 
     (useExamStore.getState().examPackages || []).find((p) => p.id === activeAttempt.packageId) || 
     useExamStore.getState().examPackages?.[0];
+
+  const studentDisplayName = currentUser?.fullName || currentUser?.full_name || 'PESERTA UJIAN';
+  const studentNisn = currentUser?.nisn || currentUser?.username || '-';
+  const studentClassroom = currentUser?.classroom_name || (typeof currentUser?.classroom === 'object' ? currentUser?.classroom?.name : currentUser?.classroom) || 'KELAS';
 
   // 0. Enforce Orientasi Layar (PORTRAIT / LANDSCAPE) saat komponen dimuat
   useEffect(() => {
@@ -846,6 +866,30 @@ export default function ExamWorkspace() {
       )}
 
       {/* ======================================================== */}
+      {/* INSTANT BLACKOUT SHIELD (ANTI-SCREENSHOT & ANTI-RECORDING) */}
+      {/* Aktif seketika (0ms) saat terjadi blur, sentuhan multi-jari, */}
+      {/* tombol fisik screenshot, atau pintasan perekaman layar.    */}
+      {/* ======================================================== */}
+      <div
+        id="instant-blackout-shield"
+        style={{ display: 'none' }}
+        className="fixed inset-0 z-[9999999] bg-black text-white flex flex-col items-center justify-center p-6 text-center select-none"
+      >
+        <div className="w-16 h-16 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-500 mb-4 animate-pulse">
+          <ShieldAlert className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl sm:text-2xl font-black text-rose-500 tracking-tight mb-2 uppercase">
+          Akses Ujian Terlindungi
+        </h2>
+        <p className="text-xs sm:text-sm text-zinc-300 max-w-md mx-auto mb-4 leading-relaxed">
+          Tangkapan layar (Screenshot) dan perekaman layar (Screen Recording) dilarang keras demi menjaga integritas pelaksanaan ujian sekolah.
+        </p>
+        <div className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-[11px] font-mono text-zinc-400">
+          Protokol Zero-Tolerance Active • Citra Layar Terproteksi Hitam
+        </div>
+      </div>
+
+      {/* ======================================================== */}
       {/* 3. AREA PENGERJAAN SOAL (HYBRID RENDERER) */}
       {/* Disembunyikan (visibility: hidden) saat terkunci agar tidak membebani GPU & bebas blank */}
       {/* ======================================================== */}
@@ -856,6 +900,32 @@ export default function ExamWorkspace() {
           pointerEvents: activeAttempt.isLocked ? 'none' : 'auto'
         }}
       >
+        {/* ======================================================== */}
+        {/* DYNAMIC FORENSIC DIGITAL WATERMARK (ANTI-CAM & ANTI-RECORDING) */}
+        {/* Menampilkan identitas peserta & timestamp live berdetik   */}
+        {/* Melindungi lembar soal dari rekaman video & foto HP lain  */}
+        {/* ======================================================== */}
+        <div 
+          className="pointer-events-none select-none absolute inset-0 z-30 overflow-hidden grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-12 p-4 sm:p-8 opacity-[0.14] mix-blend-difference"
+          aria-hidden="true"
+        >
+          {Array.from({ length: 16 }).map((_, idx) => (
+            <div 
+              key={idx} 
+              className="transform -rotate-25 text-center font-mono select-none"
+            >
+              <div className="text-[10px] sm:text-xs font-black tracking-wider text-white uppercase whitespace-nowrap">
+                {studentDisplayName} • NISN: {studentNisn}
+              </div>
+              <div className="text-[8px] sm:text-[9px] font-semibold text-zinc-300 whitespace-nowrap">
+                {studentClassroom} • {watermarkTimeString} WIB
+              </div>
+              <div className="text-[7px] sm:text-[8px] tracking-widest text-zinc-400 whitespace-nowrap">
+                DOKUMEN RAHASIA ASESMEN • DILARANG MEREKAM / SCREENSHOT
+              </div>
+            </div>
+          ))}
+        </div>
         {selectedPackage?.examType === 'EXTERNAL_LINK' ? (
           /* ========================================== */
           /* MODE IFRAME SECURE: GOOGLE FORM / MS TEAMS */

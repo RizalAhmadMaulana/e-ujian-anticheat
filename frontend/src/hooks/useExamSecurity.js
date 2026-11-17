@@ -23,9 +23,38 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
   const prevIsLockedRef = useRef(activeAttempt.isLocked);
   const consecutiveBlurChecksRef = useRef(0);
   const edgeSwipeCandidateRef = useRef(null);
+  const topEdgeSwipeRef = useRef(null);
   const longPressTimerRef = useRef(null);
   const longPressTouchPosRef = useRef(null);
   const mouseDragStartPosRef = useRef(null);
+
+  // Engine Pemadaman Layar Instan (Instant Screen Blackout Shield)
+  // Menjamin jika terjadi screenshot / rekam layar, citra yang ditangkap 100% PITCH BLACK!
+  const activateInstantBlackout = useCallback(() => {
+    try {
+      const shield = document.getElementById('instant-blackout-shield');
+      if (shield) {
+        shield.style.display = 'flex';
+      }
+      const mainEl = document.querySelector('main');
+      if (mainEl) {
+        mainEl.style.visibility = 'hidden';
+      }
+    } catch (_) {}
+  }, []);
+
+  const clearInstantBlackout = useCallback(() => {
+    try {
+      const shield = document.getElementById('instant-blackout-shield');
+      if (shield) {
+        shield.style.display = 'none';
+      }
+      const mainEl = document.querySelector('main');
+      if (mainEl && !isLockedRef.current) {
+        mainEl.style.visibility = 'visible';
+      }
+    } catch (_) {}
+  }, []);
 
   useEffect(() => {
     isSubmittedRef.current = Boolean(activeAttempt.examSubmittedAt);
@@ -38,35 +67,30 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       gracePeriodUntilRef.current = Date.now() + 5000;
       consecutiveBlurChecksRef.current = 0;
       edgeSwipeCandidateRef.current = null;
+      topEdgeSwipeRef.current = null;
       if (longPressTimerRef.current) {
         clearTimeout(longPressTimerRef.current);
         longPressTimerRef.current = null;
       }
       longPressTouchPosRef.current = null;
       mouseDragStartPosRef.current = null;
-      try {
-        document.documentElement.style.filter = '';
-        document.body.style.backgroundColor = '';
-        const shield = document.getElementById('instant-anti-screenshot-shield');
-        if (shield) {
-          shield.style.display = 'none';
-        }
-      } catch (_) {}
+      clearInstantBlackout();
     }
     prevIsLockedRef.current = activeAttempt.isLocked;
-  }, [activeAttempt.examSubmittedAt, activeAttempt.isLocked]);
+  }, [activeAttempt.examSubmittedAt, activeAttempt.isLocked, clearInstantBlackout]);
 
   // Handler Pelanggaran Spesifik (Bukan Kalimat Gabungan)
   const handleViolation = useCallback((type, description) => {
     if (isSubmittedRef.current || isLockedRef.current || !isExamActive) return;
     if (Date.now() < gracePeriodUntilRef.current) return;
 
+    activateInstantBlackout();
     playViolationWarningSound();
     triggerViolationLock(type, description);
     if (onViolationDetected) {
       onViolationDetected(type, description);
     }
-  }, [isExamActive, triggerViolationLock, onViolationDetected]);
+  }, [isExamActive, triggerViolationLock, onViolationDetected, activateInstantBlackout]);
 
   useEffect(() => {
     if (!isExamActive || isSubmittedRef.current) return;
@@ -117,56 +141,61 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       ensureCleanDisplay();
 
       if (document.visibilityState === 'hidden' || document.hidden) {
+        // Seketika aktifkan pemadaman layar instan (0ms) agar hasil tangkapan layar / perekaman 100% PITCH BLACK
+        activateInstantBlackout();
+
         if (isSubmittedRef.current || isLockedRef.current) return;
 
-        // Seketika kunci saat browser keluar / hidden agar saat siswa kembali, layar kunci sudah siap & tampil
         handleViolation(
           isMobileDevice() ? 'APP_SWITCH' : 'TAB_SWITCH',
           isMobileDevice()
             ? 'Siswa terdeteksi keluar dari layar ujian atau beralih aplikasi di HP'
             : 'Siswa terdeteksi berpindah tab peramban atau meminimalkan browser ujian'
         );
+      } else if (document.visibilityState === 'visible' && document.hasFocus() && !isLockedRef.current) {
+        clearInstantBlackout();
       }
     };
 
     // ========================================================
     // SENSOR 3: ANTI-APP SWITCH, MODE MENGAMBANG & LOSS OF FOCUS (window.onblur / onfocus)
     // Diberi toleransi terukur agar aman terhadap sentuhan iframe Google/Office Form,
-    // namun secara instan mengunci jika terdeteksi Mode Mengambang (Floating Window / Sidebar)
+    // namun secara instan memadamkan layar & mengunci jika terdeteksi Mode Mengambang / Perekam Layar
     // ========================================================
     let blurTimeout = null;
     const handleWindowBlur = () => {
+      // Seketika aktifkan pemadaman layar instan (0ms)
+      activateInstantBlackout();
+
       if (blurTimeout) clearTimeout(blurTimeout);
       blurTimeout = setTimeout(() => {
         if (isSubmittedRef.current || isLockedRef.current) return;
 
-        // Bersihkan clipboard sistem seketika saat peramban kehilangan fokus untuk mencegah paste ke AI/aplikasi luar
+        // Bersihkan clipboard sistem seketika saat peramban kehilangan fokus
         try {
           if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText('');
           }
         } catch (_) {}
 
-        // Jika dokumen masih terlihat (visible):
-        // Periksa apakah fokus sah berpindah ke dalam iframe (Google Form / Office Form).
-        // CATATAN KRUSIAL: Jika fokus berada di dalam iframe internal, dokumen peramban TETAP memegang fokus OS (document.hasFocus() === true).
-        // Sebaliknya, jika siswa membuka Mode Mengambang (Floating Window seperti Gemini / WhatsApp / Bilah Sisi Xiaomi/Samsung),
-        // fokus sistem operasi berpindah ke aplikasi luar sehingga document.hasFocus() menjadi FALSE!
         if (document.visibilityState === 'visible') {
           const activeEl = document.activeElement;
           const isFocusInsideIframe = activeEl && (activeEl.tagName === 'IFRAME' || activeEl.closest('iframe'));
           
           if (isFocusInsideIframe && document.hasFocus()) {
             // Fokus sah di dalam lembar soal iframe
+            if (!isLockedRef.current) {
+              clearInstantBlackout();
+            }
             return;
           }
 
-          // Jika dokumen terlihat tapi kehilangan fokus OS (Mode Mengambang / Floating Window / Sidebar / Bilah Notifikasi)
+          // Jika dokumen terlihat tapi kehilangan fokus OS (Mode Mengambang / Floating Window / Sidebar / Bilah Notifikasi / Perekam Layar)
           if (!document.hasFocus()) {
             handleViolation(
               isMobileDevice() ? 'FLOATING_WINDOW_ATTEMPT' : 'APP_SWITCH',
               isMobileDevice()
-                ? 'Siswa terdeteksi membuka mode mengambang (Floating Window), bilah sisi, atau bilah notifikasi di HP'
+                ? 'Siswa terdeteksi membuka mode mengambang (Floating Window), perekam layar, atau bilah notifikasi di HP'
                 : 'Siswa terdeteksi beralih ke jendela aplikasi lain di luar peramban ujian (Alt+Tab / Taskbar)'
             );
             return;
@@ -182,13 +211,16 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
               : 'Siswa terdeteksi berpindah tab peramban atau meminimalkan browser ujian'
           );
         }
-      }, 300);
+      }, 200);
     };
 
     const handleWindowFocus = () => {
       ensureCleanDisplay();
       consecutiveBlurChecksRef.current = 0;
       if (document.hasFocus() && document.visibilityState === 'visible') {
+        if (!isLockedRef.current) {
+          clearInstantBlackout();
+        }
         if (blurTimeout) {
           clearTimeout(blurTimeout);
           blurTimeout = null;
@@ -197,31 +229,44 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     };
 
     // ========================================================
-    // SENSOR 4: MOBILE (HP) - DETEKSI SCREENSHOT GESTURE 3 JARI, SMART SIDEBAR SWIPE, & ANTI-BLOCK TEKS (LONG-PRESS)
+    // SENSOR 4: MOBILE (HP) - DETEKSI MULTI-JARI SCREENSHOT (SWAP 2 JARI & 3 JARI),
+    // TARIK BILAH NOTIFIKASI/REKAM LAYAR, BILAH SISI, & LONG-PRESS ANTI-BLOCK
     // ========================================================
     const handleTouchStart = (e) => {
       if (isSubmittedRef.current || isLockedRef.current) return;
       if (Date.now() < gracePeriodUntilRef.current) return;
 
-      // 1. Deteksi Gesture Screenshot 3 Jari di HP
-      if (e.touches && e.touches.length >= 3) {
+      const touchCount = (e.touches && e.touches.length) || (e.targetTouches && e.targetTouches.length) || 0;
+
+      // 1. Deteksi Multi-Jari (2 Jari / 3 Jari atau Lebih - Universal Screenshot Gesture di Seluruh Merk HP)
+      // Menangani swap 3 jari Xiaomi/Oppo/Realme, swap 2 jari, maupun multi-touch hold
+      if (touchCount >= 2) {
         e.preventDefault();
         e.stopPropagation();
+        activateInstantBlackout();
         if (onScreenshotBlocked) {
-          onScreenshotBlocked('Tangkapan layar 3 jari diblokir! Akses ujian Anda dibekukan.');
+          onScreenshotBlocked(`Tangkapan layar ${touchCount} jari diblokir! Layar ujian Anda dibekukan.`);
         }
         handleViolation(
-          'SCREENSHOT_3FINGER_GESTURE',
-          'Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture usap 3 jari di HP'
+          'SCREENSHOT_GESTURE',
+          `Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture ${touchCount} jari di HP`
         );
         return false;
       }
 
-      // 2. Deteksi Gesture Usapan Tepi Layar (Memicu Bilah Sisi / Sidebar Aplikasi Mengambang di HP)
-      if (e.touches && e.touches.length === 1 && isMobileDevice()) {
+      if (touchCount === 1 && isMobileDevice()) {
         const touch = e.touches[0];
         const screenW = window.innerWidth || window.screen.width;
-        // Sentuhan dimulai di tepi ekstrem (kurang dari 20px dari tepi kiri atau kanan)
+
+        // 2. Deteksi Tarikan Bilah Notifikasi dari Atas Layar (Notification Drawer / Menu Rekam Layar / Quick Settings)
+        // Jika jari menyentuh zona 35px paling atas layar
+        if (touch.clientY < 35) {
+          topEdgeSwipeRef.current = { startY: touch.clientY, startTime: Date.now() };
+        } else {
+          topEdgeSwipeRef.current = null;
+        }
+
+        // 3. Deteksi Gesture Usapan Tepi Samping Layar (Bilah Sisi / Smart Sidebar Aplikasi Mengambang di HP)
         if (touch.clientX < 20 || touch.clientX > (screenW - 20)) {
           edgeSwipeCandidateRef.current = {
             startX: touch.clientX,
@@ -232,10 +277,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
           edgeSwipeCandidateRef.current = null;
         }
 
-        // 3. Pencegahan & Deteksi Long-Press untuk Mem-Block / Menyeleksi Teks Soal di HP
-        // Di smartphone, menyeleksi teks hanya dapat dilakukan dengan menahan sentuhan (long-press).
-        // Ambang batas long-press Android adalah 400-500ms.
-        // Dengan timer 320ms, sistem mencegat dan membatalkan seleksi SEBELUM Android memicu seleksi teks dan Google Touch to Search / Pintasan AI!
+        // 4. Pencegahan & Deteksi Long-Press untuk Mem-Block / Menyeleksi Teks Soal di HP
         longPressTouchPosRef.current = { x: touch.clientX, y: touch.clientY };
         if (longPressTimerRef.current) {
           clearTimeout(longPressTimerRef.current);
@@ -244,7 +286,6 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
           if (isSubmittedRef.current || isLockedRef.current) return;
           if (Date.now() < gracePeriodUntilRef.current) return;
 
-          // Hapus seleksi teks seketika dari peramban
           try {
             window.getSelection()?.removeAllRanges();
           } catch (_) {}
@@ -261,29 +302,49 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       if (isSubmittedRef.current || isLockedRef.current) return;
       if (Date.now() < gracePeriodUntilRef.current) return;
 
-      // 1. Gesture Screenshot 3 Jari
-      if (e.touches && e.touches.length >= 3) {
+      const touchCount = (e.touches && e.touches.length) || (e.targetTouches && e.targetTouches.length) || 0;
+
+      // 1. Gesture Screenshot Multi-Jari (2 Jari / 3 Jari)
+      if (touchCount >= 2) {
         e.preventDefault();
         e.stopPropagation();
+        activateInstantBlackout();
         if (onScreenshotBlocked) {
-          onScreenshotBlocked('Tangkapan layar 3 jari diblokir! Akses ujian Anda dibekukan.');
+          onScreenshotBlocked(`Tangkapan layar ${touchCount} jari diblokir! Layar ujian Anda dibekukan.`);
         }
         handleViolation(
-          'SCREENSHOT_3FINGER_GESTURE',
-          'Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture usap 3 jari di HP'
+          'SCREENSHOT_GESTURE',
+          `Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture ${touchCount} jari di HP`
         );
         return false;
       }
 
-      // 2. Deteksi Tarikan Tepi Layar ke Arah Tengah (Smart Sidebar Gesture Memicu Jendela Mengambang)
+      // 2. Deteksi Tarikan Bilah Notifikasi ke Arah Bawah (Membuka Menu Rekam Layar / Screenshot Tile)
+      if (topEdgeSwipeRef.current && e.touches && e.touches.length === 1 && isMobileDevice()) {
+        const touch = e.touches[0];
+        const deltaY = touch.clientY - topEdgeSwipeRef.current.startY;
+        if (deltaY > 25) {
+          e.preventDefault();
+          e.stopPropagation();
+          topEdgeSwipeRef.current = null;
+          activateInstantBlackout();
+          handleViolation(
+            'NOTIFICATION_BAR_PULLDOWN',
+            'Siswa terdeteksi menarik bilah notifikasi HP / menu rekam layar'
+          );
+          return false;
+        }
+      }
+
+      // 3. Deteksi Tarikan Tepi Samping Layar (Smart Sidebar Gesture Memicu Jendela Mengambang)
       if (edgeSwipeCandidateRef.current && e.touches && e.touches.length === 1 && isMobileDevice()) {
         const touch = e.touches[0];
         const deltaX = Math.abs(touch.clientX - edgeSwipeCandidateRef.current.startX);
         const deltaY = Math.abs(touch.clientY - edgeSwipeCandidateRef.current.startY);
 
-        // Jika gerakan horizontal mengarah ke dalam > 30px dalam waktu cepat (< 500ms)
         if (deltaX > 30 && deltaX > deltaY * 1.3 && (Date.now() - edgeSwipeCandidateRef.current.startTime) < 500) {
           edgeSwipeCandidateRef.current = null;
+          activateInstantBlackout();
           handleViolation(
             'FLOATING_WINDOW_ATTEMPT',
             'Siswa terdeteksi mengusap tepi layar untuk membuka bilah sisi aplikasi mengambang (Smart Sidebar / Floating Window) di HP'
@@ -292,7 +353,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         }
       }
 
-      // 3. Jika jari bergerak > 8px (scrolling lembar soal wajar), batalkan timer long-press
+      // 4. Jika jari bergerak > 8px (scrolling lembar soal wajar), batalkan timer long-press
       if (longPressTouchPosRef.current && e.touches && e.touches.length === 1) {
         const touch = e.touches[0];
         const dist = Math.hypot(
@@ -310,6 +371,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
 
     const handleTouchEnd = () => {
       edgeSwipeCandidateRef.current = null;
+      topEdgeSwipeRef.current = null;
       if (longPressTimerRef.current) {
         clearTimeout(longPressTimerRef.current);
         longPressTimerRef.current = null;
@@ -522,6 +584,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       if (isVolumeKey) {
         e.preventDefault();
         e.stopPropagation();
+        activateInstantBlackout();
         if (onScreenshotBlocked) {
           onScreenshotBlocked('Tombol fisik screenshot diblokir! Layar ujian Anda dibekukan.');
         }
@@ -541,6 +604,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       if (isPrintScreenKey) {
         e.preventDefault();
         e.stopPropagation();
+        activateInstantBlackout();
         try {
           if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText('');
@@ -560,6 +624,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       if ((isCtrlOrMeta || e.altKey) && e.shiftKey && key === 's') {
         e.preventDefault();
         e.stopPropagation();
+        activateInstantBlackout();
         try {
           if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText('');
@@ -572,10 +637,35 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         return false;
       }
 
-      // 4. Mac Screenshot Shortcut (Cmd+Shift+3 / Cmd+Shift+4)
+      // 4. Pintasan Perekaman Layar (Screen Recording di Laptop / Desktop)
+      // Win+G (Windows Game Bar), Win+Alt+R (Game Bar Record), Win+Shift+R (Snipping Tool Video Recording)
+      // Cmd+Shift+5 (Mac Screen Recording Toolbar), Alt+Shift+R / Ctrl+Shift+R (OBS/Screen Recorder)
+      const isScreenRecordingShortcut =
+        ((isCtrlOrMeta || e.altKey) && e.shiftKey && key === 'r') ||
+        (isCtrlOrMeta && e.altKey && key === 'r') ||
+        (e.metaKey && e.shiftKey && key === '5') ||
+        (isCtrlOrMeta && key === 'g') ||
+        ((isCtrlOrMeta || e.altKey) && key === 'g');
+
+      if (isScreenRecordingShortcut) {
+        e.preventDefault();
+        e.stopPropagation();
+        activateInstantBlackout();
+        if (onScreenshotBlocked) {
+          onScreenshotBlocked('Perekaman layar diblokir! Layar ujian Anda dibekukan.');
+        }
+        handleViolation(
+          'SCREEN_RECORDING_ATTEMPT',
+          'Siswa terdeteksi mencoba mengaktifkan tombol pintas perekaman layar (Screen Recording / Game Bar)'
+        );
+        return false;
+      }
+
+      // 5. Mac Screenshot Shortcut (Cmd+Shift+3 / Cmd+Shift+4)
       if (e.metaKey && e.shiftKey && (key === '3' || key === '4')) {
         e.preventDefault();
         e.stopPropagation();
+        activateInstantBlackout();
         handleViolation(
           'SCREENSHOT_KEY_ATTEMPT',
           `Siswa mencoba screenshot di macOS (Cmd+Shift+${key})`
@@ -583,10 +673,11 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         return false;
       }
 
-      // 5. Developer Tools: F12
+      // 6. Developer Tools: F12
       if (e.key === 'F12' || keyCode === 123) {
         e.preventDefault();
         e.stopPropagation();
+        activateInstantBlackout();
         handleViolation(
           'DEVTOOLS_ATTEMPT',
           'Siswa mencoba membuka Developer Tools / Inspect Element (Tombol F12)'
@@ -594,10 +685,11 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         return false;
       }
 
-      // 6. Developer Tools: Ctrl+Shift+I / Ctrl+Shift+J / Ctrl+Shift+C
+      // 7. Developer Tools: Ctrl+Shift+I / Ctrl+Shift+J / Ctrl+Shift+C
       if (isCtrlOrMeta && e.shiftKey && ['i', 'j', 'c'].includes(key)) {
         e.preventDefault();
         e.stopPropagation();
+        activateInstantBlackout();
         handleViolation(
           'DEVTOOLS_ATTEMPT',
           `Siswa mencoba membuka Developer Tools (Ctrl+Shift+${key.toUpperCase()})`
@@ -605,7 +697,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         return false;
       }
 
-      // 7. Shortcut Copy: Ctrl+C / Cmd+C
+      // 8. Shortcut Copy: Ctrl+C / Cmd+C
       if (isCtrlOrMeta && key === 'c' && !e.shiftKey) {
         e.preventDefault();
         e.stopPropagation();
@@ -621,7 +713,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         return false;
       }
 
-      // 8. Shortcut Paste: Ctrl+V / Cmd+V
+      // 9. Shortcut Paste: Ctrl+V / Cmd+V
       if (isCtrlOrMeta && key === 'v') {
         e.preventDefault();
         e.stopPropagation();
@@ -632,7 +724,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         return false;
       }
 
-      // 9. Shortcut Cut: Ctrl+X / Cmd+X
+      // 10. Shortcut Cut: Ctrl+X / Cmd+X
       if (isCtrlOrMeta && key === 'x') {
         e.preventDefault();
         e.stopPropagation();
@@ -643,7 +735,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         return false;
       }
 
-      // 10. Shortcut Select All: Ctrl+A / Cmd+A
+      // 11. Shortcut Select All: Ctrl+A / Cmd+A
       if (isCtrlOrMeta && key === 'a') {
         // Izinkan jika fokus di input text jawaban esai
         if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
@@ -658,10 +750,11 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         return false;
       }
 
-      // 11. Shortcut Print: Ctrl+P / Cmd+P
+      // 12. Shortcut Print: Ctrl+P / Cmd+P
       if (isCtrlOrMeta && key === 'p') {
         e.preventDefault();
         e.stopPropagation();
+        activateInstantBlackout();
         handleViolation(
           'PRINT_ATTEMPT',
           'Siswa mencoba mencetak lembar soal ujian (Shortcut Ctrl+P)'
@@ -669,7 +762,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         return false;
       }
 
-      // 12. Shortcut View Source: Ctrl+U / Cmd+U
+      // 13. Shortcut View Source: Ctrl+U / Cmd+U
       if (isCtrlOrMeta && key === 'u') {
         e.preventDefault();
         e.stopPropagation();
@@ -680,7 +773,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         return false;
       }
 
-      // 13. Shortcut Save Page: Ctrl+S / Cmd+S
+      // 14. Shortcut Save Page: Ctrl+S / Cmd+S
       if (isCtrlOrMeta && key === 's') {
         e.preventDefault();
         e.stopPropagation();
@@ -691,6 +784,42 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         return false;
       }
     };
+
+    // Deteksi pelepasan tombol hardware screenshot (KeyUp / KeyPress)
+    const handleKeyUpOrPress = (e) => {
+      const key = e.key ? e.key.toLowerCase() : '';
+      const keyCode = e.keyCode || e.which;
+      const isVolumeKey =
+        ['audiovolumedown', 'audiovolumeup', 'volumedown', 'volumeup'].includes(key) ||
+        ['audiovolumedown', 'audiovolumeup', 'volumedown', 'volumeup'].includes(e.code?.toLowerCase()) ||
+        keyCode === 24 || keyCode === 25 || keyCode === 174 || keyCode === 175;
+
+      if (isVolumeKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        activateInstantBlackout();
+        handleViolation(
+          'SCREENSHOT_HARDWARE_BUTTON',
+          'Siswa terdeteksi menekan kombinasi tombol fisik screenshot (Volume/Power) di HP'
+        );
+      }
+    };
+
+    // ========================================================
+    // SENSOR: PENCEGAHAN API PEREKAMAN LAYAR BROWSER (WEBRTC CAPTURE)
+    // ========================================================
+    if (typeof navigator !== 'undefined' && navigator.mediaDevices) {
+      try {
+        navigator.mediaDevices.getDisplayMedia = async function() {
+          activateInstantBlackout();
+          handleViolation(
+            'SCREEN_RECORDING_ATTEMPT',
+            'Siswa terdeteksi mencoba mengaktifkan perekaman layar (Screen Recording / Display Media Capture)'
+          );
+          throw new Error('Screen recording is strictly prohibited during exam!');
+        };
+      } catch (_) {}
+    }
 
     // ========================================================
     // SENSOR 9: BLOKIR NAVIGASI BACK BROWSER & BEFOREUNLOAD
@@ -711,8 +840,8 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     };
 
     // ========================================================
-    // SENSOR 10: CONTINUOUS INTEGRITY HEARTBEAT MONITOR (DAEMON 400ms)
-    // Memeriksa DevTools (Desktop), Mode Mengambang (Mobile), dan Mode Layar Belah (Split Screen)
+    // SENSOR 10: FAST INTEGRITY HEARTBEAT MONITOR (DAEMON 150ms)
+    // Memeriksa Kehilangan Fokus, Perekam Layar, DevTools, dan Split Screen
     // ========================================================
     const heartbeatInterval = setInterval(() => {
       if (isSubmittedRef.current || isLockedRef.current) return;
@@ -732,6 +861,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
           const widthDiff = window.outerWidth - window.innerWidth;
           const heightDiff = window.outerHeight - window.innerHeight;
           if (widthDiff > 160 || heightDiff > 160) {
+            activateInstantBlackout();
             handleViolation(
               'DEVTOOLS_ATTEMPT',
               'Siswa terdeteksi membuka panel samping Developer Tools / Inspect Element'
@@ -741,19 +871,20 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       }
 
       // ----------------------------------------------------
-      // SENSOR 10B: Deteksi Mode Mengambang (Floating Window) di HP
-      // Memantau jika peramban kehilangan fokus OS secara persisten (> 800ms)
+      // SENSOR 10B: Deteksi Kehilangan Fokus & Perekam Layar di HP
+      // Memantau jika peramban kehilangan fokus OS secara instan (> 150ms)
       // ----------------------------------------------------
       if (isMobileDevice()) {
         if (!document.hasFocus()) {
+          activateInstantBlackout();
           consecutiveBlurChecksRef.current += 1;
-          // Jika kehilangan fokus selama 2 siklus beruntun (~800ms)
+          // Jika kehilangan fokus selama 2 siklus beruntun (~300ms)
           if (consecutiveBlurChecksRef.current >= 2) {
             consecutiveBlurChecksRef.current = 0;
             if (document.visibilityState === 'visible') {
               handleViolation(
                 'FLOATING_WINDOW_ATTEMPT',
-                'Siswa terdeteksi membuka mode mengambang (Floating Window) atau aplikasi lain di atas layar ujian'
+                'Siswa terdeteksi membuka mode mengambang (Floating Window) atau perekam layar di atas ujian'
               );
             } else {
               handleViolation(
@@ -788,13 +919,14 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
 
         // Pada mode layar belah Android, fullscreen terlepas otomatis dan tinggi innerHeight anjlok < 58% layar
         if (!isFullscreen && heightRatio < 0.58 && !isNativeInputActive) {
+          activateInstantBlackout();
           handleViolation(
             'SPLIT_SCREEN_ATTEMPT',
             'Siswa terdeteksi mengaktifkan mode layar belah (Split Screen) di HP'
           );
         }
       }
-    }, 400);
+    }, 150);
 
     // ========================================================
     // REGISTRASI LISTENER DENGAN CAPTURE MODE (PRIORITAS TERTINGGI)
@@ -808,7 +940,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     window.addEventListener('blur', handleWindowBlur);
     window.addEventListener('focus', handleWindowFocus);
 
-    // Touch events untuk screenshot HP
+    // Touch events untuk screenshot HP (Multi-touch 2 jari & 3 jari)
     window.addEventListener('touchstart', handleTouchStart, { capture: true, passive: false });
     document.addEventListener('touchstart', handleTouchStart, { capture: true, passive: false });
     window.addEventListener('touchmove', handleTouchMove, { capture: true, passive: false });
@@ -854,6 +986,10 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     document.addEventListener('keydown', handleKeyDown, true);
     window.addEventListener('keyup', handleKeyDown, true);
     document.addEventListener('keyup', handleKeyDown, true);
+    window.addEventListener('keyup', handleKeyUpOrPress, true);
+    document.addEventListener('keyup', handleKeyUpOrPress, true);
+    window.addEventListener('keypress', handleKeyUpOrPress, true);
+    document.addEventListener('keypress', handleKeyUpOrPress, true);
 
     // Navigation events
     window.addEventListener('popstate', handlePopState);
@@ -912,6 +1048,10 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       document.removeEventListener('keydown', handleKeyDown, true);
       window.removeEventListener('keyup', handleKeyDown, true);
       document.removeEventListener('keyup', handleKeyDown, true);
+      window.removeEventListener('keyup', handleKeyUpOrPress, true);
+      document.removeEventListener('keyup', handleKeyUpOrPress, true);
+      window.removeEventListener('keypress', handleKeyUpOrPress, true);
+      document.removeEventListener('keypress', handleKeyUpOrPress, true);
 
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('beforeunload', handleBeforeUnload);
