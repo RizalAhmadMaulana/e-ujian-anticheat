@@ -716,12 +716,11 @@ Sistem menerapkan protokol **Zero-Tolerance Lockdown Anti-Cheat** terlengkap dan
 ### Q5: Mengapa Token Masuk dan PIN Pengawas otomatis berganti setiap 10 menit?
 > **Jawaban:** Fitur ini dirancang sebagai lapisan pertahanan aktif untuk mencegah siswa membocorkan token ujian ke teman rombel lain atau mencoba mengerjakan ulang asesmen dari gawai lain tanpa izin. Pengawas dapat melihat dan menyalin token aktif kapan saja dari kartu menu **Jadwal & Sesi Ujian** maupun bilah atas **Live Proctoring**. Sistem juga menyertakan masa tenggang (*grace window*) 1 siklus untuk mengantisipasi siswa yang memasukkan token tepat pada detik pergantian menit ke-10.
 
-### Q6: Bagaimana sistem mendeteksi dan memblokir kecurangan menggunakan Gemini Live atau Asisten Suara AI?
-> **Jawaban:** Sistem E-Ujian dilengkapi dengan modul **AudioSecuritySentinel (Multi-Layer AI Voice Defense)**:
-> 1. **Hardware Microphone Lock:** Saat siswa memulai ujian, peramban memegang stream mikrofon berstatus eksklusif sehingga fitur panggilan suara sistem seperti *"Hey Google"* dinonaktifkan atau memicu benturan akses.
-> 2. **Audio Focus Collision Detection:** Jika siswa memicu Gemini Live lewat tombol fisik atau latar belakang, sistem operasi Android akan merebut Audio Focus. Sistem E-Ujian seketika menangkap event `onmute` / `suspended` dan membekukan lembar ujian dengan log *"Asisten Suara AI (Gemini Live)"*.
-> 3. **Deteksi Suara / Membaca Soal (Voice Activity & Speech Recognition):** Sistem memantau intensitas desibel audio secara lokal di peramban siswa. Jika siswa membacakan soal ujian secara lisan terus-menerus ke AI, sistem langsung mendeteksi kata-kata yang diucapkan dan membekukan ujian dengan log *"Membaca Soal / Bersuara (Voice AI)"*.
-> 4. **OS Focus Watchdog:** Memantau jika peramban kehilangan fokus interaksi OS selama $\ge 800\text{ms}$ (akibat adanya floating bar Gemini Live atau panel samping Copilot di laptop).
+### Q6: Bagaimana sistem mendeteksi dan memblokir kecurangan menggunakan Gemini Live atau Asisten Suara AI tanpa izin mikrofon?
+> **Jawaban:** Sistem E-Ujian menggunakan arsitektur **Zero-Permission & Zero-Sound OS Focus Watchdog**:
+> 1. **Tanpa Izin Mikrofon & Bebas Bunyi Beep:** Sistem sengaja tidak meminta izin mikrofon peramban dan tidak menjalankan speech engine eksternal, sehingga tidak pernah memunculkan notifikasi izin yang membingungkan siswa dan 100% hening tanpa suara bunyi chime/tuning bawaan Android.
+> 2. **Pencegatan Fokus Sistem Operasi (OS Focus Watchdog $\le 500\text{ms}$):** Ketika Gemini Live dipicu di HP (baik via panggilan *"Hey Google"*, tombol fisik daya/Power hold, usapan sudut layar, maupun floating ambient bar), atau ketika siswa membuka panel samping Gemini/Copilot di laptop, sistem operasi Android/Windows/Mac **secara mutlak merebut fokus interaksi dari peramban (`document.hasFocus() === false` & `window.onblur`)**.
+> 3. **Pembekuan Instan:** Dalam waktu $< 500\text{ms}$, sensor seketika mendeteksi perpindahan fokus tersebut dan langsung membekukan lembar ujian ke mode terkunci merah dengan log resmi *"Asisten Mengambang (Gemini Live / Floating Window)"*, sehingga asisten suara AI tidak sempat membacakan jawaban kepada siswa.
 
 ---
 *Manual Book ini disusun secara komprehensif untuk memastikan kelancaran dan integritas pelaksanaan asesmen digital sekolah.*

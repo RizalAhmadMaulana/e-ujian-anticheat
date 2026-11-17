@@ -241,15 +241,6 @@ export default function GatekeeperPin() {
         return { activeAttempt: updated };
       });
 
-      // Warm-up izin mikrofon untuk sensor integritas audio & anti-Gemini Live
-      try {
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-            stream.getTracks().forEach((t) => t.stop());
-          }).catch(() => {});
-        }
-      } catch (_) {}
-
       // 3. Tampilkan toast Screen Pinned & Kunci Layar Penuh (Fullscreen)
       setShowPinnedToast(true);
 

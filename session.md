@@ -201,6 +201,7 @@
 - [x] Eksekusi **Tahap 5.71 — Perbaikan Akumulasi Pelanggaran Ujian: Reset Otomatis Mulai dari 0 saat Siswa Mulai/Mengulang Ujian, Presisi Hitungan 1-ke-1, dan Sinkronisasi ke Riwayat Pelanggaran & E-Jurnal**.
 - [x] Eksekusi **Tahap 5.72 — Penambahan Kolom Tanggal & Waktu Selesai pada Rekap Nilai Siswa (Tabel Web & Ekspor Excel) serta Kolom Tanggal pada Riwayat Pelanggaran**.
 - [x] Eksekusi **Tahap 5.73 — Eliminasi False-Positive Penguncian Awal Ujian, Perbaikan Total Layar Blank Hitam Buka Kunci (100dvh Viewport), dan Implementasi Multi-Layered Anti-Gemini Live & Voice AI (Microphone Hardware Lock, Benturan Audio Focus OS, Deteksi Membaca Soal/Suara RMS, & OS Focus Watchdog)**.
+- [x] Eksekusi **Tahap 5.74 — Eliminasi Total Notifikasi Izin Mikrofon & Suara Bawaan Google Chime, Pengalihan Penuh Deteksi Gemini Live ke OS Focus Loss Watchdog (<= 500ms), Ujian 100% Hening Bebas Izin & Kebal Gemini Live**.
 - [x] Seluruh sistem E-Ujian Anti-Cheat & E-Jurnal Asesmen Sekolah SIAP PRODUKSI MURNI DENGAN DATA NYATA!
 
 ---
@@ -252,5 +253,6 @@
 - [x] Eksekusi **Tahap 5.71 — Perbaikan Akumulasi Pelanggaran Ujian: Reset Otomatis Mulai dari 0 saat Siswa Mulai/Mengulang Ujian, Presisi Hitungan 1-ke-1, dan Sinkronisasi ke Riwayat Pelanggaran & E-Jurnal**.
 - [x] Eksekusi **Tahap 5.72 — Penambahan Kolom Tanggal & Waktu Selesai pada Rekap Nilai Siswa (Tabel Web & Ekspor Excel) serta Kolom Tanggal pada Riwayat Pelanggaran**.
 - [x] Eksekusi **Tahap 5.73 — Eliminasi False-Positive Penguncian Awal Ujian, Perbaikan Total Layar Blank Hitam Buka Kunci (100dvh Viewport), dan Implementasi Multi-Layered Anti-Gemini Live & Voice AI (Microphone Hardware Lock, Benturan Audio Focus OS, Deteksi Membaca Soal/Suara RMS, & OS Focus Watchdog)**.
+- [x] Eksekusi **Tahap 5.74 — Eliminasi Total Notifikasi Izin Mikrofon & Suara Bawaan Google Chime, Pengalihan Penuh Deteksi Gemini Live ke OS Focus Loss Watchdog (<= 500ms), Ujian 100% Hening Bebas Izin & Kebal Gemini Live**.
 - [x] Seluruh sistem E-Ujian Anti-Cheat & E-Jurnal Asesmen Sekolah SIAP PRODUKSI MURNI DENGAN DATA NYATA!
 

@@ -1,13 +1,12 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useExamStore } from '../store/useExamStore';
 import { playViolationWarningSound } from '../utils/soundEffects';
-import { AudioSecuritySentinel } from '../utils/audioSecuritySentinel';
 
 /**
  * Hook Sensor Keamanan Zero-Tolerance Lockdown Anti-Cheat
  * Mengawasi secara presisi:
  * 1. Mobile (HP): Screenshot gesture 3 jari sejati, tombol volume/power fisik, floating window, split screen, bilah notifikasi
- * 2. Audio & AI Integrity: Deteksi Gemini Live / Google Assistant, perebutan mic, deteksi bersuara/membaca soal
+ * 2. OS Focus & AI Integrity: Deteksi Gemini Live / Google Assistant via Focus Loss Watchdog (Zero-Permission & Zero-Sound)
  * 3. Laptop/PC: Blokir klik kanan, copy-paste (Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+A), DevTools (F12, Ctrl+Shift+I), Print (Ctrl+P), View Source (Ctrl+U)
  * 4. General: Fullscreen lock, Tab Switch, App Switch (Alt+Tab), Text Drag-and-Drop, dan Pembersihan Otomatis Clipboard
  */
@@ -30,7 +29,6 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
   const longPressTimerRef = useRef(null);
   const longPressTouchPosRef = useRef(null);
   const mouseDragStartPosRef = useRef(null);
-  const audioSentinelRef = useRef(null);
 
   useEffect(() => {
     isSubmittedRef.current = Boolean(activeAttempt.examSubmittedAt);
@@ -52,11 +50,6 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       mouseDragStartPosRef.current = null;
     }
     prevIsLockedRef.current = activeAttempt.isLocked;
-
-    // Sinkronkan status pause pada Audio Sentinel
-    if (audioSentinelRef.current) {
-      audioSentinelRef.current.setPaused(activeAttempt.isLocked || Boolean(activeAttempt.examSubmittedAt));
-    }
   }, [activeAttempt.examSubmittedAt, activeAttempt.isLocked]);
 
   // Handler Pelanggaran Spesifik
@@ -66,10 +59,6 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     // KUNCI LANGSUNG SECARA SINKRON:
     // Mencegah microtask/event lain dalam tick yang sama (cth: touchstart + blur + touchmove) memicu penalti ganda!
     isLockedRef.current = true;
-
-    if (audioSentinelRef.current) {
-      audioSentinelRef.current.setPaused(true);
-    }
 
     playViolationWarningSound();
     triggerViolationLock(type, description);
@@ -104,22 +93,6 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         }
       } catch (_) {}
     };
-
-    // Inisialisasi Audio Integrity Sentinel (Anti-Gemini Live & Deteksi Bersuara)
-    try {
-      audioSentinelRef.current = new AudioSecuritySentinel({
-        onViolation: (type, desc) => {
-          if (!isSubmittedRef.current && !isLockedRef.current && isExamActive) {
-            if (Date.now() < gracePeriodUntilRef.current) return;
-            handleViolation(type, desc);
-          }
-        },
-        isExamActive
-      });
-      audioSentinelRef.current.start();
-    } catch (sentinelErr) {
-      console.warn('[useExamSecurity] Inisialisasi AudioSecuritySentinel dilewati:', sentinelErr);
-    }
 
     // ========================================================
     // SENSOR 1: FULLSCREEN ENFORCEMENT (fullscreenchange)
@@ -852,15 +825,15 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         const hasFocus = typeof document.hasFocus === 'function' ? document.hasFocus() : true;
         if (!hasFocus) {
           consecutiveBlurChecksRef.current += 1;
-          // Kehilangan fokus persisten selama 4 siklus beruntun (~800ms)
-          if (consecutiveBlurChecksRef.current >= 4) {
+          // Kehilangan fokus persisten selama 2-3 siklus beruntun (~400ms - 500ms)
+          if (consecutiveBlurChecksRef.current >= 2) {
             consecutiveBlurChecksRef.current = 0;
             if (document.visibilityState === 'visible') {
               handleViolation(
                 'FLOATING_WINDOW_ATTEMPT',
                 isMobileDevice()
-                  ? 'Siswa terdeteksi membuka asisten mengambang (Gemini Live / Floating Assistant) atau bilah notifikasi di HP'
-                  : 'Siswa terdeteksi beralih fokus ke panel samping browser (Gemini / Copilot) atau jendela aplikasi lain di Laptop'
+                  ? 'Siswa terdeteksi mengaktifkan asisten suara / jendela mengambang (Gemini Live / Google Assistant)'
+                  : 'Siswa terdeteksi membuka panel samping peramban (Gemini / Copilot) atau jendela aplikasi lain di Laptop'
               );
             } else {
               handleViolation(
@@ -984,11 +957,6 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
 
     return () => {
       clearInterval(heartbeatInterval);
-
-      if (audioSentinelRef.current) {
-        audioSentinelRef.current.stop();
-        audioSentinelRef.current = null;
-      }
 
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
