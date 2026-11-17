@@ -38,7 +38,7 @@ import {
 } from '../../api/examApi';
 import { getClassroomsApi } from '../../api/authApi';
 import MathText from '../../components/common/MathText';
-import { resolveImageUrl } from '../../utils/imageUrlFormatter';
+import { resolveImageUrl, handleImageErrorFallback } from '../../utils/imageUrlFormatter';
 
 export default function StudentResults() {
   const [searchParams] = useSearchParams();
@@ -993,6 +993,21 @@ export default function StudentResults() {
                             <MathText text={item.question_text} />
                           </div>
 
+                          {/* Lampiran Gambar Soal (Jika Ada) */}
+                          {(item.image_url || item.imageUrl) && (
+                            <div className="pt-2">
+                              <div className="inline-block p-2 rounded-xl bg-white border border-zinc-200 shadow-2xs max-w-full">
+                                <img
+                                  src={resolveImageUrl(item.image_url || item.imageUrl)}
+                                  alt={`Gambar Soal Nomor ${item.number || idx + 1}`}
+                                  className="max-h-64 sm:max-h-80 w-auto rounded-lg object-contain bg-white block"
+                                  loading="lazy"
+                                  onError={handleImageErrorFallback}
+                                />
+                              </div>
+                            </div>
+                          )}
+
                           {/* Opsi Pilihan Ganda Visualizer (Jika Pilihan Ganda) */}
                           {item.options && item.options.length > 0 && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
@@ -1012,21 +1027,36 @@ export default function StudentResults() {
                                 return (
                                   <div
                                     key={opt.id}
-                                    className={`p-2.5 rounded-lg border text-xs flex items-start gap-2 ${borderClass}`}
+                                    className={`p-2.5 rounded-lg border text-xs flex flex-col gap-2 ${borderClass}`}
                                   >
-                                    <span className="font-bold shrink-0">{opt.label}.</span>
-                                    <div className="flex-1">
-                                      <MathText text={opt.text} />
+                                    <div className="flex items-start gap-2 w-full">
+                                      <span className="font-bold shrink-0">{opt.label}.</span>
+                                      <div className="flex-1">
+                                        <MathText text={opt.text} />
+                                      </div>
+                                      {isChosen && (
+                                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-zinc-900 text-white shrink-0">
+                                          Pilihan Siswa
+                                        </span>
+                                      )}
+                                      {isCorrect && !isChosen && (
+                                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-600 text-white shrink-0">
+                                          Kunci
+                                        </span>
+                                      )}
                                     </div>
-                                    {isChosen && (
-                                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-zinc-900 text-white shrink-0">
-                                        Pilihan Siswa
-                                      </span>
-                                    )}
-                                    {isCorrect && !isChosen && (
-                                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-emerald-600 text-white shrink-0">
-                                        Kunci
-                                      </span>
+                                    {(opt.image_url || opt.imageUrl) && (
+                                      <div className="mt-1 pl-5">
+                                        <div className="inline-block p-1.5 rounded-lg bg-white border border-zinc-200 shadow-2xs max-w-full">
+                                          <img
+                                            src={resolveImageUrl(opt.image_url || opt.imageUrl)}
+                                            alt={`Gambar Opsi ${opt.label}`}
+                                            className="max-h-40 w-auto rounded object-contain bg-white block"
+                                            loading="lazy"
+                                            onError={handleImageErrorFallback}
+                                          />
+                                        </div>
+                                      </div>
                                     )}
                                   </div>
                                 );

@@ -6,7 +6,7 @@ import { useProctorSocket } from '../../hooks/useProctorSocket';
 import { playExitSuccessAlarm } from '../../utils/soundEffects';
 import { submitExamAnswersApi, finishExamAttemptApi, cancelExamAttemptApi } from '../../api/examApi';
 import { proctoringApi } from '../../api/proctoringApi';
-import { resolveImageUrl } from '../../utils/imageUrlFormatter';
+import { resolveImageUrl, handleImageErrorFallback } from '../../utils/imageUrlFormatter';
 import Modal from '../../components/common/Modal';
 import MathText from '../../components/common/MathText';
 import NetworkSignalIndicator from '../../components/common/NetworkSignalIndicator';
@@ -1172,11 +1172,12 @@ export default function ExamWorkspace() {
 
                   {/* Gambar Pertanyaan Soal (Jika Ada) */}
                   {(currentQuestion.imageUrl || currentQuestion.image_url) && (
-                    <div className="my-3 rounded-lg overflow-hidden border border-zinc-800 max-w-xl bg-zinc-950 p-2">
+                    <div className="my-3 rounded-lg overflow-hidden border border-zinc-700 max-w-xl bg-white p-2 shadow-md">
                       <img
                         src={resolveImageUrl(currentQuestion.imageUrl || currentQuestion.image_url)}
                         alt="Gambar Pertanyaan Soal"
-                        className="w-full max-h-80 object-contain rounded-md"
+                        className="w-full max-h-80 object-contain rounded-md bg-white mx-auto"
+                        onError={handleImageErrorFallback}
                       />
                     </div>
                   )}
@@ -1216,11 +1217,12 @@ export default function ExamWorkspace() {
                             </div>
 
                             {optImg && (
-                              <div className="sm:ml-auto rounded-md overflow-hidden border border-zinc-800 max-h-32 bg-zinc-900 p-1 shrink-0">
+                              <div className="sm:ml-auto rounded-md overflow-hidden border border-zinc-400 max-h-32 bg-white p-1 shrink-0 shadow-xs">
                                 <img
                                   src={resolveImageUrl(optImg)}
                                   alt={`Gambar Opsi ${optLabel}`}
-                                  className="h-24 sm:h-28 object-contain rounded"
+                                  className="h-24 sm:h-28 object-contain rounded bg-white"
+                                  onError={handleImageErrorFallback}
                                 />
                               </div>
                             )}
@@ -1240,6 +1242,7 @@ export default function ExamWorkspace() {
                       {(currentQuestion.options || []).map((opt) => {
                         const optLabel = opt.label || opt.option_label;
                         const optText = opt.text || opt.option_text;
+                        const optImg = opt.imageUrl || opt.image_url;
                         const rawAns = activeAttempt.studentAnswers[currentQuestion.id];
                         const selectedList = Array.isArray(rawAns) ? rawAns : (typeof rawAns === 'string' ? rawAns.split(',') : []);
                         const isChecked = selectedList.includes(optLabel);
@@ -1259,20 +1262,33 @@ export default function ExamWorkspace() {
                             key={optLabel}
                             type="button"
                             onClick={handleToggle}
-                            className={`w-full p-3.5 rounded-lg border text-left text-xs sm:text-sm font-medium transition flex items-center gap-3 ${
+                            className={`w-full p-3.5 rounded-lg border text-left text-xs sm:text-sm font-medium transition flex flex-col sm:flex-row sm:items-center gap-3 ${
                               isChecked
                                 ? 'bg-zinc-800/90 border-zinc-500 text-white shadow-2xs ring-1 ring-zinc-500/40'
                                 : 'bg-zinc-950/60 border-zinc-800 text-zinc-300 hover:bg-zinc-900 hover:text-white hover:border-zinc-700'
                             }`}
                           >
-                            <div className={`w-7 h-7 rounded-md flex items-center justify-center text-xs shrink-0 transition ${
-                              isChecked ? 'bg-zinc-100 text-zinc-900 font-bold shadow-2xs' : 'bg-zinc-800 text-zinc-400 font-semibold'
-                            }`}>
-                              {isChecked ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : optLabel}
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <div className={`w-7 h-7 rounded-md flex items-center justify-center text-xs shrink-0 transition ${
+                                isChecked ? 'bg-zinc-100 text-zinc-900 font-bold shadow-2xs' : 'bg-zinc-800 text-zinc-400 font-semibold'
+                              }`}>
+                                {isChecked ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : optLabel}
+                              </div>
+                              <div className="leading-relaxed flex-1">
+                                <MathText text={optText} />
+                              </div>
                             </div>
-                            <div className="leading-relaxed flex-1">
-                              <MathText text={optText} />
-                            </div>
+
+                            {optImg && (
+                              <div className="sm:ml-auto rounded-md overflow-hidden border border-zinc-400 max-h-32 bg-white p-1 shrink-0 shadow-xs">
+                                <img
+                                  src={resolveImageUrl(optImg)}
+                                  alt={`Gambar Opsi ${optLabel}`}
+                                  className="h-24 sm:h-28 object-contain rounded bg-white"
+                                  onError={handleImageErrorFallback}
+                                />
+                              </div>
+                            )}
                           </button>
                         );
                       })}

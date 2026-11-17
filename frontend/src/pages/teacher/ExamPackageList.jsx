@@ -12,7 +12,7 @@ import {
   importExcelQuestionsApi,
   downloadQuestionTemplateExcelApi
 } from '../../api/examApi';
-import { resolveImageUrl } from '../../utils/imageUrlFormatter';
+import { resolveImageUrl, handleImageErrorFallback } from '../../utils/imageUrlFormatter';
 import { getClassroomsApi } from '../../api/authApi';
 import Modal from '../../components/common/Modal';
 import MathText from '../../components/common/MathText';
@@ -1707,11 +1707,12 @@ export default function ExamPackageList() {
 
                         {/* Pratinjau Gambar Soal */}
                         {q.imageUrl && (
-                          <div className="relative inline-block border border-zinc-200 rounded-lg p-2 bg-zinc-50">
+                          <div className="relative inline-block border border-zinc-200 rounded-lg p-2 bg-white shadow-2xs">
                             <img
                               src={resolveImageUrl(q.imageUrl)}
                               alt="Gambar Soal"
                               className="max-h-48 rounded-md object-contain border border-zinc-200 bg-white"
+                              onError={handleImageErrorFallback}
                             />
                             <div className="flex items-center justify-between gap-2 pt-1.5 px-1">
                               <span className="text-[10px] text-zinc-500 font-mono">Gambar Terlampir</span>
@@ -1788,15 +1789,23 @@ export default function ExamPackageList() {
                                     </label>
                                   </div>
 
-                                  <div className="flex items-center justify-end gap-1 shrink-0">
+                                  <div className="flex items-center justify-end gap-1.5 shrink-0">
                                     {opt.imageUrl && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleRemoveOptionImage(idx, optIdx)}
-                                        className="text-[10px] text-rose-600 hover:underline px-1.5"
-                                      >
-                                        Hapus Gbr
-                                      </button>
+                                      <div className="flex items-center gap-1 bg-white p-0.5 rounded border border-zinc-200">
+                                        <img
+                                          src={resolveImageUrl(opt.imageUrl)}
+                                          alt={`Gbr ${opt.label}`}
+                                          className="h-6 w-6 object-contain rounded bg-white"
+                                          onError={handleImageErrorFallback}
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => handleRemoveOptionImage(idx, optIdx)}
+                                          className="text-[10px] text-rose-600 hover:underline px-1"
+                                        >
+                                          Hapus Gbr
+                                        </button>
+                                      </div>
                                     )}
                                     <button
                                       type="button"
@@ -2256,11 +2265,12 @@ export default function ExamPackageList() {
 
                     {/* Gambar Pertanyaan Soal (Jika Ada) */}
                     {qImg && (
-                      <div className="my-2.5 p-2 rounded-xl bg-slate-950 border border-slate-800 max-w-xl">
+                      <div className="my-2.5 p-2 rounded-xl bg-white border-2 border-slate-200 max-w-xl shadow-2xs">
                         <img
                           src={resolveImageUrl(qImg)}
                           alt={`Gambar Soal Nomor ${idx + 1}`}
-                          className="max-h-72 w-auto object-contain rounded-lg mx-auto"
+                          className="max-h-72 w-auto object-contain rounded-lg mx-auto bg-white"
+                          onError={handleImageErrorFallback}
                         />
                       </div>
                     )}
@@ -2302,11 +2312,12 @@ export default function ExamPackageList() {
                               </div>
 
                               {optImg && (
-                                <div className="sm:ml-auto p-1.5 rounded-lg bg-slate-950 border border-slate-800 max-h-32 shrink-0">
+                                <div className="sm:ml-auto p-1.5 rounded-lg bg-white border-2 border-slate-200 max-h-32 shrink-0 shadow-2xs">
                                   <img
                                     src={resolveImageUrl(optImg)}
                                     alt={`Gambar Opsi ${optLabel}`}
-                                    className="h-20 sm:h-24 object-contain rounded"
+                                    className="h-20 sm:h-24 object-contain rounded bg-white"
+                                    onError={handleImageErrorFallback}
                                   />
                                 </div>
                               )}

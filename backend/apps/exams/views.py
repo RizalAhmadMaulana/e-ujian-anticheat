@@ -1,10 +1,11 @@
 import os
 import uuid
 import random
+import mimetypes
 from io import BytesIO
 from django.conf import settings
 from django.db.models import Q
-from django.http import HttpResponse
+from django.http import HttpResponse, Http404, FileResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics, permissions, status
@@ -492,6 +493,38 @@ class ExamImageUploadView(APIView):
             'filename': unique_name,
             'message': 'Gambar berhasil diunggah'
         }, status=status.HTTP_201_CREATED)
+
+
+class ServeExamMediaFileView(APIView):
+    """
+    GET /api/exams/images/<path:filename>
+    Melayani berkas media gambar soal secara langsung via API
+    kebal dari konfigurasi proxy Nginx dan tidak terhalang oleh DEBUG=False.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, filename):
+        clean_name = filename.replace('media/', '').replace('exam_images/', '').lstrip('/')
+        candidates = [
+            os.path.join(settings.MEDIA_ROOT, filename),
+            os.path.join(settings.MEDIA_ROOT, 'exam_images', clean_name),
+            os.path.join(settings.MEDIA_ROOT, clean_name),
+        ]
+        target_path = None
+        for cand in candidates:
+            if os.path.exists(cand) and os.path.isfile(cand):
+                target_path = cand
+                break
+
+        if not target_path:
+            raise Http404("Berkas gambar tidak ditemukan.")
+
+        content_type, _ = mimetypes.guess_type(target_path)
+        content_type = content_type or 'image/png'
+
+        response = FileResponse(open(target_path, 'rb'), content_type=content_type)
+        response['Cache-Control'] = 'public, max-age=86400'
+        return response
 
 
 class DownloadQuestionTemplateExcelView(APIView):
@@ -1019,10 +1052,21 @@ class StudentAttemptDetailBreakdownView(APIView):
                             is_chosen = True
                             student_display = f"Opsi {opt.option_label}. {opt.option_text}"
 
+                    opt_raw = opt.option_text or ''
+                    opt_img = None
+                    opt_clean_text = opt_raw
+                    if opt_raw.startswith('[IMAGE:'):
+                        end_i = opt_raw.find(']')
+                        if end_i != -1:
+                            opt_img = opt_raw[7:end_i].strip()
+                            opt_clean_text = opt_raw[end_i + 1:].strip()
+
                     options_data.append({
                         "id": str(opt.id),
                         "label": opt.option_label,
-                        "text": opt.option_text,
+                        "text": opt_clean_text,
+                        "image_url": opt_img,
+                        "imageUrl": opt_img,
                         "is_correct": opt.is_correct,
                         "is_chosen": is_chosen
                     })
@@ -1055,10 +1099,21 @@ class StudentAttemptDetailBreakdownView(APIView):
 
                 for opt in q.options.all():
                     is_chosen = opt.option_label.upper() in student_items or str(opt.id) in student_items
+                    opt_raw = opt.option_text or ''
+                    opt_img = None
+                    opt_clean_text = opt_raw
+                    if opt_raw.startswith('[IMAGE:'):
+                        end_i = opt_raw.find(']')
+                        if end_i != -1:
+                            opt_img = opt_raw[7:end_i].strip()
+                            opt_clean_text = opt_raw[end_i + 1:].strip()
+
                     options_data.append({
                         "id": str(opt.id),
                         "label": opt.option_label,
-                        "text": opt.option_text,
+                        "text": opt_clean_text,
+                        "image_url": opt_img,
+                        "imageUrl": opt_img,
                         "is_correct": opt.is_correct,
                         "is_chosen": is_chosen
                     })
@@ -1168,6 +1223,8 @@ class StudentAttemptDetailBreakdownView(APIView):
                 "question_id": str(q.id),
                 "order_number": q.order_number,
                 "question_text": q.question_text,
+                "image_url": q.image_url,
+                "imageUrl": q.image_url,
                 "question_type": q.question_type,
                 "points": q_points,
                 "earned_points": earned_points,

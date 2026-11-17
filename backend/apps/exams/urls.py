@@ -19,11 +19,14 @@ from .views import (
     SessionStudentResultsView,
     StudentAttemptDetailBreakdownView,
     ExportSessionResultsExcelView,
+    ServeExamMediaFileView,
 )
 
 urlpatterns = [
-    # Upload Gambar Soal & Opsi Jawaban
+    # Upload & Layanan File Gambar Soal (Bebas Mixed Content & Nginx-Proof)
     path('upload-image/', ExamImageUploadView.as_view(), name='exam_upload_image'),
+    path('images/<path:filename>', ServeExamMediaFileView.as_view(), name='serve_exam_image'),
+    path('media/<path:filename>', ServeExamMediaFileView.as_view(), name='serve_exam_media_file'),
 
     # Template Excel & Import Massal Word/Excel (Letakkan sebelum <uuid:pk>!)
     path('packages/template-excel/', DownloadQuestionTemplateExcelView.as_view(), name='exam_package_template_excel'),
