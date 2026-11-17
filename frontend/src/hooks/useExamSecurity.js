@@ -972,7 +972,5 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
   }, [isExamActive, handleViolation, onScreenshotBlocked]);
 }
