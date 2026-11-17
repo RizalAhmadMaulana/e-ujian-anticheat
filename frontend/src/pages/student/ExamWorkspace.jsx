@@ -79,11 +79,13 @@ export default function ExamWorkspace() {
   const formatViolationType = (type) => {
     const map = {
       'SCREENSHOT_GESTURE': 'Tangkapan Layar Gesture Multi-Jari (Swap Layar HP)',
-      'SCREENSHOT_3FINGER_GESTURE': 'Tangkapan Layar Gesture Multi-Jari (HP)',
+      'SCREENSHOT_3FINGER_GESTURE': 'Tangkapan Layar Gesture 3 Jari (HP)',
       'SCREENSHOT_HARDWARE_BUTTON': 'Tombol Fisik Screenshot HP (Volume/Power)',
       'SCREENSHOT_KEY_ATTEMPT': 'Tangkapan Layar Keyboard (PrintScreen / Snipping Tool)',
       'SCREEN_RECORDING_ATTEMPT': 'Perekaman Layar Terdeteksi (Screen Recording / Capture)',
       'NOTIFICATION_BAR_PULLDOWN': 'Menarik Bilah Notifikasi / Menu Rekam Layar HP',
+      'VOICE_ASSISTANT_ATTEMPT': 'Asisten Suara AI (Gemini Live / Google Assistant)',
+      'VOICE_SPEAKING_ATTEMPT': 'Membaca Soal / Bersuara (Voice AI)',
       'COPY_ATTEMPT': 'Menyalin Teks / Soal (Ctrl+C)',
       'PASTE_ATTEMPT': 'Menempelkan Teks (Ctrl+V)',
       'CUT_ATTEMPT': 'Memotong Teks (Ctrl+X)',
@@ -843,12 +845,30 @@ export default function ExamWorkspace() {
 
       {/* ======================================================== */}
       {/* 2. LAYAR PEMBEKUAN MERAH (PENALTY FREEZE OVERLAY) */}
-      {/* Di-render langsung in-DOM sebagai fixed overlay z-[9999] */}
+      {/* Di-render langsung in-DOM sebagai fixed overlay z-[99999] */}
       {/* 100% kebal bug GPU compositor & selalu tampil tajam di HP */}
       {/* ======================================================== */}
       {activeAttempt.isLocked && (
-        <div className="fixed inset-0 z-[9999] bg-[#090D16] flex flex-col items-center justify-center p-4 sm:p-6 text-center select-none overflow-y-auto">
-          <div className="max-w-md w-full my-auto flex flex-col items-center space-y-3.5 sm:space-y-4">
+        <div 
+          className="fixed inset-0 z-[99999] bg-[#090D16] flex items-center justify-center p-3 sm:p-6 text-center select-none overflow-y-auto"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            minHeight: '100dvh',
+            height: '100%',
+            backgroundColor: '#090D16',
+            zIndex: 99999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflowY: 'auto'
+          }}
+        >
+          <div className="max-w-md w-full m-auto py-4 flex flex-col items-center space-y-3.5 sm:space-y-4">
             <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-rose-600/20 border border-rose-500/40 flex items-center justify-center text-rose-400 animate-pulse shrink-0">
               <ShieldAlert className="w-8 h-8 sm:w-9 sm:h-9" />
             </div>
@@ -868,10 +888,10 @@ export default function ExamWorkspace() {
                 <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
                 <span>Log Pelanggaran Sistem Terkini:</span>
               </div>
-              <div>• Jenis Pelanggaran: <strong className="font-semibold text-white bg-rose-950/80 px-2 py-0.5 rounded border border-rose-500/30">{formatViolationType(activeAttempt.violationLogs?.[0]?.violationType || activeAttempt.violationLogs?.[0]?.type || 'APP_SWITCH')}</strong></div>
-              <div>• Keterangan Sensor: <em className="text-zinc-300 font-normal">{activeAttempt.violationLogs?.[0]?.description || 'Pelanggaran keamanan terdeteksi sistem.'}</em></div>
-              <div>• Waktu Terdeteksi: <strong className="font-mono text-zinc-100">{activeAttempt.violationLogs?.[0]?.detectedAt || 'Baru Saja'}</strong></div>
-              <div>• Total Akumulasi: <strong className="text-amber-300 font-semibold">{(activeAttempt.violationCount > 0 ? activeAttempt.violationCount : 1)} kali pelanggaran</strong></div>
+              <div>• Jenis Pelanggaran: <strong className="font-semibold text-white bg-rose-950/80 px-2 py-0.5 rounded border border-rose-500/30">{formatViolationType(activeAttempt?.violationLogs?.[0]?.violationType || activeAttempt?.violationLogs?.[0]?.type || 'APP_SWITCH')}</strong></div>
+              <div>• Keterangan Sensor: <em className="text-zinc-300 font-normal">{activeAttempt?.violationLogs?.[0]?.description || 'Pelanggaran keamanan terdeteksi sistem.'}</em></div>
+              <div>• Waktu Terdeteksi: <strong className="font-mono text-zinc-100">{activeAttempt?.violationLogs?.[0]?.detectedAt || 'Baru Saja'}</strong></div>
+              <div>• Total Akumulasi: <strong className="text-amber-300 font-semibold">{(Number(activeAttempt?.violationCount) > 0 ? Number(activeAttempt.violationCount) : 1)} kali pelanggaran</strong></div>
             </div>
 
             {/* Form Pembukaan Kunci Pengawas (Bebas dari Google Password Manager Popup) */}

@@ -228,6 +228,28 @@ export default function GatekeeperPin() {
         }
       }
 
+      // Pastikan status terkunci dari sesi sebelumnya di-reset secara mutlak (Anti-False Lock)
+      useExamStore.setState((state) => {
+        const updated = {
+          ...state.activeAttempt,
+          isLocked: false,
+          _lastViolationLockTime: null,
+        };
+        try {
+          localStorage.setItem('exam_active_attempt', JSON.stringify(updated));
+        } catch (_) {}
+        return { activeAttempt: updated };
+      });
+
+      // Warm-up izin mikrofon untuk sensor integritas audio & anti-Gemini Live
+      try {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+            stream.getTracks().forEach((t) => t.stop());
+          }).catch(() => {});
+        }
+      } catch (_) {}
+
       // 3. Tampilkan toast Screen Pinned & Kunci Layar Penuh (Fullscreen)
       setShowPinnedToast(true);
 

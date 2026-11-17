@@ -1,13 +1,15 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useExamStore } from '../store/useExamStore';
 import { playViolationWarningSound } from '../utils/soundEffects';
+import { AudioSecuritySentinel } from '../utils/audioSecuritySentinel';
 
 /**
  * Hook Sensor Keamanan Zero-Tolerance Lockdown Anti-Cheat
  * Mengawasi secara presisi:
- * 1. Mobile (HP): Screenshot gesture 3 jari, tombol volume/power fisik, floating window, split screen, bilah notifikasi
- * 2. Laptop/PC: Blokir klik kanan, copy-paste (Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+A), DevTools (F12, Ctrl+Shift+I), Print (Ctrl+P), View Source (Ctrl+U)
- * 3. General: Fullscreen lock, Tab Switch, App Switch (Alt+Tab), Text Drag-and-Drop, dan Pembersihan Otomatis Clipboard
+ * 1. Mobile (HP): Screenshot gesture 3 jari sejati, tombol volume/power fisik, floating window, split screen, bilah notifikasi
+ * 2. Audio & AI Integrity: Deteksi Gemini Live / Google Assistant, perebutan mic, deteksi bersuara/membaca soal
+ * 3. Laptop/PC: Blokir klik kanan, copy-paste (Ctrl+C, Ctrl+V, Ctrl+X, Ctrl+A), DevTools (F12, Ctrl+Shift+I), Print (Ctrl+P), View Source (Ctrl+U)
+ * 4. General: Fullscreen lock, Tab Switch, App Switch (Alt+Tab), Text Drag-and-Drop, dan Pembersihan Otomatis Clipboard
  */
 export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isExamActive = true }) {
   const { 
@@ -22,11 +24,13 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
   const gracePeriodUntilRef = useRef(Date.now() + 6000);
   const prevIsLockedRef = useRef(activeAttempt.isLocked);
   const consecutiveBlurChecksRef = useRef(0);
-  const edgeSwipeCandidateRef = useRef(null);
+  const threeFingerSwipeRef = useRef(null);
   const topEdgeSwipeRef = useRef(null);
+  const edgeSwipeCandidateRef = useRef(null);
   const longPressTimerRef = useRef(null);
   const longPressTouchPosRef = useRef(null);
   const mouseDragStartPosRef = useRef(null);
+  const audioSentinelRef = useRef(null);
 
   useEffect(() => {
     isSubmittedRef.current = Boolean(activeAttempt.examSubmittedAt);
@@ -37,6 +41,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     if (prevIsLockedRef.current === true && activeAttempt.isLocked === false) {
       gracePeriodUntilRef.current = Date.now() + 5000;
       consecutiveBlurChecksRef.current = 0;
+      threeFingerSwipeRef.current = null;
       edgeSwipeCandidateRef.current = null;
       topEdgeSwipeRef.current = null;
       if (longPressTimerRef.current) {
@@ -47,6 +52,11 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       mouseDragStartPosRef.current = null;
     }
     prevIsLockedRef.current = activeAttempt.isLocked;
+
+    // Sinkronkan status pause pada Audio Sentinel
+    if (audioSentinelRef.current) {
+      audioSentinelRef.current.setPaused(activeAttempt.isLocked || Boolean(activeAttempt.examSubmittedAt));
+    }
   }, [activeAttempt.examSubmittedAt, activeAttempt.isLocked]);
 
   // Handler Pelanggaran Spesifik
@@ -56,6 +66,10 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     // KUNCI LANGSUNG SECARA SINKRON:
     // Mencegah microtask/event lain dalam tick yang sama (cth: touchstart + blur + touchmove) memicu penalti ganda!
     isLockedRef.current = true;
+
+    if (audioSentinelRef.current) {
+      audioSentinelRef.current.setPaused(true);
+    }
 
     playViolationWarningSound();
     triggerViolationLock(type, description);
@@ -75,15 +89,37 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       );
     };
 
-    // Helper: Pastikan style filter selalu bersih
+    // Helper: Pastikan style filter & tampilan selalu bersih
     const ensureCleanDisplay = () => {
       try {
         document.documentElement.style.filter = '';
         document.documentElement.style.backdropFilter = '';
         document.body.style.filter = '';
         document.body.style.backgroundColor = '';
+        const mainEl = document.querySelector('main');
+        if (mainEl) {
+          mainEl.style.filter = '';
+          mainEl.style.visibility = '';
+          mainEl.style.opacity = '';
+        }
       } catch (_) {}
     };
+
+    // Inisialisasi Audio Integrity Sentinel (Anti-Gemini Live & Deteksi Bersuara)
+    try {
+      audioSentinelRef.current = new AudioSecuritySentinel({
+        onViolation: (type, desc) => {
+          if (!isSubmittedRef.current && !isLockedRef.current && isExamActive) {
+            if (Date.now() < gracePeriodUntilRef.current) return;
+            handleViolation(type, desc);
+          }
+        },
+        isExamActive
+      });
+      audioSentinelRef.current.start();
+    } catch (sentinelErr) {
+      console.warn('[useExamSecurity] Inisialisasi AudioSecuritySentinel dilewati:', sentinelErr);
+    }
 
     // ========================================================
     // SENSOR 1: FULLSCREEN ENFORCEMENT (fullscreenchange)
@@ -107,13 +143,14 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
 
     // ========================================================
     // SENSOR 2: ANTI-TAB SWITCH & MINIMIZE (visibilitychange)
-    // Ketika siswa meminimalkan browser, membuka tab lain, atau beralih aplikasi
     // ========================================================
     const handleVisibilityChange = () => {
       ensureCleanDisplay();
 
       if (document.visibilityState === 'hidden' || document.hidden) {
         if (isSubmittedRef.current || isLockedRef.current) return;
+        // PENTING: Hormati masa tenggang awal saat inisialisasi fullscreen & orientasi
+        if (Date.now() < gracePeriodUntilRef.current) return;
 
         handleViolation(
           isMobileDevice() ? 'APP_SWITCH' : 'TAB_SWITCH',
@@ -125,20 +162,16 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     };
 
     // ========================================================
-    // SENSOR 3: ANTI-APP SWITCH, MODE MENGAMBANG & LOSS OF FOCUS (window.onblur / onfocus)
-    // Diberi toleransi terukur agar aman terhadap sentuhan iframe Google/Office Form,
-    // namun secara instan mengunci ke layar merah jika terdeteksi Mode Mengambang / Perekam Layar
+    // SENSOR 3: ANTI-APP SWITCH & LOSS OF FOCUS (window.onblur / onfocus)
     // ========================================================
     let blurTimeout = null;
     const handleWindowBlur = () => {
-      // 0ms Instant Obfuscation: Sembunyikan konten soal seketika saat peramban kehilangan fokus OS
-      // Menjamin tangkapan layar (Screenshot) atau rekaman OS tidak pernah memuat teks/gambar soal
+      // Obfuscation blur ringan saat peramban kehilangan fokus OS (mencegah preview snapshot OS)
       if (!isSubmittedRef.current && !isLockedRef.current) {
         if (!document.hasFocus()) {
           const mainEl = document.querySelector('main');
           if (mainEl) {
-            mainEl.style.visibility = 'hidden';
-            mainEl.style.opacity = '0';
+            mainEl.style.filter = 'blur(16px)';
           }
         }
       }
@@ -163,19 +196,17 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
             return;
           }
 
-          // Jika dokumen terlihat tapi kehilangan fokus OS (Mode Mengambang / Floating Window / Sidebar / Bilah Notifikasi / Perekam Layar)
-          if (!document.hasFocus()) {
+          if (!document.hasFocus() && !isFocusInsideIframe) {
             handleViolation(
               isMobileDevice() ? 'FLOATING_WINDOW_ATTEMPT' : 'APP_SWITCH',
               isMobileDevice()
-                ? 'Siswa terdeteksi membuka mode mengambang (Floating Window), perekam layar, atau bilah notifikasi di HP'
+                ? 'Siswa terdeteksi membuka mode mengambang (Floating Window / Gemini Live), perekam layar, atau bilah notifikasi di HP'
                 : 'Siswa terdeteksi beralih ke jendela aplikasi lain di luar peramban ujian (Alt+Tab / Taskbar)'
             );
             return;
           }
         }
 
-        // Jika dokumen benar-benar disembunyikan / diminimalkan (Beralih Aplikasi Total / Pindah Tab)
         if (document.visibilityState === 'hidden' || document.hidden || !document.hasFocus()) {
           handleViolation(
             isMobileDevice() ? 'APP_SWITCH' : 'TAB_SWITCH',
@@ -184,7 +215,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
               : 'Siswa terdeteksi berpindah tab peramban atau meminimalkan browser ujian'
           );
         }
-      }, 50);
+      }, 70);
     };
 
     const handleWindowFocus = () => {
@@ -194,19 +225,15 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         clearTimeout(blurTimeout);
         blurTimeout = null;
       }
-      const mainEl = document.querySelector('main');
-      if (mainEl && !isLockedRef.current) {
-        mainEl.style.visibility = '';
-        mainEl.style.opacity = '';
-      }
     };
 
     // ========================================================
-    // SENSOR 4: MOBILE (HP) - DETEKSI MULTI-JARI SCREENSHOT (SWAP 2 JARI & 3 JARI),
+    // SENSOR 4: MOBILE (HP) - DETEKSI GESTURE 3 JARI SEJATI (ANTI-FALSE POSITIVE),
     // TARIK BILAH NOTIFIKASI/REKAM LAYAR, BILAH SISI, & LONG-PRESS ANTI-BLOCK
     // ========================================================
     const handleTouchStart = (e) => {
       if (isSubmittedRef.current || isLockedRef.current) return;
+      if (Date.now() < gracePeriodUntilRef.current) return;
 
       const touchCount = Math.max(
         e.touches ? e.touches.length : 0,
@@ -214,31 +241,28 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         e.changedTouches ? e.changedTouches.length : 0
       );
 
-      // 1. Deteksi Multi-Jari (2 Jari / 3 Jari atau Lebih - Universal Screenshot Gesture di Seluruh Merk HP)
-      // Menangani swap 3 jari Xiaomi/Oppo/Realme, swap 2 jari, maupun multi-touch hold
-      // MUTLAK AKTIF SEKETIKA TANPA DIBATASI GRACE PERIOD!
-      if (touchCount >= 2) {
-        if (e.cancelable) e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        if (onScreenshotBlocked) {
-          onScreenshotBlocked(`Tangkapan layar ${touchCount} jari diblokir! Layar ujian Anda dibekukan.`);
+      // 1. Catat Titik Awal Gesture 3 Jari Nyata (Screenshot Gesture di HP)
+      // Hanya mulai pelacakan jika terdapat minimal 3 titik sentuh (Xiaomi, Oppo, Realme, Vivo, dll)
+      // Sentuhan 2 jari (pegang HP / pinch zoom) diperbolehkan sepenuhnya tanpa memicu penalti!
+      if (touchCount >= 3 && e.touches && e.touches.length >= 3) {
+        let sumY = 0;
+        for (let i = 0; i < e.touches.length; i++) {
+          sumY += e.touches[i].clientY;
         }
-        handleViolation(
-          'SCREENSHOT_3FINGER_GESTURE',
-          `Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture ${touchCount} jari di HP`
-        );
-        return false;
+        threeFingerSwipeRef.current = {
+          startY: sumY / e.touches.length,
+          startTime: Date.now(),
+          touchCount: e.touches.length
+        };
+      } else {
+        threeFingerSwipeRef.current = null;
       }
-
-      if (Date.now() < gracePeriodUntilRef.current) return;
 
       if (touchCount === 1 && isMobileDevice()) {
         const touch = e.touches[0];
         const screenW = window.innerWidth || window.screen.width;
 
         // 2. Deteksi Tarikan Bilah Notifikasi dari Atas Layar (Notification Drawer / Menu Rekam Layar / Quick Settings)
-        // Jika jari menyentuh zona 45px paling atas layar
         if (touch.clientY < 45) {
           topEdgeSwipeRef.current = { startY: touch.clientY, startTime: Date.now() };
         } else {
@@ -279,34 +303,40 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
 
     const handleTouchMove = (e) => {
       if (isSubmittedRef.current || isLockedRef.current) return;
+      if (Date.now() < gracePeriodUntilRef.current) return;
 
-      const touchCount = Math.max(
-        e.touches ? e.touches.length : 0,
-        e.targetTouches ? e.targetTouches.length : 0,
-        e.changedTouches ? e.changedTouches.length : 0
-      );
-
-      // 1. Gesture Screenshot Multi-Jari (2 Jari / 3 Jari)
-      // MUTLAK AKTIF SEKETIKA TANPA DIBATASI GRACE PERIOD!
-      if (touchCount >= 2) {
-        if (e.cancelable) e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        if (onScreenshotBlocked) {
-          onScreenshotBlocked(`Tangkapan layar ${touchCount} jari diblokir! Layar ujian Anda dibekukan.`);
+      // 1. Deteksi Usapan Nyata 3 Jari ke Bawah (Real 3-Finger Downward Swipe Screenshot Gesture)
+      if (threeFingerSwipeRef.current && e.touches && e.touches.length >= 3) {
+        let sumY = 0;
+        for (let i = 0; i < e.touches.length; i++) {
+          sumY += e.touches[i].clientY;
         }
-        handleViolation(
-          'SCREENSHOT_3FINGER_GESTURE',
-          `Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture ${touchCount} jari di HP`
-        );
-        return false;
+        const currentAvgY = sumY / e.touches.length;
+        const deltaY = currentAvgY - threeFingerSwipeRef.current.startY;
+        const duration = Date.now() - threeFingerSwipeRef.current.startTime;
+
+        // Screenshot geser 3 jari di HP adalah sapuan ke bawah minimal 40px dalam tempo cepat (< 800ms)
+        if (deltaY > 40 && duration < 800) {
+          threeFingerSwipeRef.current = null;
+          if (e.cancelable) e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          if (onScreenshotBlocked) {
+            onScreenshotBlocked('Tangkapan layar 3 jari diblokir! Layar ujian Anda dibekukan.');
+          }
+          handleViolation(
+            'SCREENSHOT_3FINGER_GESTURE',
+            'Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture usap 3 jari di HP'
+          );
+          return false;
+        }
       }
 
       // 2. Deteksi Tarikan Bilah Notifikasi ke Arah Bawah (Membuka Menu Rekam Layar / Screenshot Tile)
       if (topEdgeSwipeRef.current && e.touches && e.touches.length === 1 && isMobileDevice()) {
         const touch = e.touches[0];
         const deltaY = touch.clientY - topEdgeSwipeRef.current.startY;
-        if (deltaY > 18) {
+        if (deltaY > 20) {
           if (e.cancelable) e.preventDefault();
           e.stopPropagation();
           e.stopImmediatePropagation();
@@ -319,15 +349,13 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         }
       }
 
-      if (Date.now() < gracePeriodUntilRef.current) return;
-
       // 3. Deteksi Tarikan Tepi Samping Layar (Smart Sidebar Gesture Memicu Jendela Mengambang)
       if (edgeSwipeCandidateRef.current && e.touches && e.touches.length === 1 && isMobileDevice()) {
         const touch = e.touches[0];
         const deltaX = Math.abs(touch.clientX - edgeSwipeCandidateRef.current.startX);
         const deltaY = Math.abs(touch.clientY - edgeSwipeCandidateRef.current.startY);
 
-        if (deltaX > 30 && deltaX > deltaY * 1.3 && (Date.now() - edgeSwipeCandidateRef.current.startTime) < 500) {
+        if (deltaX > 32 && deltaX > deltaY * 1.3 && (Date.now() - edgeSwipeCandidateRef.current.startTime) < 500) {
           edgeSwipeCandidateRef.current = null;
           handleViolation(
             'FLOATING_WINDOW_ATTEMPT',
@@ -354,6 +382,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     };
 
     const handleTouchEnd = () => {
+      threeFingerSwipeRef.current = null;
       edgeSwipeCandidateRef.current = null;
       topEdgeSwipeRef.current = null;
       if (longPressTimerRef.current) {
@@ -369,12 +398,11 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       if (isSubmittedRef.current || isLockedRef.current) return;
       if (Date.now() < gracePeriodUntilRef.current) return;
 
-      // Izinkan pada input teks jawaban sah
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
         return;
       }
 
-      if (e.button === 0) { // Tombol klik kiri
+      if (e.button === 0) {
         mouseDragStartPosRef.current = { x: e.clientX, y: e.clientY };
       }
     };
@@ -384,13 +412,12 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       if (isSubmittedRef.current || isLockedRef.current) return;
       if (Date.now() < gracePeriodUntilRef.current) return;
 
-      // Jika tombol kiri ditekan sambil menyeret kursor (e.buttons === 1)
       if (e.buttons === 1) {
         const dist = Math.hypot(
           e.clientX - mouseDragStartPosRef.current.x,
           e.clientY - mouseDragStartPosRef.current.y
         );
-        if (dist > 8) { // Menyeret kursor lebih dari 8px untuk mem-block teks soal
+        if (dist > 8) {
           mouseDragStartPosRef.current = null;
           try {
             window.getSelection()?.removeAllRanges();
@@ -419,7 +446,6 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       const sel = window.getSelection();
       if (sel && sel.toString().trim().length > 0) {
         const activeEl = document.activeElement;
-        // Izinkan seleksi jika berada di dalam input jawaban yang sah
         if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
           return;
         }
@@ -451,52 +477,37 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     };
 
     const handleAuxClick = (e) => {
-      if (e.button === 2) {
-        handleContextMenu(e);
-      } else if (e.button === 1) {
-        // Tombol tengah / scroll click
+      if (e.button === 1 || e.button === 2) {
         e.preventDefault();
         e.stopPropagation();
-        handleViolation(
-          'CONTEXT_MENU_ATTEMPT',
-          'Siswa mencoba klik tengah mouse (Middle Click) untuk membuka tautan'
-        );
       }
     };
 
     // ========================================================
-    // SENSOR 6: BLOKIR OPERASI CLIPBOARD (COPY, CUT, PASTE)
+    // SENSOR 6: BLOKIR OPERASI CLIPBOARD (COPY, PASTE, CUT)
     // ========================================================
     const handleCopy = (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (e.clipboardData) {
-        try {
+      try {
+        if (e.clipboardData) {
           e.clipboardData.setData('text/plain', '');
-          e.clipboardData.setData('text/html', '');
-        } catch (_) {}
-      }
-
+        }
+      } catch (_) {}
       if (isSubmittedRef.current || isLockedRef.current) return false;
-      if (Date.now() < gracePeriodUntilRef.current) return false;
-
-      handleViolation(
-        'COPY_ATTEMPT',
-        'Siswa terdeteksi mencoba menyalin konten soal ke clipboard sistem (Copy)'
-      );
+      handleViolation('COPY_ATTEMPT', 'Siswa mencoba menyalin (Copy) teks atau gambar dari lembar ujian');
       return false;
     };
 
     const handlePaste = (e) => {
+      const activeEl = document.activeElement;
+      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+        return;
+      }
       e.preventDefault();
       e.stopPropagation();
       if (isSubmittedRef.current || isLockedRef.current) return false;
-      if (Date.now() < gracePeriodUntilRef.current) return false;
-
-      handleViolation(
-        'PASTE_ATTEMPT',
-        'Siswa terdeteksi mencoba menempelkan teks dari clipboard ke lembar ujian (Paste)'
-      );
+      handleViolation('PASTE_ATTEMPT', 'Siswa mencoba menempelkan (Paste) teks dari luar ke lembar ujian');
       return false;
     };
 
@@ -504,28 +515,25 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       e.preventDefault();
       e.stopPropagation();
       if (isSubmittedRef.current || isLockedRef.current) return false;
-      if (Date.now() < gracePeriodUntilRef.current) return false;
-
-      handleViolation(
-        'CUT_ATTEMPT',
-        'Siswa terdeteksi mencoba memotong konten ke clipboard sistem (Cut)'
-      );
+      handleViolation('CUT_ATTEMPT', 'Siswa mencoba memotong (Cut) konten lembar ujian');
       return false;
     };
 
     // ========================================================
-    // SENSOR 7: BLOKIR DRAG & DROP SERTA SELEKSI TEKS
+    // SENSOR 7: BLOKIR DRAG AND DROP TEKS / GAMBAR
     // ========================================================
+    const handleSelectStart = (e) => {
+      const activeEl = document.activeElement;
+      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+        return true;
+      }
+      e.preventDefault();
+      return false;
+    };
+
     const handleDragStart = (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (isSubmittedRef.current || isLockedRef.current) return false;
-      if (Date.now() < gracePeriodUntilRef.current) return false;
-
-      handleViolation(
-        'TEXT_SELECTION_ATTEMPT',
-        'Siswa terdeteksi mencoba menyeret (drag) teks soal ujian ke luar'
-      );
       return false;
     };
 
@@ -535,27 +543,10 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       return false;
     };
 
-    const handleSelectStart = (e) => {
-      // Izinkan pemilihan teks hanya jika di dalam input jawaban sah
-      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
-        return true;
-      }
-      e.preventDefault();
-      try {
-        window.getSelection()?.removeAllRanges();
-      } catch (_) {}
-      handleViolation(
-        'TEXT_SELECTION_ATTEMPT',
-        'Siswa terdeteksi mencoba mem-block / menyeleksi teks soal ujian'
-      );
-      return false;
-    };
-
     // ========================================================
-    // SENSOR 8: SHORTCUT KEYBOARD LENGKAP & TOMBOL FISIK
+    // SENSOR 8: PINTASAN KEYBOARD (DESKTOP & TOMBOL FISIK SMARTPHONE)
     // ========================================================
     const handleKeyDown = (e) => {
-      // Jika sedang di layar terkunci, bebas tekan tombol / screenshot tanpa menambah akumulasi pelanggaran
       if (isSubmittedRef.current || isLockedRef.current) return;
 
       const isCtrlOrMeta = e.ctrlKey || e.metaKey;
@@ -623,8 +614,6 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       }
 
       // 4. Pintasan Perekaman Layar (Screen Recording di Laptop / Desktop)
-      // Win+G (Windows Game Bar), Win+Alt+R (Game Bar Record), Win+Shift+R (Snipping Tool Video Recording)
-      // Cmd+Shift+5 (Mac Screen Recording Toolbar), Alt+Shift+R / Ctrl+Shift+R (OBS/Screen Recorder)
       const isScreenRecordingShortcut =
         ((isCtrlOrMeta || e.altKey) && e.shiftKey && key === 'r') ||
         (isCtrlOrMeta && e.altKey && key === 'r') ||
@@ -640,68 +629,71 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         }
         handleViolation(
           'SCREEN_RECORDING_ATTEMPT',
-          'Siswa terdeteksi mencoba mengaktifkan tombol pintas perekaman layar (Screen Recording / Game Bar)'
+          'Siswa terdeteksi mencoba mengaktifkan perekaman layar laptop (Xbox Game Bar / Screen Recorder)'
         );
         return false;
       }
 
-      // 5. Mac Screenshot Shortcut (Cmd+Shift+3 / Cmd+Shift+4)
-      if (e.metaKey && e.shiftKey && (key === '3' || key === '4')) {
-        e.preventDefault();
-        e.stopPropagation();
-        handleViolation(
-          'SCREENSHOT_KEY_ATTEMPT',
-          `Siswa mencoba screenshot di macOS (Cmd+Shift+${key})`
-        );
-        return false;
-      }
-
-      // 6. Developer Tools: F12
-      if (e.key === 'F12' || keyCode === 123) {
+      // 5. Developer Tools: F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C
+      if (
+        e.key === 'F12' ||
+        keyCode === 123 ||
+        (isCtrlOrMeta && e.shiftKey && ['i', 'j', 'c'].includes(key))
+      ) {
         e.preventDefault();
         e.stopPropagation();
         handleViolation(
           'DEVTOOLS_ATTEMPT',
-          'Siswa mencoba membuka Developer Tools / Inspect Element (Tombol F12)'
+          'Siswa mencoba membuka Developer Tools / Inspect Element'
         );
         return false;
       }
 
-      // 7. Developer Tools: Ctrl+Shift+I / Ctrl+Shift+J / Ctrl+Shift+C
-      if (isCtrlOrMeta && e.shiftKey && ['i', 'j', 'c'].includes(key)) {
+      // 6. Navigation Lock: Alt+Left, Alt+Right, Backspace
+      if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
         e.preventDefault();
         e.stopPropagation();
-        handleViolation(
-          'DEVTOOLS_ATTEMPT',
-          `Siswa mencoba membuka Developer Tools (Ctrl+Shift+${key.toUpperCase()})`
-        );
+        return false;
+      }
+
+      if (e.key === 'Backspace') {
+        const activeEl = document.activeElement;
+        const isInputField =
+          activeEl &&
+          (activeEl.tagName === 'INPUT' ||
+            activeEl.tagName === 'TEXTAREA' ||
+            activeEl.isContentEditable);
+        if (!isInputField) {
+          e.preventDefault();
+          return false;
+        }
+      }
+
+      // 7. Shortcut Refresh: F5, Ctrl+R, Ctrl+F5
+      if (e.key === 'F5' || keyCode === 116 || (isCtrlOrMeta && key === 'r')) {
+        e.preventDefault();
+        e.stopPropagation();
+        alert('Fitur muat ulang (Refresh) dinonaktifkan demi menjaga status ujian Anda.');
         return false;
       }
 
       // 8. Shortcut Copy: Ctrl+C / Cmd+C
-      if (isCtrlOrMeta && key === 'c' && !e.shiftKey) {
+      if (isCtrlOrMeta && key === 'c') {
         e.preventDefault();
         e.stopPropagation();
-        try {
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText('');
-          }
-        } catch (_) {}
-        handleViolation(
-          'COPY_ATTEMPT',
-          'Siswa mencoba menyalin teks/soal menggunakan shortcut keyboard (Ctrl+C)'
-        );
+        handleViolation('COPY_ATTEMPT', 'Siswa mencoba menyalin teks soal menggunakan shortcut (Ctrl+C)');
         return false;
       }
 
       // 9. Shortcut Paste: Ctrl+V / Cmd+V
       if (isCtrlOrMeta && key === 'v') {
+        const activeEl = document.activeElement;
+        if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+          return;
+        }
         e.preventDefault();
         e.stopPropagation();
-        handleViolation(
-          'PASTE_ATTEMPT',
-          'Siswa mencoba menempelkan teks dari luar menggunakan shortcut keyboard (Ctrl+V)'
-        );
+        handleViolation('PASTE_ATTEMPT', 'Siswa mencoba menempelkan teks menggunakan shortcut (Ctrl+V)');
         return false;
       }
 
@@ -709,18 +701,15 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       if (isCtrlOrMeta && key === 'x') {
         e.preventDefault();
         e.stopPropagation();
-        handleViolation(
-          'CUT_ATTEMPT',
-          'Siswa mencoba memotong teks menggunakan shortcut keyboard (Ctrl+X)'
-        );
+        handleViolation('CUT_ATTEMPT', 'Siswa mencoba memotong teks menggunakan shortcut (Ctrl+X)');
         return false;
       }
 
       // 11. Shortcut Select All: Ctrl+A / Cmd+A
       if (isCtrlOrMeta && key === 'a') {
-        // Izinkan jika fokus di input text jawaban esai
-        if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
-          return true;
+        const activeEl = document.activeElement;
+        if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+          return;
         }
         e.preventDefault();
         e.stopPropagation();
@@ -765,9 +754,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       }
     };
 
-    // Deteksi pelepasan tombol hardware screenshot (KeyUp / KeyPress)
     const handleKeyUpOrPress = (e) => {
-      // Jika sedang di layar terkunci, abaikan pelepasan tombol
       if (isSubmittedRef.current || isLockedRef.current) return;
 
       const key = e.key ? e.key.toLowerCase() : '';
@@ -822,8 +809,8 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     };
 
     // ========================================================
-    // SENSOR 10: FAST INTEGRITY HEARTBEAT MONITOR (DAEMON 150ms)
-    // Memeriksa Kehilangan Fokus, Perekam Layar, DevTools, dan Split Screen
+    // SENSOR 10: FAST INTEGRITY HEARTBEAT MONITOR (DAEMON 200ms)
+    // Memeriksa Kehilangan Fokus OS (Gemini Live / Ambient Glow / Side Panels), DevTools, & Split Screen
     // ========================================================
     const heartbeatInterval = setInterval(() => {
       if (isSubmittedRef.current || isLockedRef.current) return;
@@ -852,24 +839,35 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       }
 
       // ----------------------------------------------------
-      // SENSOR 10B: Deteksi Kehilangan Fokus & Perekam Layar di HP
-      // Memantau jika peramban kehilangan fokus OS secara instan (> 150ms)
+      // SENSOR 10B: Deteksi Kehilangan Fokus OS & Gemini Live Floating Bar
+      // Memeriksa jika jendela peramban kehilangan fokus interaksi OS secara persisten (> 800ms)
       // ----------------------------------------------------
-      if (isMobileDevice()) {
-        if (!document.hasFocus()) {
+      const activeEl = document.activeElement;
+      const isFocusInsideIframe = activeEl && (activeEl.tagName === 'IFRAME' || activeEl.closest('iframe'));
+
+      // Jika fokus berada di dalam iframe sah Google Form/MS Teams, abaikan
+      if (isFocusInsideIframe) {
+        consecutiveBlurChecksRef.current = 0;
+      } else {
+        const hasFocus = typeof document.hasFocus === 'function' ? document.hasFocus() : true;
+        if (!hasFocus) {
           consecutiveBlurChecksRef.current += 1;
-          // Jika kehilangan fokus selama 2 siklus beruntun (~300ms)
-          if (consecutiveBlurChecksRef.current >= 2) {
+          // Kehilangan fokus persisten selama 4 siklus beruntun (~800ms)
+          if (consecutiveBlurChecksRef.current >= 4) {
             consecutiveBlurChecksRef.current = 0;
             if (document.visibilityState === 'visible') {
               handleViolation(
                 'FLOATING_WINDOW_ATTEMPT',
-                'Siswa terdeteksi membuka mode mengambang (Floating Window) atau perekam layar di atas ujian'
+                isMobileDevice()
+                  ? 'Siswa terdeteksi membuka asisten mengambang (Gemini Live / Floating Assistant) atau bilah notifikasi di HP'
+                  : 'Siswa terdeteksi beralih fokus ke panel samping browser (Gemini / Copilot) atau jendela aplikasi lain di Laptop'
               );
             } else {
               handleViolation(
-                'APP_SWITCH',
-                'Siswa terdeteksi keluar dari layar ujian atau beralih aplikasi di HP'
+                isMobileDevice() ? 'APP_SWITCH' : 'TAB_SWITCH',
+                isMobileDevice()
+                  ? 'Siswa terdeteksi keluar dari layar ujian atau beralih aplikasi di HP'
+                  : 'Siswa terdeteksi berpindah tab peramban atau meminimalkan browser ujian'
               );
             }
             return;
@@ -877,10 +875,12 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         } else {
           consecutiveBlurChecksRef.current = 0;
         }
+      }
 
-        // ----------------------------------------------------
-        // SENSOR 10C: Deteksi Mode Layar Belah (Split Screen / Multi-Window di HP)
-        // ----------------------------------------------------
+      // ----------------------------------------------------
+      // SENSOR 10C: Deteksi Mode Layar Belah (Split Screen di HP)
+      // ----------------------------------------------------
+      if (isMobileDevice()) {
         const isFullscreen = Boolean(
           document.fullscreenElement ||
           document.webkitFullscreenElement ||
@@ -897,7 +897,6 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
           (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA')
         );
 
-        // Pada mode layar belah Android, fullscreen terlepas otomatis dan tinggi innerHeight anjlok < 58% layar
         if (!isFullscreen && heightRatio < 0.58 && !isNativeInputActive) {
           handleViolation(
             'SPLIT_SCREEN_ATTEMPT',
@@ -905,10 +904,10 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
           );
         }
       }
-    }, 150);
+    }, 200);
 
     // ========================================================
-    // REGISTRASI LISTENER DENGAN CAPTURE MODE (PRIORITAS TERTINGGI)
+    // REGISTRASI SELURUH EVENT LISTENER SISTEM KEAMANAN
     // ========================================================
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
@@ -919,7 +918,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     window.addEventListener('blur', handleWindowBlur);
     window.addEventListener('focus', handleWindowFocus);
 
-    // Touch events untuk screenshot HP (Multi-touch 2 jari & 3 jari pada window & document)
+    // Touch events untuk screenshot gesture 3 jari nyata & proteksi HP
     window.addEventListener('touchstart', handleTouchStart, { capture: true, passive: false });
     document.addEventListener('touchstart', handleTouchStart, { capture: true, passive: false });
     if (document.documentElement) {
@@ -938,7 +937,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     window.addEventListener('touchcancel', handleTouchEnd, { capture: true, passive: true });
     document.addEventListener('touchcancel', handleTouchEnd, { capture: true, passive: true });
 
-    // Mouse & context menu events pada window & document
+    // Mouse & context menu events
     window.addEventListener('mousedown', handleMouseDown, true);
     document.addEventListener('mousedown', handleMouseDown, true);
     window.addEventListener('mousemove', handleMouseMove, true);
@@ -951,7 +950,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     window.addEventListener('auxclick', handleAuxClick, true);
     document.addEventListener('auxclick', handleAuxClick, true);
 
-    // Clipboard events pada window & document
+    // Clipboard events
     window.addEventListener('copy', handleCopy, true);
     document.addEventListener('copy', handleCopy, true);
     window.addEventListener('paste', handlePaste, true);
@@ -969,7 +968,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     window.addEventListener('drop', handleDrop, true);
     document.addEventListener('drop', handleDrop, true);
 
-    // Keyboard events pada window & document (capture true)
+    // Keyboard events
     window.addEventListener('keydown', handleKeyDown, true);
     document.addEventListener('keydown', handleKeyDown, true);
     window.addEventListener('keyup', handleKeyDown, true);
@@ -985,6 +984,11 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
 
     return () => {
       clearInterval(heartbeatInterval);
+
+      if (audioSentinelRef.current) {
+        audioSentinelRef.current.stop();
+        audioSentinelRef.current = null;
+      }
 
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);

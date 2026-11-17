@@ -85,6 +85,8 @@ class ViolationLog(models.Model):
         SCREENSHOT_HARDWARE_BUTTON = 'SCREENSHOT_HARDWARE_BUTTON', 'Tombol Fisik Screenshot HP (Volume/Power)'
         SCREEN_RECORDING_ATTEMPT = 'SCREEN_RECORDING_ATTEMPT', 'Perekaman Layar Terdeteksi (Screen Recording)'
         NOTIFICATION_BAR_PULLDOWN = 'NOTIFICATION_BAR_PULLDOWN', 'Menarik Bilah Notifikasi HP'
+        VOICE_ASSISTANT_ATTEMPT = 'VOICE_ASSISTANT_ATTEMPT', 'Asisten Suara AI (Gemini Live)'
+        VOICE_SPEAKING_ATTEMPT = 'VOICE_SPEAKING_ATTEMPT', 'Membaca Soal / Bersuara (Voice AI)'
         SPLIT_SCREEN_ATTEMPT = 'SPLIT_SCREEN_ATTEMPT', 'Mode Layar Belah HP (Split Screen)'
         FLOATING_WINDOW_ATTEMPT = 'FLOATING_WINDOW_ATTEMPT', 'Aplikasi Jendela Mengambang (Floating Window)'
         CONTEXT_MENU_ATTEMPT = 'CONTEXT_MENU_ATTEMPT', 'Mencoba Klik Kanan (Menu Konteks)'
