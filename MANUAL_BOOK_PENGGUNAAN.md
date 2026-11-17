@@ -376,24 +376,32 @@ Untuk paket ujian yang memiliki butir pertanyaan uraian / esai (`ESSAY`), sistem
 
 ---
 
-### 3.8. Menu Baru: Rekap Nilai Siswa & Analisis Butir Soal (/teacher/results)
-Menu ini didesain khusus bagi guru mata pelajaran dan wali kelas untuk membedah hasil evaluasi siswa secara mendalam per butir soal:
+### 3.8. Menu Baru: Rekap Nilai Siswa, Analisis Butir Soal & Unduh Excel (/teacher/results)
+Menu ini didesain khusus bagi guru mata pelajaran dan wali kelas untuk membedah hasil evaluasi siswa secara mendalam per butir soal, memantau capaian kelas spesifik, serta mengunduh berkas rekapitulasi nilai resmi ke format Excel (.xlsx):
 
 - **Membuka Menu:** Klik menu **"Rekap Nilai Siswa"** (`/teacher/results`) berikon piala (`Award`) pada navigasi bilah samping (*sidebar*).
 - **Alur & Fitur Lengkap:**
-  1. **Filter Terpadu 3-Level:**
+  1. **Filter Terpadu 3-Level Presisi:**
      - **Filter 1 (Paket Soal):** Memilih paket asesmen mandiri tertentu atau semua paket.
-     - **Filter 2 (Kelas / Rombel):** Menyaring rombel kelas spesifik atau seluruh kelas.
+     - **Filter 2 (Kelas / Rombel):** Menyaring rombel kelas spesifik (misal: `IXG`). Pada sesi ujian yang diikuti oleh banyak kelas (multi-kelas), sistem secara presisi **hanya menampilkan siswa dari kelas terpilih tersebut** dan tidak mencampuradukkan siswa dari kelas lain.
      - **Filter 3 (Sesi Ujian Aktif):** Menampilkan sesi-sesi ujian yang relevan dengan paket dan kelas yang dipilih.
-  2. **4 Kartu Metrik KPI Kelas:**
-     - **Total Peserta:** Jumlah siswa yang terdaftar dalam sesi ujian.
-     - **Selesai / Terkirim:** Jumlah lembar jawaban yang telah masuk ke server beserta persentase kelulusan/pengiriman.
-     - **Rata-Rata Kelas:** Nilai mean (rerata) perolehan kelas ($0$ s/d $100$).
-     - **Tertinggi / Terendah:** Nilai maksimal dan nilai minimal pada sesi tersebut.
-  3. **Tabel Rekapitulasi Siswa:**
+  2. **Default Tab Selesai (Submitted) & Tab Counter Real-Time:**
+     - Halaman secara otomatis langsung mengarahkan tampilan ke tab **Selesai** sehingga guru langsung melihat daftar siswa yang telah menyelesaikan ujian dan memperoleh nilai.
+     - Tab penyaring terstruktur rapi dengan penghitung jumlah otomatis per kelas: **Selesai (X)**, **Sedang Mengerjakan (Y)**, dan **Semua Peserta (Z)**.
+  3. **4 Kartu Metrik KPI Khusus Kelas Terpilih:**
+     - **Total Peserta:** Jumlah siswa yang terdaftar dalam rombel kelas terpilih.
+     - **Selesai / Terkirim:** Jumlah lembar jawaban yang telah masuk ke server beserta persentase kelulusan/pengiriman kelas.
+     - **Rata-Rata Kelas:** Nilai rerata (mean) khusus kelas yang sedang difilter ($0$ s/d $100$).
+     - **Tertinggi / Terendah:** Rentang nilai maksimal dan minimal siswa pada kelas tersebut.
+  4. **Tabel Rekapitulasi Siswa:**
      - Menampilkan No, NISN, Nama Lengkap Siswa, Kelas/Rombel, Durasi Pengerjaan (misal: `35 Menit`), Rasio Butir Benar (misal: `8/10 Soal`), Sensor Anti-Cheat (lencana hijau `0 Bersih` atau merah `Pelanggaran`), Status Ujian (Selesai/Mengerjakan), dan Nilai Akhir Angka Tebal.
-     - Dilengkapi live search nama siswa atau NISN, serta tab penyaring (*Semua Peserta*, *Selesai*, *Sedang Mengerjakan*).
-  4. **Modal Rincian Lembar Jawaban Siswa per Butir Soal (Tombol "Lihat Jawaban"):**
+     - Dilengkapi live search nama siswa atau NISN.
+  5. **Fitur Download Excel (.xlsx) Sesuai Filter Kelas:**
+     - Klik tombol hijau **"Download Excel"** di atas tabel.
+     - Berkas spreadsheet resmi (`.xlsx`) yang diunduh secara otomatis **difilter spesifik sesuai kelas dan tab status yang sedang aktif** (tidak mengekspor seluruh siswa dari kelas lain).
+     - Header dokumen baris ke-5 otomatis tertulis `Kelas / Rombel: [Nama Kelas]` (misal: `IXG`) dan nama berkas memuat kelas serta status (contoh: `Rekap_Nilai_IPA_IXG_SUBMITTED.xlsx`).
+     - Berkas Excel memuat 2 sheet lengkap: Sheet 1 'Rekap Nilai Siswa' (kolom No, NISN, Nama, Kelas, Status, Durasi, Nilai Akhir, serta rincian benar/salah tiap butir nomor 1..N) dan Sheet 2 'Kunci Jawaban & Butir Soal'.
+  6. **Modal Rincian Lembar Jawaban Siswa per Butir Soal (Tombol "Lihat Jawaban"):**
      - Klik tombol **"Lihat Jawaban"** di baris siswa yang bersangkutan.
      - Sistem memunculkan lembar analisis komparasi komprehensif:
        * Skor total siswa, capaian persentase, jumlah benar, dan jumlah salah.
@@ -404,7 +412,7 @@ Menu ini didesain khusus bagi guru mata pelajaran dan wali kelas untuk membedah 
        * Opsi jawaban visual (hijau untuk kunci jawaban, penanda pilihan siswa).
        * Komparasi teks eksplisit: **Jawaban Siswa** vs **Kunci Jawaban Sistem**.
        * Komentar umpan balik (*feedback*) guru jika ada.
-  5. **Integrasi Dua Arah:**
+  7. **Integrasi Dua Arah:**
      - Tersedia tombol pintas instan menuju **Berita Acara E-Jurnal** (`/teacher/ejournal`) dan tombol pintas ke **Koreksi Esai** (`/teacher/grading`).
 
 ---

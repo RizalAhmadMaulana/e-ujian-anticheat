@@ -54,7 +54,7 @@ export default function StudentResults() {
   const [selectedClassId, setSelectedClassId] = useState('ALL');
   const [selectedSessionId, setSelectedSessionId] = useState(searchParams.get('session') || '');
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusTab, setStatusTab] = useState('ALL'); // ALL | SUBMITTED | IN_PROGRESS
+  const [statusTab, setStatusTab] = useState('SUBMITTED'); // SUBMITTED | IN_PROGRESS | ALL
 
   // Session Results Data
   const [sessionResults, setSessionResults] = useState(null);
@@ -134,8 +134,14 @@ export default function StudentResults() {
     }
   }, [filteredSessions, selectedSessionId]);
 
-  // 3. Fetch Rekapitulasi Nilai Siswa untuk Sesi Terpilih
-  const fetchSessionResults = useCallback(async (sessionId) => {
+  // Helper selectedClassObj
+  const selectedClassObj = useMemo(() => {
+    if (selectedClassId === 'ALL') return null;
+    return classrooms.find((c) => String(c.id) === String(selectedClassId));
+  }, [classrooms, selectedClassId]);
+
+  // 3. Fetch Rekapitulasi Nilai Siswa untuk Sesi & Kelas Terpilih
+  const fetchSessionResults = useCallback(async (sessionId, classId = selectedClassId) => {
     if (!sessionId) {
       setSessionResults(null);
       return;
@@ -144,7 +150,8 @@ export default function StudentResults() {
     setIsLoadingResults(true);
     setResultsError('');
     try {
-      const data = await getSessionStudentResultsApi(sessionId);
+      const clsParam = (classId && classId !== 'ALL') ? classId : null;
+      const data = await getSessionStudentResultsApi(sessionId, clsParam);
       setSessionResults(data);
     } catch (err) {
       console.error('Gagal mengambil rekapitulasi nilai sesi:', err);
@@ -153,13 +160,13 @@ export default function StudentResults() {
     } finally {
       setIsLoadingResults(false);
     }
-  }, []);
+  }, [selectedClassId]);
 
   useEffect(() => {
     if (selectedSessionId) {
-      fetchSessionResults(selectedSessionId);
+      fetchSessionResults(selectedSessionId, selectedClassId);
     }
-  }, [selectedSessionId, fetchSessionResults]);
+  }, [selectedSessionId, selectedClassId, fetchSessionResults]);
 
   // 4. Fetch Rincian Lembar Jawaban Siswa (Breakdown Modal)
   const handleOpenBreakdownModal = async (student) => {
@@ -183,14 +190,58 @@ export default function StudentResults() {
     setBreakdownData(null);
   };
 
-  // 5. Data Siswa yang Sudah Terfilter
-  const filteredStudents = useMemo(() => {
+  // 5. Isolasi Data Siswa Berdasarkan Kelas Terpilih
+  const classStudents = useMemo(() => {
     if (!sessionResults?.students) return [];
+    if (selectedClassId === 'ALL') return sessionResults.students;
+
+    const targetName = selectedClassObj?.name?.trim().toLowerCase();
+    const targetIdStr = String(selectedClassId);
 
     return sessionResults.students.filter((st) => {
+      if (st.classroom_id && String(st.classroom_id) === targetIdStr) return true;
+      if (targetName && st.classroom_name && st.classroom_name.trim().toLowerCase() === targetName) return true;
+      return false;
+    });
+  }, [sessionResults, selectedClassId, selectedClassObj]);
+
+  // 6. Hitung Statistik Nilai Khusus Kelas Terpilih
+  const classStats = useMemo(() => {
+    const total = classStudents.length;
+    const submitted = classStudents.filter((s) => s.status === 'SUBMITTED');
+    const submittedCount = submitted.length;
+    const inProgressCount = classStudents.filter((s) => s.status !== 'SUBMITTED' && s.status !== 'NOT_STARTED').length;
+
+    let average = '-';
+    let highest = 0;
+    let lowest = 0;
+
+    if (submittedCount > 0) {
+      const scores = submitted.map((s) => Number(s.final_score !== undefined ? s.final_score : s.total_score) || 0);
+      const sum = scores.reduce((a, b) => a + b, 0);
+      average = Math.round((sum / submittedCount) * 10) / 10;
+      highest = Math.max(...scores);
+      lowest = Math.min(...scores);
+    }
+
+    return {
+      total,
+      submittedCount,
+      inProgressCount,
+      average,
+      highest,
+      lowest,
+    };
+  }, [classStudents]);
+
+  // 7. Filter Akhir Data Siswa (Tab Status + Search Query)
+  const filteredStudents = useMemo(() => {
+    if (!classStudents) return [];
+
+    return classStudents.filter((st) => {
       // Filter Status Tab
       if (statusTab === 'SUBMITTED' && st.status !== 'SUBMITTED') return false;
-      if (statusTab === 'IN_PROGRESS' && st.status === 'SUBMITTED') return false;
+      if (statusTab === 'IN_PROGRESS' && (st.status === 'SUBMITTED' || st.status === 'NOT_STARTED')) return false;
 
       // Filter Pencarian Teks
       if (searchQuery.trim()) {
@@ -203,7 +254,7 @@ export default function StudentResults() {
 
       return true;
     });
-  }, [sessionResults, statusTab, searchQuery]);
+  }, [classStudents, statusTab, searchQuery]);
 
   // Helper Durasi Pengerjaan
   const formatDuration = (started, finished) => {
@@ -224,7 +275,7 @@ export default function StudentResults() {
     return sessions.find((s) => String(s.id) === String(selectedSessionId)) || null;
   }, [sessions, selectedSessionId]);
 
-  // Handler Download Rekapitulasi Nilai & Analisis Butir Soal ke Excel (.xlsx)
+  // Handler Download Rekapitulasi Nilai & Analisis Butir Soal ke Excel (.xlsx) Sesuai Filter
   const handleDownloadExcel = async () => {
     if (!selectedSessionId) {
       alert('Silakan pilih sesi ujian terlebih dahulu.');
@@ -233,9 +284,14 @@ export default function StudentResults() {
     setIsExportingExcel(true);
     try {
       const currentPkgTitle = currentSessionObj?.title || 'Rekap_Ujian';
-      const currentCls = currentSessionObj?.classroom_display || currentSessionObj?.classroom_name || 'Kelas';
-      const cleanFilename = `Rekap_Nilai_${currentPkgTitle}_${currentCls}.xlsx`.replace(/[^\w.-]/g, '_');
-      await downloadSessionResultsExcelApi(selectedSessionId, cleanFilename);
+      const classNameForFile = selectedClassObj?.name || (selectedClassId !== 'ALL' ? selectedClassId : (currentSessionObj?.classroom_display || currentSessionObj?.classroom_name || 'Semua_Kelas'));
+      const statusSuffix = statusTab !== 'ALL' ? `_${statusTab}` : '';
+      const cleanFilename = `Rekap_Nilai_${currentPkgTitle}_${classNameForFile}${statusSuffix}.xlsx`.replace(/[^\w.-]/g, '_');
+      
+      const classroomParam = selectedClassId !== 'ALL' ? (selectedClassObj?.name || selectedClassId) : null;
+      const statusParam = statusTab !== 'ALL' ? statusTab : null;
+
+      await downloadSessionResultsExcelApi(selectedSessionId, cleanFilename, classroomParam, statusParam);
     } catch (err) {
       console.error('Gagal mengunduh file excel rekapitulasi nilai:', err);
       alert('Gagal mengunduh rekap Excel: ' + (err.response?.data?.error || err.message || 'Terjadi kesalahan'));
@@ -391,11 +447,13 @@ export default function StudentResults() {
             </div>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-2xl sm:text-3xl font-extrabold font-mono text-zinc-900">
-                {sessionResults.statistics?.total_students || 0}
+                {classStats.total}
               </span>
               <span className="text-xs text-zinc-500 font-medium">Siswa</span>
             </div>
-            <div className="text-[11px] text-zinc-400 mt-1">Terdaftar dalam sesi ini</div>
+            <div className="text-[11px] text-zinc-400 mt-1">
+              {selectedClassObj ? `Terdaftar di kelas ${selectedClassObj.name}` : 'Terdaftar dalam sesi ini'}
+            </div>
           </div>
 
           {/* Card 2: Sudah Selesai / Terkirim */}
@@ -408,11 +466,11 @@ export default function StudentResults() {
             </div>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-2xl sm:text-3xl font-extrabold font-mono text-emerald-600">
-                {sessionResults.statistics?.submitted_count || 0}
+                {classStats.submittedCount}
               </span>
               <span className="text-xs text-zinc-500 font-medium">
-                {sessionResults.statistics?.total_students > 0
-                  ? `(${Math.round(((sessionResults.statistics?.submitted_count || 0) / sessionResults.statistics.total_students) * 100)}%)`
+                {classStats.total > 0
+                  ? `(${Math.round((classStats.submittedCount / classStats.total) * 100)}%)`
                   : ''}
               </span>
             </div>
@@ -429,11 +487,11 @@ export default function StudentResults() {
             </div>
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-2xl sm:text-3xl font-extrabold font-mono text-amber-600">
-                {sessionResults.statistics?.average_score !== undefined ? sessionResults.statistics.average_score : '-'}
+                {classStats.average}
               </span>
               <span className="text-xs text-zinc-500 font-medium">/ 100</span>
             </div>
-            <div className="text-[11px] text-zinc-400 mt-1">Skor rerata kelas</div>
+            <div className="text-[11px] text-zinc-400 mt-1">Skor rerata {selectedClassObj?.name || 'kelas'}</div>
           </div>
 
           {/* Card 4: Tertinggi & Terendah */}
@@ -446,11 +504,11 @@ export default function StudentResults() {
             </div>
             <div className="mt-2 flex items-baseline gap-2 font-mono">
               <span className="text-xl sm:text-2xl font-black text-emerald-600">
-                {sessionResults.statistics?.highest_score ?? 0}
+                {classStats.highest}
               </span>
               <span className="text-zinc-400 font-light">/</span>
               <span className="text-xl sm:text-2xl font-black text-rose-500">
-                {sessionResults.statistics?.lowest_score ?? 0}
+                {classStats.lowest}
               </span>
             </div>
             <div className="text-[11px] text-zinc-400 mt-1">Rentang nilai siswa</div>
@@ -468,17 +526,6 @@ export default function StudentResults() {
           <div className="flex items-center gap-1 bg-zinc-200/70 p-1 rounded-lg overflow-x-auto">
             <button
               type="button"
-              onClick={() => setStatusTab('ALL')}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition whitespace-nowrap ${
-                statusTab === 'ALL'
-                  ? 'bg-white text-zinc-900 shadow-2xs font-semibold'
-                  : 'text-zinc-600 hover:text-zinc-900'
-              }`}
-            >
-              Semua Peserta ({sessionResults?.students?.length || 0})
-            </button>
-            <button
-              type="button"
               onClick={() => setStatusTab('SUBMITTED')}
               className={`px-3 py-1.5 rounded-md text-xs font-medium transition whitespace-nowrap ${
                 statusTab === 'SUBMITTED'
@@ -486,7 +533,7 @@ export default function StudentResults() {
                   : 'text-zinc-600 hover:text-zinc-900'
               }`}
             >
-              Selesai ({sessionResults?.students?.filter((s) => s.status === 'SUBMITTED').length || 0})
+              Selesai ({classStats.submittedCount})
             </button>
             <button
               type="button"
@@ -497,7 +544,18 @@ export default function StudentResults() {
                   : 'text-zinc-600 hover:text-zinc-900'
               }`}
             >
-              Sedang Mengerjakan ({sessionResults?.students?.filter((s) => s.status !== 'SUBMITTED' && s.status !== 'NOT_STARTED').length || 0})
+              Sedang Mengerjakan ({classStats.inProgressCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => setStatusTab('ALL')}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition whitespace-nowrap ${
+                statusTab === 'ALL'
+                  ? 'bg-white text-zinc-900 shadow-2xs font-semibold'
+                  : 'text-zinc-600 hover:text-zinc-900'
+              }`}
+            >
+              Semua Peserta ({classStats.total})
             </button>
           </div>
 
@@ -575,7 +633,9 @@ export default function StudentResults() {
                 <p className="text-xs text-zinc-400 max-w-sm mx-auto">
                   {searchQuery 
                     ? `Tidak ditemukan siswa dengan kata kunci "${searchQuery}". Coba kata kunci lain.`
-                    : 'Belum ada siswa yang mengerjakan atau terdaftar di sesi ini.'}
+                    : statusTab === 'SUBMITTED'
+                      ? `Belum ada siswa ${selectedClassObj ? `kelas ${selectedClassObj.name}` : ''} yang berstatus Selesai pada sesi ini.`
+                      : `Belum ada siswa ${selectedClassObj ? `kelas ${selectedClassObj.name}` : ''} yang terdaftar atau mengerjakan sesi ini.`}
                 </p>
               </div>
             </div>

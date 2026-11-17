@@ -718,18 +718,34 @@ class SessionStudentResultsView(APIView):
         total_questions_count = len(questions)
         total_max_points = sum(q.points for q in questions)
 
+        # Ambil filter kelas dari parameter query (ID atau nama kelas)
+        classroom_param = request.query_params.get('classroom') or request.query_params.get('classroom_id')
+        target_classroom = None
+        if classroom_param and str(classroom_param).strip().upper() != 'ALL':
+            from apps.accounts.models import ClassRoom
+            if str(classroom_param).strip().isdigit():
+                target_classroom = ClassRoom.objects.filter(id=int(classroom_param)).first()
+            if not target_classroom:
+                target_classroom = ClassRoom.objects.filter(name__iexact=str(classroom_param).strip()).first()
+
         # Ambil daftar seluruh siswa yang berhak mengikuti sesi ujian ini
-        if session.allow_all_classes:
-            students_qs = list(User.objects.filter(role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name'))
-        elif hasattr(session, 'classrooms') and session.classrooms.exists():
-            students_qs = list(User.objects.filter(classroom__in=session.classrooms.all(), role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name'))
-        elif session.classroom:
-            students_qs = list(User.objects.filter(classroom=session.classroom, role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name'))
+        if target_classroom:
+            students_qs = list(User.objects.filter(classroom=target_classroom, role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name'))
+            attempts_qs = StudentAttempt.objects.filter(session=session, student__classroom=target_classroom).select_related('student', 'student__classroom')
+            classroom_display_name = target_classroom.name
         else:
-            students_qs = list(User.objects.filter(role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name'))
+            if session.allow_all_classes:
+                students_qs = list(User.objects.filter(role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name'))
+            elif hasattr(session, 'classrooms') and session.classrooms.exists():
+                students_qs = list(User.objects.filter(classroom__in=session.classrooms.all(), role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name'))
+            elif session.classroom:
+                students_qs = list(User.objects.filter(classroom=session.classroom, role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name'))
+            else:
+                students_qs = list(User.objects.filter(role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name'))
+            attempts_qs = StudentAttempt.objects.filter(session=session).select_related('student', 'student__classroom')
+            classroom_display_name = session.get_classrooms_display()
 
         # Peta attempt yang sudah tersimpan untuk sesi ini
-        attempts_qs = StudentAttempt.objects.filter(session=session).select_related('student', 'student__classroom')
         attempts_by_student = {att.student_id: att for att in attempts_qs}
 
         # Gabungkan siswa yang terdaftar maupun siswa yang telah memiliki attempt
@@ -801,7 +817,8 @@ class SessionStudentResultsView(APIView):
                     "student_id": str(st.id),
                     "nisn": st.nisn or st.username or "-",
                     "student_name": st.full_name or st.username,
-                    "classroom_name": st.classroom.name if getattr(st, 'classroom', None) else session.get_classrooms_display(),
+                    "classroom_id": st.classroom_id,
+                    "classroom_name": st.classroom.name if getattr(st, 'classroom', None) else classroom_display_name,
                     "status": att.status,
                     "status_label": att.get_status_display(),
                     "total_score": score_val,
@@ -817,7 +834,8 @@ class SessionStudentResultsView(APIView):
                     "student_id": str(st.id),
                     "nisn": st.nisn or st.username or "-",
                     "student_name": st.full_name or st.username,
-                    "classroom_name": st.classroom.name if getattr(st, 'classroom', None) else session.get_classrooms_display(),
+                    "classroom_id": st.classroom_id,
+                    "classroom_name": st.classroom.name if getattr(st, 'classroom', None) else classroom_display_name,
                     "status": "NOT_STARTED",
                     "status_label": "Belum Masuk",
                     "total_score": None,
@@ -841,7 +859,7 @@ class SessionStudentResultsView(APIView):
             "session_id": str(session.id),
             "session_title": session_title,
             "subject_name": subject_name,
-            "classroom_display": session.get_classrooms_display(),
+            "classroom_display": classroom_display_name,
             "exam_type": exam_type,
             "total_questions": total_questions_count,
             "total_max_points": total_max_points,
@@ -1084,6 +1102,7 @@ class ExportSessionResultsExcelView(APIView):
     """
     GET /api/exams/sessions/<uuid:session_id>/export-results-excel/
     Mengunduh berkas Excel (.xlsx) resmi rekapitulasi nilai dan analisis lembar jawaban per butir soal
+    Mendukung parameter query ?classroom=... dan ?status=...
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -1092,16 +1111,33 @@ class ExportSessionResultsExcelView(APIView):
         package = session.package
         questions = list(Question.objects.filter(package=package).prefetch_related('options').order_by('order_number')) if package else []
 
-        if session.allow_all_classes:
-            students_qs = list(User.objects.filter(role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name'))
-        elif hasattr(session, 'classrooms') and session.classrooms.exists():
-            students_qs = list(User.objects.filter(classroom__in=session.classrooms.all(), role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name'))
-        elif session.classroom:
-            students_qs = list(User.objects.filter(classroom=session.classroom, role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name'))
-        else:
-            students_qs = list(User.objects.filter(role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name'))
+        classroom_param = request.query_params.get('classroom') or request.query_params.get('classroom_id')
+        status_param = request.query_params.get('status')
 
-        attempts_qs = StudentAttempt.objects.filter(session=session).select_related('student', 'student__classroom')
+        target_classroom = None
+        if classroom_param and str(classroom_param).strip().upper() != 'ALL':
+            from apps.accounts.models import ClassRoom
+            if str(classroom_param).strip().isdigit():
+                target_classroom = ClassRoom.objects.filter(id=int(classroom_param)).first()
+            if not target_classroom:
+                target_classroom = ClassRoom.objects.filter(name__iexact=str(classroom_param).strip()).first()
+
+        if target_classroom:
+            students_qs = list(User.objects.filter(classroom=target_classroom, role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name'))
+            attempts_qs = StudentAttempt.objects.filter(session=session, student__classroom=target_classroom).select_related('student', 'student__classroom')
+            classroom_display_name = target_classroom.name
+        else:
+            if session.allow_all_classes:
+                students_qs = list(User.objects.filter(role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name'))
+            elif hasattr(session, 'classrooms') and session.classrooms.exists():
+                students_qs = list(User.objects.filter(classroom__in=session.classrooms.all(), role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name'))
+            elif session.classroom:
+                students_qs = list(User.objects.filter(classroom=session.classroom, role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name'))
+            else:
+                students_qs = list(User.objects.filter(role=User.RoleChoices.STUDENT).select_related('classroom').order_by('full_name'))
+            attempts_qs = StudentAttempt.objects.filter(session=session).select_related('student', 'student__classroom')
+            classroom_display_name = session.get_classrooms_display()
+
         attempts_by_student = {att.student_id: att for att in attempts_qs}
 
         enrolled_student_ids = set(s.id for s in students_qs)
@@ -1162,7 +1198,7 @@ class ExportSessionResultsExcelView(APIView):
                     "student_id": st.id,
                     "nisn": st.nisn or st.username or "-",
                     "student_name": st.full_name or st.username,
-                    "classroom_name": st.classroom.name if getattr(st, 'classroom', None) else session.get_classrooms_display(),
+                    "classroom_name": st.classroom.name if getattr(st, 'classroom', None) else classroom_display_name,
                     "status": att.status,
                     "total_score": score_val,
                     "correct_count": correct_count,
@@ -1173,19 +1209,30 @@ class ExportSessionResultsExcelView(APIView):
                     "student_id": st.id,
                     "nisn": st.nisn or st.username or "-",
                     "student_name": st.full_name or st.username,
-                    "classroom_name": st.classroom.name if getattr(st, 'classroom', None) else session.get_classrooms_display(),
+                    "classroom_name": st.classroom.name if getattr(st, 'classroom', None) else classroom_display_name,
                     "status": "NOT_STARTED",
                     "total_score": None,
                     "correct_count": 0,
                     "violation_count": 0,
                 })
 
-        from .excel_results_generator import generate_session_results_excel
-        excel_bytes = generate_session_results_excel(session, questions, students_data, attempts_by_student)
+        # Filter status jika diminta (contoh: SUBMITTED atau WORKING)
+        if status_param and str(status_param).strip().upper() != 'ALL':
+            st_filter = str(status_param).strip().upper()
+            if st_filter == 'SUBMITTED':
+                students_data = [s for s in students_data if s["status"] == "SUBMITTED"]
+            elif st_filter in ['WORKING', 'IN_PROGRESS']:
+                students_data = [s for s in students_data if s["status"] in ["WORKING", "LOCKED_VIOLATION"]]
+            else:
+                students_data = [s for s in students_data if s["status"] == st_filter]
 
-        cls_slug = session.get_classrooms_display().replace(', ', '_').replace(' ', '_')
+        from .excel_results_generator import generate_session_results_excel
+        excel_bytes = generate_session_results_excel(session, questions, students_data, attempts_by_student, classroom_display=classroom_display_name)
+
+        cls_slug = classroom_display_name.replace(', ', '_').replace(' ', '_')
         subj_slug = (package.subject_name or 'Ujian').replace(' ', '_') if package else 'Ujian'
-        filename = f"Rekap_Nilai_{cls_slug}_{subj_slug}.xlsx"
+        status_slug = f"_{status_param}" if (status_param and str(status_param).strip().upper() != 'ALL') else ""
+        filename = f"Rekap_Nilai_{cls_slug}_{subj_slug}{status_slug}.xlsx"
 
         response = HttpResponse(
             excel_bytes,

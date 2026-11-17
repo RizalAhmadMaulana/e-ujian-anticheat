@@ -174,8 +174,12 @@ export const saveEssayGradeApi = async (sessionId, payload) => {
 // -------------------------------------------------------------
 // REKAP NILAI & ANALISIS LEMBAR JAWABAN SISWA (ROLE GURU)
 // -------------------------------------------------------------
-export const getSessionStudentResultsApi = async (sessionId) => {
-  const response = await axiosInstance.get(`/exams/sessions/${sessionId}/student-results/`);
+export const getSessionStudentResultsApi = async (sessionId, classroomId = null) => {
+  const params = {};
+  if (classroomId && String(classroomId).toUpperCase() !== 'ALL') {
+    params.classroom = classroomId;
+  }
+  const response = await axiosInstance.get(`/exams/sessions/${sessionId}/student-results/`, { params });
   return response.data;
 };
 
@@ -184,8 +188,21 @@ export const getStudentAttemptBreakdownApi = async (attemptId) => {
   return response.data;
 };
 
-export const downloadSessionResultsExcelApi = async (sessionId, defaultFilename = 'Rekap_Nilai_Siswa.xlsx') => {
+export const downloadSessionResultsExcelApi = async (
+  sessionId, 
+  defaultFilename = 'Rekap_Nilai_Siswa.xlsx', 
+  classroomId = null, 
+  status = null
+) => {
+  const params = {};
+  if (classroomId && String(classroomId).toUpperCase() !== 'ALL') {
+    params.classroom = classroomId;
+  }
+  if (status && String(status).toUpperCase() !== 'ALL') {
+    params.status = status;
+  }
   const response = await axiosInstance.get(`/exams/sessions/${sessionId}/export-results-excel/`, {
+    params,
     responseType: 'blob',
   });
   const blob = new Blob([response.data], { 

@@ -5,7 +5,7 @@ from openpyxl.utils import get_column_letter
 from apps.accounts.models import SchoolSetting
 from apps.exams.models import Question
 
-def generate_session_results_excel(session, questions, students_data, attempts_by_student) -> bytes:
+def generate_session_results_excel(session, questions, students_data, attempts_by_student, classroom_display=None) -> bytes:
     """
     Menghasilkan file Excel (.xlsx) resmi Rekapitulasi Nilai Siswa
     lengkap dengan analisis jawaban per butir soal (benar/salah/poin) dan kunci jawaban.
@@ -68,10 +68,11 @@ def generate_session_results_excel(session, questions, students_data, attempts_b
     subj_name = session.package.subject_name if session.package else "-"
     date_str = session.start_time.strftime("%d %B %Y") if session.start_time else "-"
     time_str = f"{session.start_time.strftime('%H:%M')} - {session.end_time.strftime('%H:%M')} WIB" if session.start_time and session.end_time else "-"
+    cls_display = classroom_display if classroom_display else session.get_classrooms_display()
 
     meta_info = [
         ("Mata Pelajaran", subj_name, "Hari / Tanggal", date_str),
-        ("Kelas / Rombel", session.get_classrooms_display(), "Waktu Sesi", time_str),
+        ("Kelas / Rombel", cls_display, "Waktu Sesi", time_str),
         ("Judul Paket Soal", pkg_title, "Durasi Ujian", f"{session.duration_minutes} Menit"),
         ("Mode Asesmen", "Zero-Tolerance Anti-Cheat", "Jumlah Soal", f"{len(questions)} Butir"),
     ]
