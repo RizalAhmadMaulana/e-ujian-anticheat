@@ -949,6 +949,61 @@ export default function ExamWorkspace() {
       )}
 
       {/* ======================================================== */}
+      {/* 2B. 1-TAP FULLSCREEN ENFORCEMENT OVERLAY */}
+      {/* Mengunci layar seketika ke mode fullscreen saat siswa mulai masuk ujian */}
+      {/* Bebas popup izin mikrofon & 100% fullscreen otomatis tanpa kendala */}
+      {/* ======================================================== */}
+      {!isFullscreenActive && !activeAttempt.isLocked && !activeAttempt.examSubmittedAt && (
+        <div 
+          onClick={handleReEnterFullscreen}
+          className="fixed inset-0 z-[99990] bg-[#090D16]/95 backdrop-blur-md flex items-center justify-center p-4 text-center cursor-pointer select-none"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            minHeight: '100dvh',
+            height: '100%',
+            backgroundColor: 'rgba(9, 13, 22, 0.95)',
+            zIndex: 99990,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <div className="max-w-sm w-full p-6 rounded-2xl bg-zinc-900/90 border border-amber-500/40 shadow-2xl flex flex-col items-center space-y-4 m-auto">
+            <div className="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 animate-pulse">
+              <Maximize2 className="w-8 h-8" />
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-lg font-bold text-white tracking-tight">
+                Mode Layar Penuh Ujian
+              </h3>
+              <p className="text-zinc-300 text-xs leading-relaxed">
+                Sistem mewajibkan mode layar penuh (Fullscreen) untuk mencegah kecurangan. Ketuk tombol di bawah untuk mengaktifkan layar penuh secara otomatis.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleReEnterFullscreen}
+              className="w-full py-3 px-5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-zinc-950 font-bold text-xs uppercase tracking-wider shadow-lg transition active:scale-[0.98] flex items-center justify-center gap-2"
+            >
+              <Maximize2 className="w-4 h-4" />
+              <span>Aktifkan Layar Penuh (1-Ketuk)</span>
+            </button>
+
+            <span className="text-[11px] text-zinc-400">
+              Ketuk di mana saja pada layar ini untuk melanjutkan
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
       {/* 3. AREA PENGERJAAN SOAL (HYBRID RENDERER) */}
       {/* Disembunyikan seketika saat terkunci agar bebas intip & tidak direkam */}
       {/* ======================================================== */}
@@ -988,30 +1043,6 @@ export default function ExamWorkspace() {
             {/* Security Notice Bar for External Forms */}
             <div 
               className="bg-amber-950/90 border-b border-amber-800/80 px-3 py-1.5 flex items-center justify-between text-[11px] text-amber-200 shrink-0 z-10 shadow-xs"
-              onTouchStart={(e) => {
-                if (activeAttempt.isLocked) return;
-                const count = Math.max(e.touches?.length || 0, e.targetTouches?.length || 0, e.changedTouches?.length || 0);
-                if (count >= 2) {
-                  if (e.cancelable) e.preventDefault();
-                  e.stopPropagation();
-                  setScreenshotToast(`Tangkapan layar ${count} jari diblokir! Layar ujian Anda dibekukan.`);
-                  setTimeout(() => setScreenshotToast(''), 3000);
-                  handleSecurityViolation('SCREENSHOT_3FINGER_GESTURE', `Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture ${count} jari di HP`);
-                  triggerViolationLock('SCREENSHOT_3FINGER_GESTURE', `Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture ${count} jari di HP`);
-                }
-              }}
-              onTouchMove={(e) => {
-                if (activeAttempt.isLocked) return;
-                const count = Math.max(e.touches?.length || 0, e.targetTouches?.length || 0, e.changedTouches?.length || 0);
-                if (count >= 2) {
-                  if (e.cancelable) e.preventDefault();
-                  e.stopPropagation();
-                  setScreenshotToast(`Tangkapan layar ${count} jari diblokir! Layar ujian Anda dibekukan.`);
-                  setTimeout(() => setScreenshotToast(''), 3000);
-                  handleSecurityViolation('SCREENSHOT_3FINGER_GESTURE', `Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture ${count} jari di HP`);
-                  triggerViolationLock('SCREENSHOT_3FINGER_GESTURE', `Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture ${count} jari di HP`);
-                }
-              }}
             >
               <div className="flex items-center gap-1.5 truncate">
                 <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />

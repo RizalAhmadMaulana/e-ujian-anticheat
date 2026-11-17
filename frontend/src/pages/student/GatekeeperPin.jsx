@@ -136,6 +136,17 @@ export default function GatekeeperPin() {
       return;
     }
 
+    // 1. PANGGIL FULLSCREEN SEGERA PADA USER GESTURE SINKRON (Sebelum Async Network Calls)
+    // Menjamin browser HP langsung masuk ke mode Fullscreen otomatis tanpa terblokir batasan gesture async
+    try {
+      const docEl = document.documentElement;
+      if (docEl.requestFullscreen) {
+        docEl.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
+      } else if (docEl.webkitRequestFullscreen) {
+        docEl.webkitRequestFullscreen();
+      }
+    } catch (_) {}
+
     setIsChecking(true);
 
     try {
