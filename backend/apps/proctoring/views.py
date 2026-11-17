@@ -343,24 +343,26 @@ class ViolationHistoryListView(APIView):
         if package_id and package_id != 'ALL':
             queryset = queryset.filter(attempt__session__package_id=package_id)
         if classroom_param and str(classroom_param).strip().upper() != 'ALL':
+            import re
             from apps.accounts.models import ClassRoom
+            param_str = str(classroom_param).strip()
             target_class = None
-            if str(classroom_param).strip().isdigit():
-                target_class = ClassRoom.objects.filter(id=int(classroom_param)).first()
+            if param_str.isdigit():
+                target_class = ClassRoom.objects.filter(id=int(param_str)).first()
             if not target_class:
-                clean_cls_name = str(classroom_param).split('(')[0].strip()
-                target_class = ClassRoom.objects.filter(name__iexact=clean_cls_name).first() or ClassRoom.objects.filter(name__iexact=str(classroom_param).strip()).first()
+                clean_cls_name = re.sub(r'^(kelas|rombel)\s+', '', param_str.split('(')[0].strip(), flags=re.IGNORECASE)
+                target_class = (
+                    ClassRoom.objects.filter(name__iexact=clean_cls_name).first() or
+                    ClassRoom.objects.filter(name__iexact=param_str).first() or
+                    ClassRoom.objects.filter(name__icontains=clean_cls_name).first()
+                )
 
             if target_class:
-                queryset = queryset.filter(
-                    Q(attempt__student__classroom=target_class) |
-                    Q(attempt__session__classroom=target_class)
-                )
+                # Filter strictly by the student's classroom (crucial for multi-class sessions)
+                queryset = queryset.filter(attempt__student__classroom=target_class)
             else:
-                queryset = queryset.filter(
-                    Q(attempt__student__classroom__name__icontains=str(classroom_param).strip()) |
-                    Q(attempt__session__classroom__name__icontains=str(classroom_param).strip())
-                )
+                clean_name = re.sub(r'^(kelas|rombel)\s+', '', param_str.split('(')[0].strip(), flags=re.IGNORECASE)
+                queryset = queryset.filter(attempt__student__classroom__name__icontains=clean_name)
         if search:
             from django.db.models import Q
             queryset = queryset.filter(
@@ -424,6 +426,7 @@ class ViolationHistoryBulkDeleteView(APIView):
     def post(self, request):
         ids = request.data.get('ids', [])
         session_id = request.data.get('session_id')
+        classroom_param = request.data.get('classroom_id') or request.data.get('classroom')
 
         if not ids and not session_id:
             return Response({
@@ -431,11 +434,27 @@ class ViolationHistoryBulkDeleteView(APIView):
                 "error": "Parameter ids atau session_id wajib disertakan."
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        queryset = ViolationLog.objects.select_related('attempt', 'attempt__session')
+        queryset = ViolationLog.objects.select_related('attempt', 'attempt__session', 'attempt__student__classroom')
         if ids:
             queryset = queryset.filter(id__in=ids)
         elif session_id:
             queryset = queryset.filter(attempt__session_id=session_id)
+            if classroom_param and str(classroom_param).strip().upper() != 'ALL':
+                import re
+                from apps.accounts.models import ClassRoom
+                param_str = str(classroom_param).strip()
+                target_class = None
+                if param_str.isdigit():
+                    target_class = ClassRoom.objects.filter(id=int(param_str)).first()
+                if not target_class:
+                    clean_cls_name = re.sub(r'^(kelas|rombel)\s+', '', param_str.split('(')[0].strip(), flags=re.IGNORECASE)
+                    target_class = (
+                        ClassRoom.objects.filter(name__iexact=clean_cls_name).first() or 
+                        ClassRoom.objects.filter(name__iexact=param_str).first() or
+                        ClassRoom.objects.filter(name__icontains=clean_cls_name).first()
+                    )
+                if target_class:
+                    queryset = queryset.filter(attempt__student__classroom=target_class)
 
         affected_attempts = list(set(v.attempt for v in queryset))
         affected_sessions = list(set(att.session for att in affected_attempts))

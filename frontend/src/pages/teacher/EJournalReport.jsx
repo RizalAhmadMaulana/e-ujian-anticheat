@@ -65,6 +65,14 @@ export default function EJournalReport() {
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [isExportingExcel, setIsExportingExcel] = useState(false);
 
+  // Helper resolusi objek & nama kelas terpilih
+  const selectedClassObj = useMemo(() => {
+    if (!selectedClassFilter || selectedClassFilter === 'ALL') return null;
+    return allClassrooms.find((c) => String(c.id) === String(selectedClassFilter) || c.name === selectedClassFilter) || null;
+  }, [selectedClassFilter, allClassrooms]);
+
+  const selectedClassName = selectedClassObj ? selectedClassObj.name : (selectedClassFilter !== 'ALL' ? selectedClassFilter : null);
+
   // 1. Ambil seluruh data sesi, paket, kelas, dan pengaturan sekolah dari backend
   useEffect(() => {
     const initializeData = async () => {
@@ -101,22 +109,42 @@ export default function EJournalReport() {
   // 2. Filter sesi berdasarkan pilihan Paket Soal & Kelas
   const filteredSessions = useMemo(() => {
     return allSessions.filter((ses) => {
-      const matchPackage = 
-        selectedPackageFilter === 'ALL' || 
-        ses.package === selectedPackageFilter || 
-        ses.packageId === selectedPackageFilter || 
-        ses.package_id === selectedPackageFilter;
+      // 1. Filter Paket Soal
+      if (selectedPackageFilter !== 'ALL') {
+        const sPkgId = ses.package?.id || ses.package || ses.packageId || ses.package_id;
+        if (sPkgId && String(sPkgId) !== String(selectedPackageFilter)) return false;
+      }
 
-      const sessionClass = ses.classroom || ses.classroom_name || '';
-      const matchClass = 
-        selectedClassFilter === 'ALL' || 
-        ses.allow_all_classes ||
-        sessionClass === selectedClassFilter ||
-        sessionClass.split(',').map(s => s.trim().toLowerCase()).includes(selectedClassFilter.trim().toLowerCase());
+      // 2. Filter Kelas
+      if (selectedClassFilter !== 'ALL') {
+        if (ses.allow_all_classes || ses.is_all_classrooms) return true;
 
-      return matchPackage && matchClass;
+        const targetId = selectedClassObj ? String(selectedClassObj.id) : String(selectedClassFilter);
+        const targetName = (selectedClassName || selectedClassFilter).toLowerCase().trim().replace(/^(kelas|rombel)\s+/i, '');
+
+        const multiClassIds = Array.isArray(ses.classrooms) 
+          ? ses.classrooms.map((c) => String(c.id || c)) 
+          : (Array.isArray(ses.classroom_ids) ? ses.classroom_ids.map(String) : []);
+        const singleClassId = ses.classroom?.id ? String(ses.classroom.id) : (ses.classroom_id ? String(ses.classroom_id) : null);
+
+        if (multiClassIds.includes(targetId) || singleClassId === targetId) return true;
+
+        const multiClassNames = Array.isArray(ses.classrooms)
+          ? ses.classrooms.map((c) => (c.name || String(c)).toLowerCase().trim().replace(/^(kelas|rombel)\s+/i, ''))
+          : [];
+        const singleClassText = (ses.classroom_display || ses.classroom_name || ses.classroom || '').toLowerCase().trim();
+        const singleClassNames = singleClassText.split(',').map((s) => s.trim().replace(/^(kelas|rombel)\s+/i, ''));
+
+        if (multiClassNames.includes(targetName)) return true;
+        if (singleClassNames.includes(targetName)) return true;
+        if (singleClassText.includes(targetName)) return true;
+
+        return false;
+      }
+
+      return true;
     });
-  }, [allSessions, selectedPackageFilter, selectedClassFilter]);
+  }, [allSessions, selectedPackageFilter, selectedClassFilter, selectedClassObj, selectedClassName]);
 
   // Update selectedSessionId jika sesi yang sedang dipilih tidak ada di daftar filtered
   useEffect(() => {
@@ -131,9 +159,10 @@ export default function EJournalReport() {
 
   // 3. Sesi aktif yang sedang dilihat
   const currentSession = useMemo(() => {
-    if (!selectedSessionId) return filteredSessions[0] || allSessions[0] || null;
-    return allSessions.find((s) => s.id === selectedSessionId) || filteredSessions[0] || null;
-  }, [selectedSessionId, allSessions, filteredSessions]);
+    if (filteredSessions.length === 0) return null;
+    if (!selectedSessionId) return filteredSessions[0];
+    return filteredSessions.find((s) => s.id === selectedSessionId) || filteredSessions[0];
+  }, [selectedSessionId, filteredSessions]);
 
   // 4. Ambil detail E-Jurnal dari backend saat sesi aktif berubah atau filter kelas berubah
   useEffect(() => {
@@ -145,7 +174,7 @@ export default function EJournalReport() {
       }
       setIsLoading(true);
       try {
-        const clsParam = selectedClassFilter !== 'ALL' ? selectedClassFilter : null;
+        const clsParam = selectedClassName || (selectedClassFilter !== 'ALL' ? selectedClassFilter : null);
         const data = await ejournalApi.getJournal(currentSession.id, clsParam);
         if (data) {
           setJournalData(data);
@@ -161,7 +190,7 @@ export default function EJournalReport() {
     };
 
     fetchJournal();
-  }, [currentSession, selectedClassFilter]);
+  }, [currentSession?.id, selectedClassFilter, selectedClassName]);
 
   // Simpan Catatan Berita Acara
   const handleSaveNotes = async () => {
@@ -184,8 +213,8 @@ export default function EJournalReport() {
     if (!currentSession?.id) return;
     setIsExportingPdf(true);
     try {
-      const clsParam = selectedClassFilter !== 'ALL' ? selectedClassFilter : null;
-      const clsName = selectedClassFilter !== 'ALL' ? selectedClassFilter : (currentSession.classroom_name || currentSession.classroom || 'Kelas');
+      const clsParam = selectedClassName || (selectedClassFilter !== 'ALL' ? selectedClassFilter : null);
+      const clsName = selectedClassName || (currentSession.classroom_name || currentSession.classroom || 'Kelas');
       const subjName = (currentSession.subject_name || currentSession.subjectName || 'Ujian').replace(/\s+/g, '_');
       await ejournalApi.downloadPdf(
         currentSession.id,
@@ -205,8 +234,8 @@ export default function EJournalReport() {
     if (!currentSession?.id) return;
     setIsExportingExcel(true);
     try {
-      const clsParam = selectedClassFilter !== 'ALL' ? selectedClassFilter : null;
-      const clsName = selectedClassFilter !== 'ALL' ? selectedClassFilter : (currentSession.classroom_name || currentSession.classroom || 'Kelas');
+      const clsParam = selectedClassName || (selectedClassFilter !== 'ALL' ? selectedClassFilter : null);
+      const clsName = selectedClassName || (currentSession.classroom_name || currentSession.classroom || 'Kelas');
       const subjName = (currentSession.subject_name || currentSession.subjectName || 'Ujian').replace(/\s+/g, '_');
       await ejournalApi.downloadExcel(
         currentSession.id,
@@ -221,21 +250,24 @@ export default function EJournalReport() {
     }
   };
 
-  // Daftar data kehadiran & nilai siswa (tersaring per rombel kelas jika difilter)
+  // Daftar data kehadiran & nilai siswa (tersaring ketat per rombel kelas jika difilter)
   const attendanceList = useMemo(() => {
-    if (journalData && Array.isArray(journalData.attendance_records)) {
-      if (selectedClassFilter !== 'ALL') {
-        const target = selectedClassFilter.toLowerCase().trim();
-        return journalData.attendance_records.filter(r => 
-          (r.classroom && r.classroom.toLowerCase().trim() === target) ||
-          (r.classroom_name && r.classroom_name.toLowerCase().trim() === target) ||
-          String(r.classroom_id) === String(selectedClassFilter)
-        );
-      }
+    if (!journalData || !Array.isArray(journalData.attendance_records)) {
+      return [];
+    }
+    if (selectedClassFilter === 'ALL') {
       return journalData.attendance_records;
     }
-    return [];
-  }, [journalData, selectedClassFilter]);
+    const targetName = (selectedClassName || selectedClassFilter).toLowerCase().trim().replace(/^(kelas|rombel)\s+/i, '');
+    const targetId = selectedClassObj ? String(selectedClassObj.id) : String(selectedClassFilter);
+
+    return journalData.attendance_records.filter((r) => {
+      if (r.classroom_id && String(r.classroom_id) === targetId) return true;
+      const rCls = (r.classroom_name || r.classroom || '').toLowerCase().trim().replace(/^(kelas|rombel)\s+/i, '');
+      if (rCls === targetName || rCls.includes(targetName) || targetName.includes(rCls)) return true;
+      return false;
+    });
+  }, [journalData, selectedClassFilter, selectedClassName, selectedClassObj]);
 
   const filteredAttendance = useMemo(() => {
     if (!searchQuery.trim()) return attendanceList;
@@ -247,21 +279,24 @@ export default function EJournalReport() {
   }, [attendanceList, searchQuery]);
 
   const violationList = useMemo(() => {
-    if (journalData && Array.isArray(journalData.violation_records)) {
-      if (selectedClassFilter !== 'ALL') {
-        const target = selectedClassFilter.toLowerCase().trim();
-        return journalData.violation_records.filter(v => 
-          (v.classroom && v.classroom.toLowerCase().trim() === target) ||
-          (v.classroom_name && v.classroom_name.toLowerCase().trim() === target) ||
-          String(v.classroom_id) === String(selectedClassFilter)
-        );
-      }
+    if (!journalData || !Array.isArray(journalData.violation_records)) {
+      return [];
+    }
+    if (selectedClassFilter === 'ALL') {
       return journalData.violation_records;
     }
-    return [];
-  }, [journalData, selectedClassFilter]);
+    const targetName = (selectedClassName || selectedClassFilter).toLowerCase().trim().replace(/^(kelas|rombel)\s+/i, '');
+    const targetId = selectedClassObj ? String(selectedClassObj.id) : String(selectedClassFilter);
 
-  // Hitung Nilai Rata-Rata, Tertinggi, dan Terendah
+    return journalData.violation_records.filter((v) => {
+      if (v.classroom_id && String(v.classroom_id) === targetId) return true;
+      const vCls = (v.classroom_name || v.classroom || '').toLowerCase().trim().replace(/^(kelas|rombel)\s+/i, '');
+      if (vCls === targetName || vCls.includes(targetName) || targetName.includes(vCls)) return true;
+      return false;
+    });
+  }, [journalData, selectedClassFilter, selectedClassName, selectedClassObj]);
+
+  // Hitung Nilai Rata-Rata, Tertinggi, dan Terendah dari daftar terfilter
   const validScores = attendanceList
     .map((s) => (s.total_score !== null && s.total_score !== undefined ? Number(s.total_score) : null))
     .filter((score) => score !== null && !isNaN(score));
@@ -272,10 +307,13 @@ export default function EJournalReport() {
   const highestScore = validScores.length > 0 ? Math.max(...validScores).toFixed(0) : '-';
   const lowestScore = validScores.length > 0 ? Math.min(...validScores).toFixed(0) : '-';
 
-  const totalScheduled = journalData ? journalData.total_students_scheduled : 0;
-  const presentStudents = journalData ? journalData.total_students_present : attendanceList.length;
-  const absentStudents = journalData ? journalData.total_students_absent : Math.max(0, totalScheduled - presentStudents);
-  const totalViolations = journalData ? journalData.total_violations_recorded : violationList.length;
+  // Ringkasan KPI terfilter presisi
+  const totalScheduled = selectedClassFilter !== 'ALL' 
+    ? attendanceList.length 
+    : (journalData?.total_students_scheduled ?? attendanceList.length);
+  const presentStudents = attendanceList.filter((s) => s.status !== 'ABSENT').length;
+  const absentStudents = attendanceList.filter((s) => s.status === 'ABSENT').length;
+  const totalViolations = violationList.length;
 
   // Nama Pengawas & Pejabat Sekolah
   const displaySchool = schoolSettings || {
@@ -402,9 +440,9 @@ export default function EJournalReport() {
               onChange={(e) => setSelectedClassFilter(e.target.value)}
               className="w-full text-xs font-medium rounded-lg border border-zinc-200 focus:outline-none focus:border-zinc-400 py-2 bg-white text-zinc-800"
             >
-              <option value="ALL">Semua Kelas</option>
+              <option value="ALL">-- Seluruh Kelas ({allClassrooms.length}) --</option>
               {allClassrooms.map((cls) => (
-                <option key={cls.id} value={cls.name}>
+                <option key={cls.id} value={cls.id}>
                   {cls.name} ({cls.academic_year || 'Aktif'})
                 </option>
               ))}
@@ -474,7 +512,7 @@ export default function EJournalReport() {
               <div>
                 <div className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">Total Peserta</div>
                 <div className="text-lg sm:text-xl font-bold font-mono text-zinc-900 mt-0.5">{totalScheduled} Siswa</div>
-                <div className="text-[10px] text-zinc-400">Kelas {selectedClassFilter !== 'ALL' ? selectedClassFilter : (currentSession.classroom_name || currentSession.classroom)}</div>
+                <div className="text-[10px] text-zinc-400">Kelas {selectedClassName || (selectedClassFilter !== 'ALL' ? selectedClassFilter : (currentSession.classroom_name || currentSession.classroom))}</div>
               </div>
             </div>
 
@@ -559,7 +597,7 @@ export default function EJournalReport() {
                 </div>
                 <div className="flex">
                   <span className="w-32 text-zinc-500 font-medium">Kelas / Rombel:</span>
-                  <span className="font-semibold text-zinc-900">{selectedClassFilter !== 'ALL' ? selectedClassFilter : (currentSession.classroom_name || currentSession.classroom)}</span>
+                  <span className="font-semibold text-zinc-900">{selectedClassName || (selectedClassFilter !== 'ALL' ? selectedClassFilter : (currentSession.classroom_name || currentSession.classroom))}</span>
                 </div>
                 <div className="flex">
                   <span className="w-32 text-zinc-500 font-medium">Judul Paket Soal:</span>

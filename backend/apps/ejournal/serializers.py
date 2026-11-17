@@ -7,7 +7,9 @@ from apps.accounts.models import User
 class ViolationLogItemSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='attempt.student.full_name', read_only=True)
     nisn = serializers.SerializerMethodField()
+    classroom_id = serializers.SerializerMethodField()
     classroom = serializers.SerializerMethodField()
+    classroom_name = serializers.SerializerMethodField()
     violation_type_label = serializers.CharField(source='get_violation_type_display', read_only=True)
 
     class Meta:
@@ -16,7 +18,9 @@ class ViolationLogItemSerializer(serializers.ModelSerializer):
             'id',
             'student_name',
             'nisn',
+            'classroom_id',
             'classroom',
+            'classroom_name',
             'violation_type',
             'violation_type_label',
             'description',
@@ -28,11 +32,18 @@ class ViolationLogItemSerializer(serializers.ModelSerializer):
         student = getattr(obj.attempt, 'student', None)
         return getattr(student, 'nisn', None) or getattr(student, 'username', '-')
 
+    def get_classroom_id(self, obj):
+        student = getattr(obj.attempt, 'student', None)
+        return getattr(student, 'classroom_id', None)
+
     def get_classroom(self, obj):
         student = getattr(obj.attempt, 'student', None)
         if student and getattr(student, 'classroom', None):
             return student.classroom.name
         return '-'
+
+    def get_classroom_name(self, obj):
+        return self.get_classroom(obj)
 
 class StudentAttendanceItemSerializer(serializers.Serializer):
     attempt_id = serializers.UUIDField(allow_null=True)
@@ -108,11 +119,17 @@ class ExamJournalDetailSerializer(serializers.ModelSerializer):
         if request:
             classroom_param = request.query_params.get('classroom') or request.query_params.get('classroom_id')
             if classroom_param and str(classroom_param).strip().upper() != 'ALL':
+                import re
                 from apps.accounts.models import ClassRoom
-                if str(classroom_param).strip().isdigit():
-                    return ClassRoom.objects.filter(id=int(classroom_param)).first()
-                clean_cls_name = str(classroom_param).split('(')[0].strip()
-                return ClassRoom.objects.filter(name__iexact=clean_cls_name).first() or ClassRoom.objects.filter(name__iexact=str(classroom_param).strip()).first()
+                param_str = str(classroom_param).strip()
+                if param_str.isdigit():
+                    return ClassRoom.objects.filter(id=int(param_str)).first()
+                clean_cls_name = re.sub(r'^(kelas|rombel)\s+', '', param_str.split('(')[0].strip(), flags=re.IGNORECASE)
+                return (
+                    ClassRoom.objects.filter(name__iexact=clean_cls_name).first() or 
+                    ClassRoom.objects.filter(name__iexact=param_str).first() or
+                    ClassRoom.objects.filter(name__icontains=clean_cls_name).first()
+                )
         return None
 
     def get_classroom_name(self, obj):
@@ -156,12 +173,15 @@ class ExamJournalDetailSerializer(serializers.ModelSerializer):
         for student in all_students:
             attempt = attempts_map.get(student.id)
             cls_name = student.classroom.name if getattr(student, 'classroom', None) else (target_classroom.name if target_classroom else obj.session.get_classrooms_display())
+            cls_id = student.classroom.id if getattr(student, 'classroom', None) else (target_classroom.id if target_classroom else None)
             if attempt:
                 records.append({
                     'attempt_id': attempt.id,
                     'student_id': student.id,
                     'nisn': student.nisn or student.username,
                     'student_name': student.full_name or student.username,
+                    'classroom_id': cls_id,
+                    'classroom': cls_name,
                     'classroom_name': cls_name,
                     'status': attempt.status,
                     'status_label': attempt.get_status_display(),
@@ -177,6 +197,8 @@ class ExamJournalDetailSerializer(serializers.ModelSerializer):
                     'student_id': student.id,
                     'nisn': student.nisn or student.username,
                     'student_name': student.full_name or student.username,
+                    'classroom_id': cls_id,
+                    'classroom': cls_name,
                     'classroom_name': cls_name,
                     'status': 'ABSENT',
                     'status_label': 'Belum Masuk / Tidak Hadir',

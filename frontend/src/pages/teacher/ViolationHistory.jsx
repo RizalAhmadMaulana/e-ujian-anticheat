@@ -48,6 +48,14 @@ export default function ViolationHistory() {
   const [toastMessage, setToastMessage] = useState('');
 
   // 1. Ambil data master sesi, paket, dan kelas saat inisialisasi
+  // Helper resolusi objek & nama kelas terpilih
+  const selectedClassObj = useMemo(() => {
+    if (!selectedClassFilter || selectedClassFilter === 'ALL') return null;
+    return allClassrooms.find((c) => String(c.id) === String(selectedClassFilter) || c.name === selectedClassFilter) || null;
+  }, [selectedClassFilter, allClassrooms]);
+
+  const selectedClassName = selectedClassObj ? selectedClassObj.name : (selectedClassFilter !== 'ALL' ? selectedClassFilter : null);
+
   useEffect(() => {
     const initializeMasterData = async () => {
       setIsLoading(true);
@@ -79,7 +87,7 @@ export default function ViolationHistory() {
     initializeMasterData();
   }, []);
 
-  // 2. Filter sesi berdasarkan pilihan Paket Soal & Kelas
+  // 2. Filter sesi berdasarkan pilihan Paket Soal & Kelas (Sinkron Multi-Kelas)
   const filteredSessions = useMemo(() => {
     return allSessions.filter((ses) => {
       // 1. Filter Paket Soal
@@ -91,20 +99,35 @@ export default function ViolationHistory() {
       // 2. Filter Kelas
       if (selectedClassFilter !== 'ALL') {
         if (ses.allow_all_classes || ses.is_all_classrooms) return true;
-        const cleanTarget = selectedClassFilter.trim().toLowerCase();
-        const multiClassNames = Array.isArray(ses.classrooms) 
-          ? ses.classrooms.map((c) => (c.name || String(c)).toLowerCase()) 
-          : [];
-        const singleClass = (ses.classroom_display || ses.classroom?.name || ses.classroom || ses.classroom_name || '').toLowerCase();
 
-        const matchClass = multiClassNames.some(c => c === cleanTarget || cleanTarget.includes(c) || c.includes(cleanTarget)) ||
-                           singleClass.includes(cleanTarget);
-        if (!matchClass) return false;
+        const targetId = selectedClassObj ? String(selectedClassObj.id) : String(selectedClassFilter);
+        const targetName = (selectedClassName || selectedClassFilter).toLowerCase().trim().replace(/^(kelas|rombel)\s+/i, '');
+
+        // Cek ID kelas pada sesi
+        const multiClassIds = Array.isArray(ses.classrooms) 
+          ? ses.classrooms.map((c) => String(c.id || c)) 
+          : (Array.isArray(ses.classroom_ids) ? ses.classroom_ids.map(String) : []);
+        const singleClassId = ses.classroom?.id ? String(ses.classroom.id) : (ses.classroom_id ? String(ses.classroom_id) : null);
+
+        if (multiClassIds.includes(targetId) || singleClassId === targetId) return true;
+
+        // Cek Nama kelas pada sesi
+        const multiClassNames = Array.isArray(ses.classrooms)
+          ? ses.classrooms.map((c) => (c.name || String(c)).toLowerCase().trim().replace(/^(kelas|rombel)\s+/i, ''))
+          : [];
+        const singleClassText = (ses.classroom_display || ses.classroom_name || ses.classroom || '').toLowerCase().trim();
+        const singleClassNames = singleClassText.split(',').map((s) => s.trim().replace(/^(kelas|rombel)\s+/i, ''));
+
+        if (multiClassNames.includes(targetName)) return true;
+        if (singleClassNames.includes(targetName)) return true;
+        if (singleClassText.includes(targetName)) return true;
+
+        return false;
       }
 
       return true;
     });
-  }, [allSessions, selectedPackageFilter, selectedClassFilter]);
+  }, [allSessions, selectedPackageFilter, selectedClassFilter, selectedClassObj, selectedClassName]);
 
   // Update selectedSessionId jika sesi yang sedang dipilih tidak ada di daftar filtered
   useEffect(() => {
@@ -117,11 +140,12 @@ export default function ViolationHistory() {
     }
   }, [filteredSessions, selectedSessionId]);
 
-  // 3. Sesi aktif yang sedang dipilih
+  // 3. Sesi aktif yang sedang dipilih (Strict: tidak fallback ke sesi luar filter)
   const currentSession = useMemo(() => {
-    if (!selectedSessionId) return filteredSessions[0] || allSessions[0] || null;
-    return allSessions.find((s) => s.id === selectedSessionId) || filteredSessions[0] || null;
-  }, [selectedSessionId, allSessions, filteredSessions]);
+    if (filteredSessions.length === 0) return null;
+    if (!selectedSessionId) return filteredSessions[0];
+    return filteredSessions.find((s) => s.id === selectedSessionId) || filteredSessions[0];
+  }, [selectedSessionId, filteredSessions]);
 
   // 4. Ambil daftar pelanggaran terfilter dari backend
   const fetchViolations = useCallback(async () => {
@@ -139,7 +163,7 @@ export default function ViolationHistory() {
         params.package_id = selectedPackageFilter;
       }
       if (selectedClassFilter !== 'ALL') {
-        params.classroom_id = selectedClassFilter;
+        params.classroom_id = selectedClassName || selectedClassFilter;
       }
 
       const data = await proctoringApi.getViolations(params);
@@ -152,7 +176,7 @@ export default function ViolationHistory() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentSession?.id, selectedPackageFilter, selectedClassFilter]);
+  }, [currentSession?.id, selectedPackageFilter, selectedClassFilter, selectedClassName]);
 
   useEffect(() => {
     fetchViolations();
@@ -160,12 +184,19 @@ export default function ViolationHistory() {
 
   // 5. Filter pelanggaran secara reaktif (Kelas + Search Query)
   const filteredViolations = useMemo(() => {
+    if (!currentSession) return [];
+
     return violations.filter((v) => {
       // Filter Kelas Siswa jika selectedClassFilter aktif
       if (selectedClassFilter !== 'ALL') {
-        const targetCls = selectedClassFilter.trim().toLowerCase();
-        const vCls = (v.classroom_name || '').toLowerCase();
-        if (!vCls.includes(targetCls) && !targetCls.includes(vCls)) {
+        const targetId = selectedClassObj ? String(selectedClassObj.id) : String(selectedClassFilter);
+        const targetName = (selectedClassName || selectedClassFilter).toLowerCase().trim().replace(/^(kelas|rombel)\s+/i, '');
+
+        const matchId = v.classroom_id && String(v.classroom_id) === targetId;
+        const vCls = (v.classroom_name || v.classroom || '').toLowerCase().trim().replace(/^(kelas|rombel)\s+/i, '');
+        const matchName = vCls === targetName || vCls.includes(targetName) || targetName.includes(vCls);
+
+        if (!matchId && !matchName) {
           return false;
         }
       }
@@ -182,7 +213,7 @@ export default function ViolationHistory() {
 
       return true;
     });
-  }, [violations, selectedClassFilter, searchQuery]);
+  }, [violations, currentSession, selectedClassFilter, selectedClassName, selectedClassObj, searchQuery]);
 
   // Statistik Ringkasan Dihitung dari Data Terfilter
   const totalViolations = filteredViolations.length;
@@ -222,14 +253,17 @@ export default function ViolationHistory() {
     }
   };
 
-  // Handler Hapus Massal (Terpilih atau Seluruh Sesi)
+  // Handler Hapus Massal (Terpilih atau Seluruh Sesi Sesuai Filter Kelas)
   const handleConfirmBulkDelete = async () => {
     if (!currentSession?.id) return;
     setIsDeleting(true);
     try {
       const payload = selectedIds.length > 0 
         ? { ids: selectedIds } 
-        : { session_id: currentSession.id };
+        : { 
+            session_id: currentSession.id,
+            classroom_id: selectedClassFilter !== 'ALL' ? (selectedClassName || selectedClassFilter) : undefined
+          };
 
       const res = await proctoringApi.bulkDeleteViolations(payload);
       setToastMessage(res.message || 'Catatan pelanggaran berhasil dihapus dan E-Jurnal telah disinkronkan.');
@@ -336,10 +370,10 @@ export default function ViolationHistory() {
               onChange={(e) => setSelectedClassFilter(e.target.value)}
               className="w-full text-xs font-medium rounded-lg border border-zinc-200 focus:outline-none focus:border-zinc-400 py-2 px-2.5 bg-white text-zinc-900"
             >
-              <option value="ALL">Semua Kelas</option>
+              <option value="ALL">-- Seluruh Kelas ({allClassrooms.length}) --</option>
               {allClassrooms.map((cls) => (
-                <option key={cls.id || cls.name} value={cls.name}>
-                  Kelas {cls.name}
+                <option key={cls.id || cls.name} value={cls.id}>
+                  {cls.name} ({cls.academic_year || 'Aktif'})
                 </option>
               ))}
             </select>
@@ -465,6 +499,7 @@ export default function ViolationHistory() {
                 </th>
                 <th className="py-2.5 px-3 text-center w-10">No</th>
                 <th className="py-2.5 px-3">Nama Siswa</th>
+                <th className="py-2.5 px-3 text-center">Kelas</th>
                 <th className="py-2.5 px-3 text-center">NISN</th>
                 <th className="py-2.5 px-3 text-center">Jenis Pelanggaran</th>
                 <th className="py-2.5 px-3">Keterangan Sensor</th>
@@ -476,21 +511,23 @@ export default function ViolationHistory() {
             <tbody className="divide-y divide-rose-100 bg-rose-50/20">
               {isLoading ? (
                 <tr>
-                  <td colSpan="9" className="py-10 text-center text-zinc-500 text-xs">
+                  <td colSpan="10" className="py-10 text-center text-zinc-500 text-xs">
                     <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-1.5 text-rose-600" />
                     <span>Memuat riwayat pelanggaran...</span>
                   </td>
                 </tr>
               ) : filteredViolations.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="py-12 text-center text-zinc-400 text-xs">
+                  <td colSpan="10" className="py-12 text-center text-zinc-400 text-xs">
                     {searchQuery ? (
                       <div>Tidak ditemukan data pelanggaran dengan kata kunci "{searchQuery}".</div>
                     ) : (
                       <div className="space-y-1">
                         <div className="font-semibold text-zinc-700">Bersih! Tidak Ada Catatan Pelanggaran</div>
                         <p className="text-zinc-500 text-[11px]">
-                          Seluruh siswa pada sesi ini mengerjakan secara tertib tanpa ada insiden yang tercatat.
+                          {selectedClassFilter !== 'ALL' 
+                            ? `Seluruh siswa kelas ${selectedClassName || selectedClassFilter} pada sesi ini tertib tanpa insiden yang tercatat.`
+                            : 'Seluruh siswa pada sesi ini mengerjakan secara tertib tanpa ada insiden yang tercatat.'}
                         </p>
                       </div>
                     )}
@@ -517,6 +554,11 @@ export default function ViolationHistory() {
                       </td>
                       <td className="py-2 px-3 font-semibold text-zinc-900">
                         {v.student_name}
+                      </td>
+                      <td className="py-2 px-3 text-center">
+                        <span className="px-2 py-0.5 rounded bg-zinc-100 border border-zinc-200 text-zinc-800 text-[10px] font-mono font-medium">
+                          {v.classroom_name || v.classroom || '-'}
+                        </span>
                       </td>
                       <td className="py-2 px-3 text-center font-mono text-zinc-600">
                         {v.nisn}

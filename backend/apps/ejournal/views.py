@@ -96,12 +96,18 @@ class ExamJournalExportPDFView(APIView):
         classroom_param = request.query_params.get('classroom') or request.query_params.get('classroom_id')
         target_classroom = None
         if classroom_param and str(classroom_param).strip().upper() != 'ALL':
+            import re
             from apps.accounts.models import ClassRoom
-            if str(classroom_param).strip().isdigit():
-                target_classroom = ClassRoom.objects.filter(id=int(classroom_param)).first()
+            param_str = str(classroom_param).strip()
+            if param_str.isdigit():
+                target_classroom = ClassRoom.objects.filter(id=int(param_str)).first()
             if not target_classroom:
-                clean_cls_name = str(classroom_param).split('(')[0].strip()
-                target_classroom = ClassRoom.objects.filter(name__iexact=clean_cls_name).first() or ClassRoom.objects.filter(name__iexact=str(classroom_param).strip()).first()
+                clean_cls_name = re.sub(r'^(kelas|rombel)\s+', '', param_str.split('(')[0].strip(), flags=re.IGNORECASE)
+                target_classroom = (
+                    ClassRoom.objects.filter(name__iexact=clean_cls_name).first() or 
+                    ClassRoom.objects.filter(name__iexact=param_str).first() or
+                    ClassRoom.objects.filter(name__icontains=clean_cls_name).first()
+                )
 
         if target_classroom:
             attempts = list(
@@ -171,12 +177,18 @@ class ExamJournalExportExcelView(APIView):
         classroom_param = request.query_params.get('classroom') or request.query_params.get('classroom_id')
         target_classroom = None
         if classroom_param and str(classroom_param).strip().upper() != 'ALL':
+            import re
             from apps.accounts.models import ClassRoom
-            if str(classroom_param).strip().isdigit():
-                target_classroom = ClassRoom.objects.filter(id=int(classroom_param)).first()
+            param_str = str(classroom_param).strip()
+            if param_str.isdigit():
+                target_classroom = ClassRoom.objects.filter(id=int(param_str)).first()
             if not target_classroom:
-                clean_cls_name = str(classroom_param).split('(')[0].strip()
-                target_classroom = ClassRoom.objects.filter(name__iexact=clean_cls_name).first() or ClassRoom.objects.filter(name__iexact=str(classroom_param).strip()).first()
+                clean_cls_name = re.sub(r'^(kelas|rombel)\s+', '', param_str.split('(')[0].strip(), flags=re.IGNORECASE)
+                target_classroom = (
+                    ClassRoom.objects.filter(name__iexact=clean_cls_name).first() or 
+                    ClassRoom.objects.filter(name__iexact=param_str).first() or
+                    ClassRoom.objects.filter(name__icontains=clean_cls_name).first()
+                )
 
         if target_classroom:
             attempts = list(
