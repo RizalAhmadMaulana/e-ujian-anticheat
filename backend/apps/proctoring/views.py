@@ -43,6 +43,16 @@ class ReportViolationAPIView(APIView):
 
     def post(self, request, attempt_id):
         attempt = get_object_or_404(StudentAttempt, id=attempt_id)
+
+        # Guard Mutlak: Jika siswa SUDAH dalam status terkunci, jangan tambah akumulasi lagi!
+        if attempt.status == StudentAttempt.AttemptStatus.LOCKED_VIOLATION:
+            return Response({
+                "success": True,
+                "status": attempt.status,
+                "violation_count": attempt.violation_count,
+                "message": "Attempt already locked"
+            }, status=status.HTTP_200_OK)
+
         violation_type = request.data.get('violation_type', 'TAB_SWITCH')
         description = request.data.get('description', 'Perpindahan aplikasi/layar terdeteksi.')
 

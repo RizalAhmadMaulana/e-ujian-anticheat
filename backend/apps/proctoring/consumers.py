@@ -52,7 +52,7 @@ class ProctoringConsumer(AsyncJsonWebsocketConsumer):
                 attempt_id, violation_type, description
             )
 
-            if violation_data:
+            if violation_data and not violation_data.get('already_locked'):
                 # Broadcast ke dashboard pengawas Guru dan seluruh grup
                 await self.channel_layer.group_send(
                     self.group_name,
@@ -206,6 +206,16 @@ class ProctoringConsumer(AsyncJsonWebsocketConsumer):
     def record_violation_in_db(self, attempt_id, violation_type, description):
         try:
             attempt = StudentAttempt.objects.select_related('student').get(id=attempt_id)
+            # Guard Mutlak: Jika status attempt sudah LOCKED_VIOLATION, jangan tambah akumulasi lagi!
+            if attempt.status == StudentAttempt.AttemptStatus.LOCKED_VIOLATION:
+                return {
+                    "student_name": attempt.student.full_name or attempt.student.username,
+                    "nisn": attempt.student.username,
+                    "violation_count": attempt.violation_count,
+                    "detected_at": timezone.now().strftime("%H:%M:%S"),
+                    "already_locked": True
+                }
+
             attempt.status = StudentAttempt.AttemptStatus.LOCKED_VIOLATION
             attempt.violation_count += 1
             attempt.save(update_fields=['status', 'violation_count'])
@@ -217,10 +227,11 @@ class ProctoringConsumer(AsyncJsonWebsocketConsumer):
             )
 
             return {
-                "student_name": attempt.student.full_name,
+                "student_name": attempt.student.full_name or attempt.student.username,
                 "nisn": attempt.student.username,
                 "violation_count": attempt.violation_count,
                 "detected_at": log.detected_at.strftime("%H:%M:%S"),
+                "already_locked": False
             }
         except StudentAttempt.DoesNotExist:
             return None

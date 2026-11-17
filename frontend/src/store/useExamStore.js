@@ -410,24 +410,48 @@ export const useExamStore = create((set, get) => ({
   // 4. PROTOKOL KEAMANAN ANTI-CHEAT (SISWA)
   // ==========================================
   triggerViolationLock: (violationType, description) => {
+    const currentAttempt = get().activeAttempt;
+
+    // 1. Guard Mutlak: Jika ujian SUDAH TERKUNCI (isLocked === true)
+    // ATAU sudah selesai (examSubmittedAt), abaikan total!
+    // Siswa di halaman terkunci diizinkan screenshot/sentuh tanpa menambah akumulasi pelanggaran.
+    if (currentAttempt.isLocked || currentAttempt.examSubmittedAt) {
+      return;
+    }
+
+    // 2. Cooldown Guard: Cegah pemanggilan beruntun dalam selang < 1200ms
+    // Menjamin gesture fisik awal (cth: touchstart + blur + touchmove) hanya dihitung tepat 1 kali
+    const nowMs = Date.now();
+    if (currentAttempt._lastViolationLockTime && (nowMs - currentAttempt._lastViolationLockTime) < 1200) {
+      return;
+    }
+
     const now = new Date();
     const timeString = now.toLocaleTimeString('id-ID');
     const currentUser = get().currentUser || MOCK_STUDENT;
 
     const newLog = {
-      id: `viol-${Date.now()}`,
+      id: `viol-${nowMs}`,
       studentId: currentUser.id,
       studentName: currentUser.fullName,
       nisn: currentUser.nisn || '0067829101',
-      violationType, // 'TAB_SWITCH' | 'EXIT_FULLSCREEN' | 'WINDOW_BLUR_APP_SWITCH' | 'SHORTCUT_ATTEMPT'
+      violationType,
       description: description || 'Upaya perpindahan layar atau aplikasi terdeteksi sistem.',
       detectedAt: timeString,
       unlockedAt: null,
     };
 
     set((state) => {
-      const updatedCount = state.activeAttempt.violationCount + 1;
-      const updatedLogs = [newLog, ...state.activeAttempt.violationLogs];
+      // Guard ganda di dalam updater function
+      if (state.activeAttempt.isLocked || state.activeAttempt.examSubmittedAt) {
+        return state;
+      }
+      if (state.activeAttempt._lastViolationLockTime && (nowMs - state.activeAttempt._lastViolationLockTime) < 1200) {
+        return state;
+      }
+
+      const updatedCount = (state.activeAttempt.violationCount || 0) + 1;
+      const updatedLogs = [newLog, ...(state.activeAttempt.violationLogs || [])];
 
       // Update juga di daftar proctoring untuk sinkronisasi simulasi
       const updatedProctoring = state.proctoringStudents.map((s) => {
@@ -435,7 +459,7 @@ export const useExamStore = create((set, get) => ({
           return {
             ...s,
             status: 'LOCKED_VIOLATION',
-            violationCount: s.violationCount + 1,
+            violationCount: (s.violationCount || 0) + 1,
             lastViolation: {
               type: violationType,
               description: newLog.description,
@@ -451,6 +475,7 @@ export const useExamStore = create((set, get) => ({
         isLocked: true,
         violationCount: updatedCount,
         violationLogs: updatedLogs,
+        _lastViolationLockTime: nowMs,
       };
       persistActiveAttempt(updatedAttempt);
 

@@ -289,11 +289,11 @@ export default function ExamWorkspace() {
 
   // Handler saat sensor useExamSecurity mendeteksi pelanggaran
   const handleSecurityViolation = useCallback((type, description) => {
-    if (activeAttempt.attemptId) {
+    if (activeAttempt.attemptId && !activeAttempt.isLocked) {
       sendViolationReport(activeAttempt.attemptId, type, description);
       proctoringApi.reportViolation(activeAttempt.attemptId, type, description).catch(() => {});
     }
-  }, [activeAttempt.attemptId, sendViolationReport]);
+  }, [activeAttempt.attemptId, activeAttempt.isLocked, sendViolationReport]);
 
   // Sambungkan Sensor Keamanan Zero-Tolerance Lockdown
   useExamSecurity({
@@ -585,6 +585,8 @@ export default function ExamWorkspace() {
         isLandscape ? 'orientation-landscape' : 'orientation-portrait'
       }`}
       onTouchStart={(e) => {
+        // Jika sedang di layar terkunci, bebas sentuh / screenshot tanpa menambah akumulasi pelanggaran
+        if (activeAttempt.isLocked) return;
         if (e.touches && e.touches.length >= 2) {
           if (e.cancelable) e.preventDefault();
           e.stopPropagation();
@@ -592,6 +594,8 @@ export default function ExamWorkspace() {
         }
       }}
       onTouchMove={(e) => {
+        // Jika sedang di layar terkunci, bebas sentuh / screenshot tanpa menambah akumulasi pelanggaran
+        if (activeAttempt.isLocked) return;
         if (e.touches && e.touches.length >= 2) {
           if (e.cancelable) e.preventDefault();
           e.stopPropagation();
@@ -599,6 +603,7 @@ export default function ExamWorkspace() {
         }
       }}
       onContextMenu={(e) => {
+        if (activeAttempt.isLocked) return;
         e.preventDefault();
         e.stopPropagation();
         handleSecurityViolation('CONTEXT_MENU_ATTEMPT', 'Siswa mencoba membuka menu klik kanan (Context Menu) pada lembar ujian');
