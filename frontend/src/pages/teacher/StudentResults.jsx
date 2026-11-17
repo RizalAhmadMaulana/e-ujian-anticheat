@@ -658,6 +658,7 @@ export default function StudentResults() {
                   <th className="py-3 px-3">NISN</th>
                   <th className="py-3 px-4">Nama Siswa</th>
                   <th className="py-3 px-3">Kelas</th>
+                  <th className="py-3 px-3 text-center">Waktu Selesai</th>
                   <th className="py-3 px-3">Durasi</th>
                   <th className="py-3 px-3 text-center">Jawaban Benar</th>
                   <th className="py-3 px-3 text-center">Sensor Anti-Cheat</th>
@@ -687,6 +688,24 @@ export default function StudentResults() {
                     </td>
                     <td className="py-3 px-3 text-zinc-600 font-medium">
                       {st.classroom_name || '-'}
+                    </td>
+                    <td className="py-3 px-3 text-center">
+                      {st.finished_at ? (
+                        <div className="flex flex-col items-center leading-tight">
+                          <span className="font-mono text-zinc-800 text-[11px] font-semibold whitespace-nowrap">
+                            {st.finished_date && st.finished_date !== '-' 
+                              ? st.finished_date 
+                              : new Date(st.finished_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </span>
+                          <span className="font-mono text-zinc-500 text-[10px] whitespace-nowrap">
+                            {st.finished_time && st.finished_time !== '-'
+                              ? `${st.finished_time} WIB`
+                              : `${new Date(st.finished_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB`}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-zinc-400 font-mono text-xs">-</span>
+                      )}
                     </td>
                     <td className="py-3 px-3 text-zinc-500 font-mono text-[11px]">
                       {formatDuration(st.started_at, st.finished_at)}

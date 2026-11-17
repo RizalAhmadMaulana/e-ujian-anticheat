@@ -24,6 +24,8 @@ class ViolationHistorySerializer(serializers.ModelSerializer):
     session_title = serializers.CharField(source='attempt.session.title', read_only=True)
     session_id = serializers.UUIDField(source='attempt.session.id', read_only=True)
     violation_type_label = serializers.CharField(source='get_violation_type_display', read_only=True)
+    detected_date = serializers.SerializerMethodField()
+    detected_time = serializers.SerializerMethodField()
 
     class Meta:
         model = ViolationLog
@@ -42,8 +44,24 @@ class ViolationHistorySerializer(serializers.ModelSerializer):
             'violation_type_label',
             'description',
             'detected_at',
+            'detected_date',
+            'detected_time',
             'unlocked_by_teacher_at'
         ]
+
+    def get_detected_date(self, obj):
+        if obj.detected_at:
+            from django.utils import timezone
+            local_dt = timezone.localtime(obj.detected_at)
+            return local_dt.strftime("%d/%m/%Y")
+        return "-"
+
+    def get_detected_time(self, obj):
+        if obj.detected_at:
+            from django.utils import timezone
+            local_dt = timezone.localtime(obj.detected_at)
+            return local_dt.strftime("%H:%M:%S")
+        return "-"
 
     def get_nisn(self, obj):
         student = getattr(obj.attempt, 'student', None)

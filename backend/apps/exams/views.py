@@ -224,12 +224,11 @@ class StartExamSessionView(APIView):
             }
         )
 
-        fresh_start = request.data.get('fresh_start', True)
         # Jika attempt sudah pernah ada sebelumnya di basis data:
         if not created:
-            # Jika siswa mulai pengerjaan baru (fresh_start), atau sesi sebelumnya berstatus SUBMITTED:
-            # Akumulasi pelanggaran sesi otomatis di-reset ke 0 dan log pelanggaran lama dibersihkan
-            if fresh_start or attempt.status == StudentAttempt.AttemptStatus.SUBMITTED:
+            # 1. Jika siswa mengulang setelah sesi sebelumnya berstatus SUBMITTED (selesai resmi):
+            # Akumulasi pelanggaran sesi otomatis di-reset ke 0, jawaban dikosongkan, dan log lama dibersihkan
+            if attempt.status == StudentAttempt.AttemptStatus.SUBMITTED:
                 attempt.status = StudentAttempt.AttemptStatus.WORKING
                 attempt.screen_orientation = orientation
                 attempt.violation_count = 0
@@ -249,6 +248,8 @@ class StartExamSessionView(APIView):
                 except Exception:
                     pass
             elif attempt.status not in [StudentAttempt.AttemptStatus.DISQUALIFIED]:
+                # 2. Siswa melanjutkan ujian yang belum selesai (status WORKING / LOCKED_VIOLATION):
+                # Pertahankan answers_json dan akumulasi pelanggaran yang sudah terjadi (TIDAK di-reset)
                 attempt.status = StudentAttempt.AttemptStatus.WORKING
                 attempt.screen_orientation = orientation
                 attempt.save(update_fields=['status', 'screen_orientation'])
@@ -851,6 +852,8 @@ class SessionStudentResultsView(APIView):
                     "violation_count": att.violation_count,
                     "started_at": att.started_at.isoformat() if att.started_at else None,
                     "finished_at": att.finished_at.isoformat() if att.finished_at else None,
+                    "finished_date": timezone.localtime(att.finished_at).strftime("%d/%m/%Y") if att.finished_at else "-",
+                    "finished_time": timezone.localtime(att.finished_at).strftime("%H:%M:%S") if att.finished_at else "-",
                 })
             else:
                 students_data.append({
@@ -1227,6 +1230,7 @@ class ExportSessionResultsExcelView(APIView):
                     "total_score": score_val,
                     "correct_count": correct_count,
                     "violation_count": att.violation_count,
+                    "finished_at": att.finished_at.isoformat() if att.finished_at else None,
                 })
             else:
                 students_data.append({

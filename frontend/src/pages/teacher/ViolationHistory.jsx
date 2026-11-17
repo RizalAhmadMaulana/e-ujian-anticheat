@@ -517,6 +517,7 @@ export default function ViolationHistory() {
                 <th className="py-2.5 px-3 text-center">NISN</th>
                 <th className="py-2.5 px-3 text-center">Jenis Pelanggaran</th>
                 <th className="py-2.5 px-3">Keterangan Sensor</th>
+                <th className="py-2.5 px-3 text-center">Tanggal</th>
                 <th className="py-2.5 px-3 text-center">Waktu</th>
                 <th className="py-2.5 px-3 text-center">Status Buka Kunci</th>
                 <th className="py-2.5 px-3 text-center w-16">Aksi</th>
@@ -525,14 +526,14 @@ export default function ViolationHistory() {
             <tbody className="divide-y divide-rose-100 bg-rose-50/20">
               {isLoading ? (
                 <tr>
-                  <td colSpan="10" className="py-10 text-center text-zinc-500 text-xs">
+                  <td colSpan="11" className="py-10 text-center text-zinc-500 text-xs">
                     <RefreshCw className="w-4 h-4 animate-spin mx-auto mb-1.5 text-rose-600" />
                     <span>Memuat riwayat pelanggaran...</span>
                   </td>
                 </tr>
               ) : filteredViolations.length === 0 ? (
                 <tr>
-                  <td colSpan="10" className="py-12 text-center text-zinc-400 text-xs">
+                  <td colSpan="11" className="py-12 text-center text-zinc-400 text-xs">
                     {searchQuery ? (
                       <div>Tidak ditemukan data pelanggaran dengan kata kunci "{searchQuery}".</div>
                     ) : (
@@ -585,8 +586,15 @@ export default function ViolationHistory() {
                       <td className="py-2 px-3 text-zinc-700 leading-relaxed">
                         {v.description}
                       </td>
-                      <td className="py-2 px-3 text-center font-mono text-zinc-600">
-                        {v.detected_at ? new Date(v.detected_at).toLocaleTimeString('id-ID') : '-'}
+                      <td className="py-2 px-3 text-center font-mono text-zinc-600 whitespace-nowrap">
+                        {v.detected_date && v.detected_date !== '-' 
+                          ? v.detected_date 
+                          : (v.detected_at ? new Date(v.detected_at).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-')}
+                      </td>
+                      <td className="py-2 px-3 text-center font-mono text-zinc-600 whitespace-nowrap">
+                        {v.detected_time && v.detected_time !== '-'
+                          ? v.detected_time
+                          : (v.detected_at ? new Date(v.detected_at).toLocaleTimeString('id-ID') : '-')}
                       </td>
                       <td className="py-2 px-3 text-center">
                         {v.unlocked_by_teacher_at ? (

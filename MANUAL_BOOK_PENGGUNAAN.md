@@ -533,7 +533,7 @@ Menu ini disediakan khusus bagi guru untuk menganalisis hasil belajar peserta di
   - **Rata-Rata Kelas:** Rerata perolehan nilai siswa secara real-time (skala 0 - 100).
   - **Tertinggi / Terendah:** Rekor nilai tertinggi dan nilai terendah pada sesi tersebut.
 - **Tabel Rekapitulasi Nilai & Status Pengerjaan:**
-  - Menampilkan NISN, Nama Siswa, Kelas, Durasi Pengerjaan, Total Jawaban Benar, Pelanggaran Sensor Anti-Cheat, Status (Selesai, Sedang Mengerjakan, atau Belum Masuk), dan Nilai Akhir.
+  - Menampilkan NISN, Nama Siswa, Kelas, Waktu Selesai (Tanggal & Jam), Durasi Pengerjaan, Total Jawaban Benar, Pelanggaran Sensor Anti-Cheat, Status (Selesai, Sedang Mengerjakan, atau Belum Masuk), dan Nilai Akhir.
   - **Lihat Lembar Jawaban Siswa:** Klik tombol **"Lihat Jawaban"** untuk membuka modal rincian lembar jawaban siswa per butir soal (dilengkapi penanda warna hijau untuk jawaban benar, merah untuk jawaban salah, dan oranye untuk koreksi esai guru).
 - **Fitur Unduh Rekap Excel (.xlsx) Lengkap dengan Analisis Butir Soal:**
   - Tersedia tombol **"Unduh Rekap Excel"** di bilah aksi atas dan di atas tabel data.
@@ -542,6 +542,15 @@ Menu ini disediakan khusus bagi guru untuk menganalisis hasil belajar peserta di
     2. **Sheet 2 (Kunci Jawaban & Analisis Butir Soal):** Berisi kunci jawaban resmi tiap nomor, tipe soal, dan persentase ketuntasan (daya serap soal) oleh siswa.
 - **Integrasi Cepat ke Koreksi Esai & E-Jurnal:**
   - Tombol pintas langsung menuju menu **Koreksi Esai** manual guru dan **E-Jurnal Berita Acara** resmi.
+
+---
+
+### 3.11. Menu Riwayat Pelanggaran Siswa (`/teacher/violations`)
+Menu ini digunakan oleh pengawas/guru untuk meninjau log pelanggaran sensor integritas ujian secara real-time dan terperinci:
+- **Filter 3-Level Terpadu:** Filter Paket Soal, Filter Kelas/Rombel, dan Pilih Sesi Ujian Terbuka.
+- **4 Kartu Metrik Statistik:** Total Pelanggaran, Siswa Terdeteksi, Sudah Dibuka Kunci, dan Status Masih Terkunci.
+- **Tabel Riwayat Pelanggaran Lengkap:** Checkbox seleksi massal, No, Nama Siswa, Kelas, NISN, Jenis Pelanggaran, Keterangan Sensor, **Tanggal Insiden (`DD/MM/YYYY`)**, **Waktu (`HH:MM:SS`)**, Status Buka Kunci, dan tombol Aksi Hapus satuan.
+- **Pembersihan Log & Sinkronisasi Dua Arah:** Pengawas berwenang menghapus rekaman pelanggaran satuan atau massal (*"Bersihkan Seluruh Log Sesi"*). Penghapusan langsung menyinkronkan counter pelanggaran siswa dan laporan Berita Acara E-Jurnal.
 
 
 ---

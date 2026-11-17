@@ -408,7 +408,7 @@ Setelah masuk melalui portal login terpadu (`/login`) menggunakan **NIP** dan ka
   1. **Filter Terpadu 3-Level Presisi:** Filter Paket Soal, Filter Kelas/Rombel (menyaring siswa hanya dari kelas yang dipilih pada sesi multi-kelas, misal IXG), dan Sesi Ujian Aktif.
   2. **Default Tab Selesai (Submitted):** Secara otomatis langsung memfilter dan menampilkan siswa yang telah mengirimkan ujian dan memiliki nilai (status Selesai), dilengkapi opsi beralih ke tab *Sedang Mengerjakan* atau *Semua Peserta*.
   3. **4 Kartu KPI & Counter Real-Time per Kelas:** Total Peserta, Selesai/Terkirim, Rata-Rata Nilai Kelas, serta Nilai Tertinggi & Terendah dihitung spesifik untuk kelas yang sedang difilter.
-  4. **Tabel Rekapitulasi Nilai:** No, NISN, Nama Siswa, Kelas, Durasi Pengerjaan, Butir Benar, Sensor Anti-Cheat, Status, Nilai Akhir, dan tombol **"Lihat Jawaban"**.
+  4. **Tabel Rekapitulasi Nilai:** No, NISN, Nama Siswa, Kelas, Waktu Selesai (Tanggal & Jam), Durasi Pengerjaan, Butir Benar, Sensor Anti-Cheat, Status, Nilai Akhir, dan tombol **"Lihat Jawaban"**.
   5. **Modal Rincian Lembar Jawaban Siswa:** Bedah butir soal 1 s/d N (status Benar/Sebagian/Salah/Esai, perolehan poin, opsi pilihan siswa vs kunci jawaban sistem).
   6. **Fitur Unduh Rekap Excel (.xlsx) Sesuai Filter:** Tombol **"Download Excel"** di atas tabel untuk mengunduh berkas spreadsheet resmi 2-sheet yang difilter spesifik menurut kelas dan status terpilih (header berkas: `Kelas / Rombel: IXG`, nama file dinamis: `Rekap_Nilai_[Paket]_[Kelas]_[Status].xlsx`), dilengkapi analisis per butir nomor 1 s/d N dan kunci jawaban resmi.
 
@@ -420,7 +420,7 @@ Setelah masuk melalui portal login terpadu (`/login`) menggunakan **NIP** dan ka
 - **Fitur Utama:**
   1. **Filter Terpadu (Identik dengan E-Jurnal):** Filter Paket Soal, Filter Kelas / Rombel, dan Pilih Sesi Ujian Terbuka.
   2. **4 Kartu Metrik KPI:** Total Pelanggaran, Siswa Terdeteksi, Sudah Dibuka Kunci, dan Status Masih Terkunci dengan angka tabular monospace.
-  3. **Tabel Catatan Integritas Ujian:** Checkbox seleksi massal, Nomor, Nama Siswa, NISN, Jenis Pelanggaran, Keterangan Sensor, Waktu Deteksi, Status Buka Kunci, dan tombol Aksi Hapus individual.
+  3. **Tabel Catatan Integritas Ujian:** Checkbox seleksi massal, Nomor, Nama Siswa, Kelas, NISN, Jenis Pelanggaran, Keterangan Sensor, Tanggal, Waktu Deteksi, Status Buka Kunci, dan tombol Aksi Hapus individual.
   4. **Hapus Satuan & Hapus Massal:** Dukungan hapus 1 rekaman atau seleksi multi-baris melalui tombol **"Hapus Terpilih"** dan opsi **"Bersihkan Seluruh Log Sesi"**.
   5. **Sinkronisasi Dua Arah Terpadu:** Penghapusan log di menu ini secara langsung menghapus data di database, me-reset akumulasi pelanggaran siswa (`violation_count`), memperbarui `total_violations_recorded` pada E-Jurnal, dan seketika lenyap dari tabel Catatan Integritas E-Jurnal, cetak PDF ReportLab, dan unduhan Excel Berita Acara.
 

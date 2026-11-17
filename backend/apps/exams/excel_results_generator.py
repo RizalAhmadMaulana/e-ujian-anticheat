@@ -92,7 +92,7 @@ def generate_session_results_excel(session, questions, students_data, attempts_b
     start_row = 9
     fixed_headers = [
         "No", "NISN", "Nama Siswa", "Kelas", "Status",
-        "Durasi", "Sensor Anti-Cheat", "Total Benar", "Nilai Akhir"
+        "Waktu Selesai", "Durasi", "Sensor Anti-Cheat", "Total Benar", "Nilai Akhir"
     ]
 
     # Kolom soal dinamis
@@ -122,6 +122,22 @@ def generate_session_results_excel(session, questions, students_data, attempts_b
         answers = att.answers_json or {} if att else {}
         essay_scores = att.essay_scores or {} if att else {}
 
+        # Waktu selesai
+        finished_str = "-"
+        if att and att.finished_at:
+            from django.utils import timezone
+            local_fin = timezone.localtime(att.finished_at)
+            finished_str = local_fin.strftime("%d/%m/%Y %H:%M:%S")
+        elif st.get("finished_at"):
+            try:
+                from datetime import datetime
+                from django.utils import timezone
+                fin_dt = datetime.fromisoformat(st["finished_at"])
+                local_fin = timezone.localtime(fin_dt) if timezone.is_aware(fin_dt) else fin_dt
+                finished_str = local_fin.strftime("%d/%m/%Y %H:%M:%S")
+            except Exception:
+                finished_str = str(st["finished_at"])
+
         # Waktu durasi
         duration_str = "-"
         if att and att.started_at and att.finished_at:
@@ -143,6 +159,7 @@ def generate_session_results_excel(session, questions, students_data, attempts_b
             (st.get("student_name", "-"), align_left, font_bold),
             (st.get("classroom_name", "-"), align_center, font_data),
             (status_display, align_center, font_data),
+            (finished_str, align_center, font_mono),
             (duration_str, align_center, font_data),
             (viol_display, align_center, font_data),
             (correct_display, align_center, font_bold),
@@ -156,7 +173,7 @@ def generate_session_results_excel(session, questions, students_data, attempts_b
             cell.border = thin_border
             if default_row_fill:
                 cell.fill = default_row_fill
-            if col_idx == 9 and score_val is not None:
+            if col_idx == 10 and score_val is not None:
                 cell.font = font_correct if score_val >= 75 else font_bold
 
         # Isi Per-Question Columns
@@ -292,7 +309,7 @@ def generate_session_results_excel(session, questions, students_data, attempts_b
         cell_empty = ws1.cell(row=summary_row, column=c)
         cell_empty.border = thin_border
         cell_empty.fill = fill_summary
-        if c == 9:
+        if c == 10:
             avg_score = round(sum(scores_list) / len(scores_list), 1) if scores_list else 0.0
             cell_empty.value = f"Rata: {avg_score}"
             cell_empty.font = font_bold
