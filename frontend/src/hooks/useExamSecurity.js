@@ -131,6 +131,18 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     // ========================================================
     let blurTimeout = null;
     const handleWindowBlur = () => {
+      // 0ms Instant Obfuscation: Sembunyikan konten soal seketika saat peramban kehilangan fokus OS
+      // Menjamin tangkapan layar (Screenshot) atau rekaman OS tidak pernah memuat teks/gambar soal
+      if (!isSubmittedRef.current && !isLockedRef.current) {
+        if (!document.hasFocus()) {
+          const mainEl = document.querySelector('main');
+          if (mainEl) {
+            mainEl.style.visibility = 'hidden';
+            mainEl.style.opacity = '0';
+          }
+        }
+      }
+
       if (blurTimeout) clearTimeout(blurTimeout);
       blurTimeout = setTimeout(() => {
         if (isSubmittedRef.current || isLockedRef.current) return;
@@ -172,7 +184,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
               : 'Siswa terdeteksi berpindah tab peramban atau meminimalkan browser ujian'
           );
         }
-      }, 150);
+      }, 50);
     };
 
     const handleWindowFocus = () => {
@@ -181,6 +193,11 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       if (blurTimeout) {
         clearTimeout(blurTimeout);
         blurTimeout = null;
+      }
+      const mainEl = document.querySelector('main');
+      if (mainEl && !isLockedRef.current) {
+        mainEl.style.visibility = '';
+        mainEl.style.opacity = '';
       }
     };
 
@@ -191,7 +208,11 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     const handleTouchStart = (e) => {
       if (isSubmittedRef.current || isLockedRef.current) return;
 
-      const touchCount = (e.touches && e.touches.length) || (e.targetTouches && e.targetTouches.length) || 0;
+      const touchCount = Math.max(
+        e.touches ? e.touches.length : 0,
+        e.targetTouches ? e.targetTouches.length : 0,
+        e.changedTouches ? e.changedTouches.length : 0
+      );
 
       // 1. Deteksi Multi-Jari (2 Jari / 3 Jari atau Lebih - Universal Screenshot Gesture di Seluruh Merk HP)
       // Menangani swap 3 jari Xiaomi/Oppo/Realme, swap 2 jari, maupun multi-touch hold
@@ -259,7 +280,11 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     const handleTouchMove = (e) => {
       if (isSubmittedRef.current || isLockedRef.current) return;
 
-      const touchCount = (e.touches && e.touches.length) || (e.targetTouches && e.targetTouches.length) || 0;
+      const touchCount = Math.max(
+        e.touches ? e.touches.length : 0,
+        e.targetTouches ? e.targetTouches.length : 0,
+        e.changedTouches ? e.changedTouches.length : 0
+      );
 
       // 1. Gesture Screenshot Multi-Jari (2 Jari / 3 Jari)
       // MUTLAK AKTIF SEKETIKA TANPA DIBATASI GRACE PERIOD!
@@ -894,37 +919,65 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     window.addEventListener('blur', handleWindowBlur);
     window.addEventListener('focus', handleWindowFocus);
 
-    // Touch events untuk screenshot HP (Multi-touch 2 jari & 3 jari pada window)
+    // Touch events untuk screenshot HP (Multi-touch 2 jari & 3 jari pada window & document)
     window.addEventListener('touchstart', handleTouchStart, { capture: true, passive: false });
-    window.addEventListener('touchmove', handleTouchMove, { capture: true, passive: false });
-    window.addEventListener('touchend', handleTouchEnd, { capture: true, passive: true });
-    window.addEventListener('touchcancel', handleTouchEnd, { capture: true, passive: true });
+    document.addEventListener('touchstart', handleTouchStart, { capture: true, passive: false });
+    if (document.documentElement) {
+      document.documentElement.addEventListener('touchstart', handleTouchStart, { capture: true, passive: false });
+    }
 
-    // Mouse & context menu events pada window
+    window.addEventListener('touchmove', handleTouchMove, { capture: true, passive: false });
+    document.addEventListener('touchmove', handleTouchMove, { capture: true, passive: false });
+    if (document.documentElement) {
+      document.documentElement.addEventListener('touchmove', handleTouchMove, { capture: true, passive: false });
+    }
+
+    window.addEventListener('touchend', handleTouchEnd, { capture: true, passive: true });
+    document.addEventListener('touchend', handleTouchEnd, { capture: true, passive: true });
+
+    window.addEventListener('touchcancel', handleTouchEnd, { capture: true, passive: true });
+    document.addEventListener('touchcancel', handleTouchEnd, { capture: true, passive: true });
+
+    // Mouse & context menu events pada window & document
     window.addEventListener('mousedown', handleMouseDown, true);
+    document.addEventListener('mousedown', handleMouseDown, true);
     window.addEventListener('mousemove', handleMouseMove, true);
+    document.addEventListener('mousemove', handleMouseMove, true);
     window.addEventListener('mouseup', handleMouseUp, true);
+    document.addEventListener('mouseup', handleMouseUp, true);
 
     window.addEventListener('contextmenu', handleContextMenu, true);
+    document.addEventListener('contextmenu', handleContextMenu, true);
     window.addEventListener('auxclick', handleAuxClick, true);
+    document.addEventListener('auxclick', handleAuxClick, true);
 
-    // Clipboard events pada window
+    // Clipboard events pada window & document
     window.addEventListener('copy', handleCopy, true);
+    document.addEventListener('copy', handleCopy, true);
     window.addEventListener('paste', handlePaste, true);
+    document.addEventListener('paste', handlePaste, true);
     window.addEventListener('cut', handleCut, true);
+    document.addEventListener('cut', handleCut, true);
 
     // Selection & Drag events
     document.addEventListener('selectstart', handleSelectStart, true);
     document.addEventListener('selectionchange', handleSelectionChange, true);
     window.addEventListener('dragstart', handleDragStart, true);
+    document.addEventListener('dragstart', handleDragStart, true);
     window.addEventListener('dragover', handleDrop, true);
+    document.addEventListener('dragover', handleDrop, true);
     window.addEventListener('drop', handleDrop, true);
+    document.addEventListener('drop', handleDrop, true);
 
-    // Keyboard events pada window (tunggal, capture true)
+    // Keyboard events pada window & document (capture true)
     window.addEventListener('keydown', handleKeyDown, true);
+    document.addEventListener('keydown', handleKeyDown, true);
     window.addEventListener('keyup', handleKeyDown, true);
+    document.addEventListener('keyup', handleKeyDown, true);
     window.addEventListener('keyup', handleKeyUpOrPress, true);
+    document.addEventListener('keyup', handleKeyUpOrPress, true);
     window.addEventListener('keypress', handleKeyUpOrPress, true);
+    document.addEventListener('keypress', handleKeyUpOrPress, true);
 
     // Navigation events
     window.addEventListener('popstate', handlePopState);
@@ -943,31 +996,59 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       window.removeEventListener('focus', handleWindowFocus);
 
       window.removeEventListener('touchstart', handleTouchStart, { capture: true });
+      document.removeEventListener('touchstart', handleTouchStart, { capture: true });
+      if (document.documentElement) {
+        document.documentElement.removeEventListener('touchstart', handleTouchStart, { capture: true });
+      }
+
       window.removeEventListener('touchmove', handleTouchMove, { capture: true });
+      document.removeEventListener('touchmove', handleTouchMove, { capture: true });
+      if (document.documentElement) {
+        document.documentElement.removeEventListener('touchmove', handleTouchMove, { capture: true });
+      }
+
       window.removeEventListener('touchend', handleTouchEnd, { capture: true });
+      document.removeEventListener('touchend', handleTouchEnd, { capture: true });
+
       window.removeEventListener('touchcancel', handleTouchEnd, { capture: true });
+      document.removeEventListener('touchcancel', handleTouchEnd, { capture: true });
 
       window.removeEventListener('mousedown', handleMouseDown, true);
+      document.removeEventListener('mousedown', handleMouseDown, true);
       window.removeEventListener('mousemove', handleMouseMove, true);
+      document.removeEventListener('mousemove', handleMouseMove, true);
       window.removeEventListener('mouseup', handleMouseUp, true);
+      document.removeEventListener('mouseup', handleMouseUp, true);
 
       window.removeEventListener('contextmenu', handleContextMenu, true);
+      document.removeEventListener('contextmenu', handleContextMenu, true);
       window.removeEventListener('auxclick', handleAuxClick, true);
+      document.removeEventListener('auxclick', handleAuxClick, true);
 
       window.removeEventListener('copy', handleCopy, true);
+      document.removeEventListener('copy', handleCopy, true);
       window.removeEventListener('paste', handlePaste, true);
+      document.removeEventListener('paste', handlePaste, true);
       window.removeEventListener('cut', handleCut, true);
+      document.removeEventListener('cut', handleCut, true);
 
       document.removeEventListener('selectstart', handleSelectStart, true);
       document.removeEventListener('selectionchange', handleSelectionChange, true);
       window.removeEventListener('dragstart', handleDragStart, true);
+      document.removeEventListener('dragstart', handleDragStart, true);
       window.removeEventListener('dragover', handleDrop, true);
+      document.removeEventListener('dragover', handleDrop, true);
       window.removeEventListener('drop', handleDrop, true);
+      document.removeEventListener('drop', handleDrop, true);
 
       window.removeEventListener('keydown', handleKeyDown, true);
+      document.removeEventListener('keydown', handleKeyDown, true);
       window.removeEventListener('keyup', handleKeyDown, true);
+      document.removeEventListener('keyup', handleKeyDown, true);
       window.removeEventListener('keyup', handleKeyUpOrPress, true);
+      document.removeEventListener('keyup', handleKeyUpOrPress, true);
       window.removeEventListener('keypress', handleKeyUpOrPress, true);
+      document.removeEventListener('keypress', handleKeyUpOrPress, true);
 
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('beforeunload', handleBeforeUnload);

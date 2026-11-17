@@ -587,19 +587,27 @@ export default function ExamWorkspace() {
       onTouchStart={(e) => {
         // Jika sedang di layar terkunci, bebas sentuh / screenshot tanpa menambah akumulasi pelanggaran
         if (activeAttempt.isLocked) return;
-        if (e.touches && e.touches.length >= 2) {
+        const count = Math.max(e.touches?.length || 0, e.targetTouches?.length || 0, e.changedTouches?.length || 0);
+        if (count >= 2) {
           if (e.cancelable) e.preventDefault();
           e.stopPropagation();
-          triggerViolationLock('SCREENSHOT_3FINGER_GESTURE', 'Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture multi-jari di HP');
+          setScreenshotToast(`Tangkapan layar ${count} jari diblokir! Layar ujian Anda dibekukan.`);
+          setTimeout(() => setScreenshotToast(''), 3000);
+          handleSecurityViolation('SCREENSHOT_3FINGER_GESTURE', `Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture ${count} jari di HP`);
+          triggerViolationLock('SCREENSHOT_3FINGER_GESTURE', `Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture ${count} jari di HP`);
         }
       }}
       onTouchMove={(e) => {
         // Jika sedang di layar terkunci, bebas sentuh / screenshot tanpa menambah akumulasi pelanggaran
         if (activeAttempt.isLocked) return;
-        if (e.touches && e.touches.length >= 2) {
+        const count = Math.max(e.touches?.length || 0, e.targetTouches?.length || 0, e.changedTouches?.length || 0);
+        if (count >= 2) {
           if (e.cancelable) e.preventDefault();
           e.stopPropagation();
-          triggerViolationLock('SCREENSHOT_3FINGER_GESTURE', 'Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture multi-jari di HP');
+          setScreenshotToast(`Tangkapan layar ${count} jari diblokir! Layar ujian Anda dibekukan.`);
+          setTimeout(() => setScreenshotToast(''), 3000);
+          handleSecurityViolation('SCREENSHOT_3FINGER_GESTURE', `Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture ${count} jari di HP`);
+          triggerViolationLock('SCREENSHOT_3FINGER_GESTURE', `Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture ${count} jari di HP`);
         }
       }}
       onContextMenu={(e) => {
@@ -646,7 +654,33 @@ export default function ExamWorkspace() {
       {/* ======================================================== */}
       {/* 1. TOP SECURITY BAR (KAPSUL HITAM PENGAMAN DI ATAS LAYAR) */}
       {/* ======================================================== */}
-      <header className="bg-zinc-950/90 border-b border-zinc-800/80 px-2 sm:px-4 py-1.5 flex items-center justify-between z-30 sticky top-0 backdrop-blur-md gap-1 sm:gap-2 w-full max-w-full overflow-hidden">
+      <header 
+        className="bg-zinc-950/90 border-b border-zinc-800/80 px-2 sm:px-4 py-1.5 flex items-center justify-between z-30 sticky top-0 backdrop-blur-md gap-1 sm:gap-2 w-full max-w-full overflow-hidden"
+        onTouchStart={(e) => {
+          if (activeAttempt.isLocked) return;
+          const count = Math.max(e.touches?.length || 0, e.targetTouches?.length || 0, e.changedTouches?.length || 0);
+          if (count >= 2) {
+            if (e.cancelable) e.preventDefault();
+            e.stopPropagation();
+            setScreenshotToast(`Tangkapan layar ${count} jari diblokir! Layar ujian Anda dibekukan.`);
+            setTimeout(() => setScreenshotToast(''), 3000);
+            handleSecurityViolation('SCREENSHOT_3FINGER_GESTURE', `Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture ${count} jari di HP`);
+            triggerViolationLock('SCREENSHOT_3FINGER_GESTURE', `Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture ${count} jari di HP`);
+          }
+        }}
+        onTouchMove={(e) => {
+          if (activeAttempt.isLocked) return;
+          const count = Math.max(e.touches?.length || 0, e.targetTouches?.length || 0, e.changedTouches?.length || 0);
+          if (count >= 2) {
+            if (e.cancelable) e.preventDefault();
+            e.stopPropagation();
+            setScreenshotToast(`Tangkapan layar ${count} jari diblokir! Layar ujian Anda dibekukan.`);
+            setTimeout(() => setScreenshotToast(''), 3000);
+            handleSecurityViolation('SCREENSHOT_3FINGER_GESTURE', `Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture ${count} jari di HP`);
+            triggerViolationLock('SCREENSHOT_3FINGER_GESTURE', `Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture ${count} jari di HP`);
+          }
+        }}
+      >
         {/* Status Monitoring & Judul */}
         <div className="flex items-center gap-1 sm:gap-2 shrink-0 min-w-0">
           <div className="flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] font-semibold tracking-wider uppercase shrink-0 whitespace-nowrap">
@@ -917,7 +951,33 @@ export default function ExamWorkspace() {
             }}
           >
             {/* Security Notice Bar for External Forms */}
-            <div className="bg-amber-950/90 border-b border-amber-800/80 px-3 py-1.5 flex items-center justify-between text-[11px] text-amber-200 shrink-0 z-10 shadow-xs">
+            <div 
+              className="bg-amber-950/90 border-b border-amber-800/80 px-3 py-1.5 flex items-center justify-between text-[11px] text-amber-200 shrink-0 z-10 shadow-xs"
+              onTouchStart={(e) => {
+                if (activeAttempt.isLocked) return;
+                const count = Math.max(e.touches?.length || 0, e.targetTouches?.length || 0, e.changedTouches?.length || 0);
+                if (count >= 2) {
+                  if (e.cancelable) e.preventDefault();
+                  e.stopPropagation();
+                  setScreenshotToast(`Tangkapan layar ${count} jari diblokir! Layar ujian Anda dibekukan.`);
+                  setTimeout(() => setScreenshotToast(''), 3000);
+                  handleSecurityViolation('SCREENSHOT_3FINGER_GESTURE', `Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture ${count} jari di HP`);
+                  triggerViolationLock('SCREENSHOT_3FINGER_GESTURE', `Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture ${count} jari di HP`);
+                }
+              }}
+              onTouchMove={(e) => {
+                if (activeAttempt.isLocked) return;
+                const count = Math.max(e.touches?.length || 0, e.targetTouches?.length || 0, e.changedTouches?.length || 0);
+                if (count >= 2) {
+                  if (e.cancelable) e.preventDefault();
+                  e.stopPropagation();
+                  setScreenshotToast(`Tangkapan layar ${count} jari diblokir! Layar ujian Anda dibekukan.`);
+                  setTimeout(() => setScreenshotToast(''), 3000);
+                  handleSecurityViolation('SCREENSHOT_3FINGER_GESTURE', `Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture ${count} jari di HP`);
+                  triggerViolationLock('SCREENSHOT_3FINGER_GESTURE', `Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture ${count} jari di HP`);
+                }
+              }}
+            >
               <div className="flex items-center gap-1.5 truncate">
                 <ShieldAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                 <span className="font-semibold text-amber-300">Protokol Keamanan Lembar Eksternal:</span>
