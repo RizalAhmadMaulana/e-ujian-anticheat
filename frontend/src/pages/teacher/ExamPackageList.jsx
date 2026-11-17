@@ -346,14 +346,20 @@ export default function ExamPackageList() {
     setQuestions(updated);
   };
 
-  // Upload Gambar Soal
+  // Upload Gambar Soal (Pratinjau Instan Blob + Unggah Server)
   const handleQuestionImageUpload = async (qIndex, file) => {
     if (!file) return;
+    const localBlobUrl = URL.createObjectURL(file);
+    const updated = [...questions];
+    updated[qIndex].imageUrl = localBlobUrl;
+    setQuestions(updated);
+
     try {
       const res = await uploadExamImageApi(file);
-      const updated = [...questions];
-      updated[qIndex].imageUrl = res.url;
-      setQuestions(updated);
+      const serverUrl = res.stream_url || res.url || res.relative_url;
+      const finalUpdated = [...questions];
+      finalUpdated[qIndex].imageUrl = serverUrl;
+      setQuestions(finalUpdated);
     } catch (err) {
       alert('Gagal mengunggah gambar soal: ' + (err.response?.data?.error || err.message));
     }
@@ -414,13 +420,20 @@ export default function ExamPackageList() {
     setQuestions(updated);
   };
 
+  // Upload Gambar Opsi Jawaban (Pratinjau Instan Blob + Unggah Server)
   const handleOptionImageUpload = async (qIndex, optIndex, file) => {
     if (!file) return;
+    const localBlobUrl = URL.createObjectURL(file);
+    const updated = [...questions];
+    updated[qIndex].options[optIndex].imageUrl = localBlobUrl;
+    setQuestions(updated);
+
     try {
       const res = await uploadExamImageApi(file);
-      const updated = [...questions];
-      updated[qIndex].options[optIndex].imageUrl = res.url;
-      setQuestions(updated);
+      const serverUrl = res.stream_url || res.url || res.relative_url;
+      const finalUpdated = [...questions];
+      finalUpdated[qIndex].options[optIndex].imageUrl = serverUrl;
+      setQuestions(finalUpdated);
     } catch (err) {
       alert('Gagal mengunggah gambar opsi: ' + (err.response?.data?.error || err.message));
     }
@@ -683,7 +696,9 @@ export default function ExamPackageList() {
           options = (q.options || []).map((opt) => ({
             option_label: opt.label,
             option_text: opt.text,
+            text: opt.text,
             image_url: opt.imageUrl || null,
+            imageUrl: opt.imageUrl || null,
             is_correct: opt.label === q.correctOption,
           }));
         } else if (q.questionType === 'MULTIPLE_CHOICE_COMPLEX') {
@@ -691,7 +706,9 @@ export default function ExamPackageList() {
           options = (q.options || []).map((opt) => ({
             option_label: opt.label,
             option_text: opt.text,
+            text: opt.text,
             image_url: opt.imageUrl || null,
+            imageUrl: opt.imageUrl || null,
             is_correct: correctSet.has(opt.label),
           }));
         } else if (q.questionType === 'SHORT_ANSWER') {
@@ -714,9 +731,12 @@ export default function ExamPackageList() {
 
         return {
           question_type: q.questionType,
+          question_text: q.questionText,
           text: q.questionText,
           image_url: q.imageUrl || null,
+          imageUrl: q.imageUrl || null,
           points: Number(q.points) || 20,
+          order_number: idx + 1,
           order: idx + 1,
           options,
           extra_data: extraData,
@@ -740,7 +760,9 @@ export default function ExamPackageList() {
           });
         }
       } catch (err) {
-        console.warn('Backend package save fallback:', err);
+        console.error('Backend package save error:', err);
+        const errMsg = err.response?.data?.error || err.response?.data?.detail || JSON.stringify(err.response?.data) || err.message;
+        alert('Perhatian: Gagal menyimpan paket ke server: ' + errMsg);
       }
 
       addExamPackage({

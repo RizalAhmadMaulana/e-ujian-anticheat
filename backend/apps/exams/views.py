@@ -487,12 +487,55 @@ class ExamImageUploadView(APIView):
             for chunk in file_obj.chunks():
                 destination.write(chunk)
 
+        stream_url = f"/api/exams/image-stream/?file={unique_name}"
         relative_url = f"/media/exam_images/{unique_name}"
         return Response({
-            'url': relative_url,
+            'url': stream_url,
+            'stream_url': stream_url,
+            'relative_url': relative_url,
             'filename': unique_name,
             'message': 'Gambar berhasil diunggah'
         }, status=status.HTTP_201_CREATED)
+
+
+class ServeExamImageStreamView(APIView):
+    """
+    GET /api/exams/image-stream/?file=<filename>
+    GET /api/exams/image-stream/<path:filename>
+    Melayani stream biner gambar soal & opsi jawaban tanpa ekstensi di path URL.
+    Sangat kebal dari pencegatan regex static file Nginx (location ~* \.(jpg|png|webp)).
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, filename=None):
+        raw_name = filename or request.GET.get('file') or request.GET.get('name') or request.GET.get('f') or ''
+        if not raw_name:
+            raise Http404("Nama berkas gambar tidak disertakan.")
+
+        # Sanitasi path traversal
+        clean_name = os.path.basename(raw_name).strip()
+        candidates = [
+            os.path.join(settings.MEDIA_ROOT, 'exam_images', clean_name),
+            os.path.join(settings.MEDIA_ROOT, clean_name),
+            os.path.join(str(settings.BASE_DIR), 'media', 'exam_images', clean_name),
+            os.path.join(str(settings.BASE_DIR), 'media', clean_name),
+        ]
+
+        target_path = None
+        for cand in candidates:
+            if os.path.exists(cand) and os.path.isfile(cand):
+                target_path = cand
+                break
+
+        if not target_path:
+            raise Http404(f"Berkas gambar '{clean_name}' tidak ditemukan di server.")
+
+        content_type, _ = mimetypes.guess_type(target_path)
+        content_type = content_type or 'image/png'
+
+        response = FileResponse(open(target_path, 'rb'), content_type=content_type)
+        response['Cache-Control'] = 'public, max-age=86400'
+        return response
 
 
 class ServeExamMediaFileView(APIView):
@@ -504,11 +547,13 @@ class ServeExamMediaFileView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request, filename):
-        clean_name = filename.replace('media/', '').replace('exam_images/', '').lstrip('/')
+        clean_name = os.path.basename(filename).strip()
         candidates = [
-            os.path.join(settings.MEDIA_ROOT, filename),
             os.path.join(settings.MEDIA_ROOT, 'exam_images', clean_name),
             os.path.join(settings.MEDIA_ROOT, clean_name),
+            os.path.join(str(settings.BASE_DIR), 'media', 'exam_images', clean_name),
+            os.path.join(str(settings.BASE_DIR), 'media', clean_name),
+            os.path.join(settings.MEDIA_ROOT, filename),
         ]
         target_path = None
         for cand in candidates:
@@ -517,7 +562,7 @@ class ServeExamMediaFileView(APIView):
                 break
 
         if not target_path:
-            raise Http404("Berkas gambar tidak ditemukan.")
+            raise Http404(f"Berkas gambar '{clean_name}' tidak ditemukan.")
 
         content_type, _ = mimetypes.guess_type(target_path)
         content_type = content_type or 'image/png'

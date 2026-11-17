@@ -45,24 +45,35 @@ class QuestionOptionSerializer(serializers.ModelSerializer):
 
 class QuestionSerializer(serializers.ModelSerializer):
     options = QuestionOptionSerializer(many=True, required=False)
+    text = serializers.CharField(source='question_text', required=False, allow_blank=True)
+    order = serializers.IntegerField(source='order_number', required=False)
+    imageUrl = serializers.CharField(source='image_url', required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = Question
         fields = [
             'id', 
             'question_text', 
+            'text',
             'image_url', 
+            'imageUrl',
             'question_type', 
             'points', 
             'order_number', 
+            'order',
             'extra_data',
             'options'
         ]
+        extra_kwargs = {
+            'question_text': {'required': False, 'allow_blank': True},
+            'order_number': {'required': False},
+        }
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
         # Sediakan kompatibilitas camelCase untuk UI Frontend
         data['questionText'] = instance.question_text
+        data['text'] = instance.question_text
         data['imageUrl'] = instance.image_url
         data['questionType'] = instance.question_type
         data['orderNumber'] = instance.order_number
@@ -133,14 +144,38 @@ class ExamPackageSerializer(serializers.ModelSerializer):
         if package.exam_type == ExamPackage.ExamTypeChoices.NATIVE_QUESTIONS:
             for q_idx, q_data in enumerate(questions_data):
                 options_data = q_data.pop('options', [])
-                q_data['order_number'] = q_data.get('order_number', q_idx + 1)
-                question = Question.objects.create(package=package, **q_data)
+                q_text = q_data.get('question_text') or q_data.get('text', '')
+                q_img = q_data.get('image_url') or q_data.get('imageUrl') or None
+                q_order = q_data.get('order_number') or q_data.get('order', q_idx + 1)
+                q_type = q_data.get('question_type', Question.QuestionTypeChoices.MULTIPLE_CHOICE)
+                q_pts = q_data.get('points', 10)
+                q_extra = q_data.get('extra_data', {})
+
+                question = Question.objects.create(
+                    package=package,
+                    question_text=q_text,
+                    image_url=q_img,
+                    question_type=q_type,
+                    points=q_pts,
+                    order_number=q_order,
+                    extra_data=q_extra
+                )
 
                 for opt_data in options_data:
                     opt_img = opt_data.pop('image_url', None) or opt_data.pop('imageUrl', None)
-                    raw_text = opt_data.get('option_text', '')
+                    raw_text = opt_data.get('option_text', '') or opt_data.get('text', '')
+                    if raw_text.startswith('[IMAGE:'):
+                        end_idx = raw_text.find(']')
+                        if end_idx != -1:
+                            if not opt_img:
+                                opt_img = raw_text[7:end_idx].strip()
+                            raw_text = raw_text[end_idx + 1:].strip()
                     if opt_img:
-                        opt_data['option_text'] = f"[IMAGE:{opt_img}]{raw_text}"
+                        opt_data['option_text'] = f"[IMAGE:{opt_img}] {raw_text}".strip()
+                    else:
+                        opt_data['option_text'] = raw_text
+                    opt_data.pop('text', None)
+                    opt_data.pop('imageUrl', None)
                     QuestionOption.objects.create(question=question, **opt_data)
 
         return package
@@ -160,14 +195,38 @@ class ExamPackageSerializer(serializers.ModelSerializer):
             instance.questions.all().delete()
             for q_idx, q_data in enumerate(questions_data):
                 options_data = q_data.pop('options', [])
-                q_data['order_number'] = q_data.get('order_number', q_idx + 1)
-                question = Question.objects.create(package=instance, **q_data)
+                q_text = q_data.get('question_text') or q_data.get('text', '')
+                q_img = q_data.get('image_url') or q_data.get('imageUrl') or None
+                q_order = q_data.get('order_number') or q_data.get('order', q_idx + 1)
+                q_type = q_data.get('question_type', Question.QuestionTypeChoices.MULTIPLE_CHOICE)
+                q_pts = q_data.get('points', 10)
+                q_extra = q_data.get('extra_data', {})
+
+                question = Question.objects.create(
+                    package=instance,
+                    question_text=q_text,
+                    image_url=q_img,
+                    question_type=q_type,
+                    points=q_pts,
+                    order_number=q_order,
+                    extra_data=q_extra
+                )
 
                 for opt_data in options_data:
                     opt_img = opt_data.pop('image_url', None) or opt_data.pop('imageUrl', None)
-                    raw_text = opt_data.get('option_text', '')
+                    raw_text = opt_data.get('option_text', '') or opt_data.get('text', '')
+                    if raw_text.startswith('[IMAGE:'):
+                        end_idx = raw_text.find(']')
+                        if end_idx != -1:
+                            if not opt_img:
+                                opt_img = raw_text[7:end_idx].strip()
+                            raw_text = raw_text[end_idx + 1:].strip()
                     if opt_img:
-                        opt_data['option_text'] = f"[IMAGE:{opt_img}]{raw_text}"
+                        opt_data['option_text'] = f"[IMAGE:{opt_img}] {raw_text}".strip()
+                    else:
+                        opt_data['option_text'] = raw_text
+                    opt_data.pop('text', None)
+                    opt_data.pop('imageUrl', None)
                     QuestionOption.objects.create(question=question, **opt_data)
 
         return instance

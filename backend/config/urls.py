@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
 from django.views.static import serve
+from apps.exams.views import ServeExamImageStreamView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -9,6 +10,11 @@ urlpatterns = [
     # Autentikasi JWT & Profil Pengguna
     path('api/auth/', include('apps.accounts.urls')),
     path('api/accounts/', include('apps.accounts.urls')),
+
+    # Endpoint Khusus Streaming Media Gambar Anti-Nginx Cache/Interception
+    path('api/exams/image-stream/', ServeExamImageStreamView.as_view(), name='root_api_serve_image_stream'),
+    path('api/exams/image-stream/<path:filename>', ServeExamImageStreamView.as_view(), name='root_api_serve_image_stream_path'),
+    path('exams/image-stream/', ServeExamImageStreamView.as_view(), name='root_serve_image_stream'),
 
     # Bank Soal, Sesi Ujian, & Gerbang Siswa
     path('api/exams/', include('apps.exams.urls')),

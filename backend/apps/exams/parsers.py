@@ -210,9 +210,9 @@ def extract_images_from_excel_workbook(excel_file):
                                 with open(disk_path, 'wb') as f_out:
                                     f_out.write(zf.read(media_zip_path))
 
-                                rel_url = f"/media/exam_images/{unique_fname}"
+                                stream_url = f"/api/exams/image-stream/?file={unique_fname}"
                                 if (row_val, col_val) not in images_map:
-                                    images_map[(row_val, col_val)] = rel_url
+                                    images_map[(row_val, col_val)] = stream_url
                 except Exception:
                     pass
     except Exception:
@@ -263,9 +263,9 @@ def extract_images_from_excel_workbook(excel_file):
                         disk_path = os.path.join(media_dir, unique_fname)
                         with open(disk_path, 'wb') as f_out:
                             f_out.write(img_bytes)
-                        rel_url = f"/media/exam_images/{unique_fname}"
+                        stream_url = f"/api/exams/image-stream/?file={unique_fname}"
                         if (r_val, c_val) not in images_map:
-                            images_map[(r_val, c_val)] = rel_url
+                            images_map[(r_val, c_val)] = stream_url
         except Exception:
             pass
 
@@ -297,7 +297,13 @@ def parse_excel_questions(excel_file):
         raw_q_text = sheet.cell(row=row_idx, column=3).value
 
         # Deteksi lampiran gambar pada sel pertanyaan (Kolom 3)
-        q_img_url = images_map.get((row_idx, 3))
+        # Mendukung pencocokan tepat dan toleransi pergeseran anchor (-1 baris atau +1 baris)
+        q_img_url = (
+            images_map.get((row_idx, 3)) 
+            or images_map.get((row_idx - 1, 3)) 
+            or images_map.get((row_idx + 1, 3))
+            or images_map.get((row_idx, 2))
+        )
 
         # Bersihkan enter dan spasi kosong di awal kalimat akibat peletakan gambar di atas teks
         clean_q_text = ""
@@ -340,7 +346,11 @@ def parse_excel_questions(excel_file):
             col_idx = 4 + col_offset
             val = sheet.cell(row=row_idx, column=col_idx).value
             opt_text = str(val).strip() if val is not None else ""
-            opt_img_url = images_map.get((row_idx, col_idx))
+            opt_img_url = (
+                images_map.get((row_idx, col_idx)) 
+                or images_map.get((row_idx - 1, col_idx)) 
+                or images_map.get((row_idx + 1, col_idx))
+            )
 
             # Jika ada teks ATAU ada gambar pada kolom opsi ini
             if opt_text or opt_img_url:

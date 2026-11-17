@@ -20,11 +20,14 @@ from .views import (
     StudentAttemptDetailBreakdownView,
     ExportSessionResultsExcelView,
     ServeExamMediaFileView,
+    ServeExamImageStreamView,
 )
 
 urlpatterns = [
     # Upload & Layanan File Gambar Soal (Bebas Mixed Content & Nginx-Proof)
     path('upload-image/', ExamImageUploadView.as_view(), name='exam_upload_image'),
+    path('image-stream/', ServeExamImageStreamView.as_view(), name='serve_exam_image_stream'),
+    path('image-stream/<path:filename>', ServeExamImageStreamView.as_view(), name='serve_exam_image_stream_path'),
     path('images/<path:filename>', ServeExamMediaFileView.as_view(), name='serve_exam_image'),
     path('media/<path:filename>', ServeExamMediaFileView.as_view(), name='serve_exam_media_file'),
 
