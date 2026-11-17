@@ -323,12 +323,18 @@ Setelah masuk melalui portal login terpadu (`/login`) menggunakan **NIP** dan ka
   - **Editor Rumus Matematika & Sains (KaTeX + Formula Toolbar):**
     - Mendukung format LaTeX inline (`$...$`) dan block (`$$...$$`).
     - Dilengkapi **Formula Toolbar** sekali klik (pecahan, akar, pangkat, indeks, integral, sigma, simbol pi, alfa, beta, derajat, dll) serta live preview rumus.
-  - **Opsi B: Import Soal Massal Word (.docx) & Excel (.xlsx):**
+  - **Opsi B: Import Soal Massal Word (.docx) & Excel (.xlsx) dengan Ekstraksi Gambar Otomatis:**
     1. Klik tombol **"Import Soal (Word / Excel)"**.
     2. **Impor Word (`.docx`):** Membaca teks soal, pilihan A-E, dan penanda kunci jawaban tebal (*bold*) secara otomatis.
-    3. **Impor Excel (`.xlsx`):** Mengunduh template resmi via tombol **"Unduh Template Excel"**, mengisi tabel, dan mengimpor puluhan butir soal seketika.
+    3. **Impor Excel (`.xlsx`) & Ekstraksi Gambar Otomatis:**
+       - Mengunduh template resmi via tombol **"Unduh Template Excel"**, mengisi tabel, dan mengimpor puluhan butir soal seketika.
+       - **Ekstraksi Gambar Otomatis (Lossless Drawing Parser):** Gambar yang disisipkan guru pada sel Excel di kolom **Pertanyaan (Kolom C)** maupun kolom **Opsi Pilihan Ganda A s/d E (Kolom D s/d H)** otomatis diekstrak, disimpan ke media storage server, dan ditautkan ke soal atau opsi yang bersangkutan.
+       - **Dukungan Format Gambar & Teks Cerdas:** Mendukung gambar yang mendahului teks pertanyaan (membersihkan enter kosong di awal kalimat), butir soal yang hanya berupa gambar (tanpa teks), serta opsi pilihan ganda yang hanya berisi diagram/gambar tanpa teks.
   - **Opsi C: Tautan Google Form / MS Teams:**
     - Menyematkan tautan formulir dalam bingkai terproteksi (*Secure Iframe*) dengan konversi otomatis `?embedded=true`.
+  - **Fitur Pratinjau (Preview) Soal Mandiri Guru:**
+    - Pada setiap kartu paket bertipe **Soal Mandiri (AKM)**, kini tersedia tombol **"Preview"** (ikon mata).
+    - Membuka modal simulasi visual lembar soal yang interaktif persis seperti yang akan dikerjakan siswa, lengkap dengan rumus matematika KaTeX, gambar soal, opsi pilihan ganda A-E, gambar opsi jawaban, dan indikator kunci jawaban (`✓ Kunci`).
 
 ---
 

@@ -563,6 +563,7 @@ class ImportDocxQuestionsView(APIView):
             question = Question.objects.create(
                 package=package,
                 question_text=q_data.get('question_text', ''),
+                image_url=q_data.get('image_url') or None,
                 question_type=q_data.get('question_type', 'MULTIPLE_CHOICE'),
                 points=q_data.get('points', 10),
                 order_number=order_num,
@@ -633,6 +634,7 @@ class ImportExcelQuestionsView(APIView):
             question = Question.objects.create(
                 package=package,
                 question_text=q_data.get('question_text', ''),
+                image_url=q_data.get('image_url') or None,
                 question_type=q_data.get('question_type', 'MULTIPLE_CHOICE'),
                 points=q_data.get('points', 10),
                 order_number=order_num,

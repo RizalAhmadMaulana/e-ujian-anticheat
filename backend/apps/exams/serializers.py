@@ -17,12 +17,17 @@ class QuestionOptionSerializer(serializers.ModelSerializer):
         if raw_text.startswith('[IMAGE:'):
             end_idx = raw_text.find(']')
             if end_idx != -1:
-                data['image_url'] = raw_text[7:end_idx]
-                data['option_text'] = raw_text[end_idx + 1:]
+                data['image_url'] = raw_text[7:end_idx].strip()
+                data['option_text'] = raw_text[end_idx + 1:].strip()
             else:
                 data['image_url'] = None
         else:
             data['image_url'] = None
+
+        # Sediakan kompatibilitas camelCase untuk UI Frontend
+        data['imageUrl'] = data['image_url']
+        data['optionText'] = data['option_text']
+        data['optionLabel'] = instance.option_label
 
         request = self.context.get('request')
 
@@ -31,6 +36,10 @@ class QuestionOptionSerializer(serializers.ModelSerializer):
         if request and hasattr(request, 'user') and request.user.is_authenticated:
             if getattr(request.user, 'role', None) == 'STUDENT':
                 data.pop('is_correct', None)
+            else:
+                data['isCorrect'] = instance.is_correct
+        else:
+            data['isCorrect'] = instance.is_correct
         return data
 
 

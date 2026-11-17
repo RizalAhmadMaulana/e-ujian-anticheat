@@ -3,6 +3,7 @@ import { useExamStore } from '../../store/useExamStore';
 import { formatExternalExamUrl, isValidExamUrl } from '../../utils/urlEmbedFormatter';
 import { 
   getPackagesApi, 
+  getPackageDetailApi,
   createPackageApi, 
   updatePackageApi, 
   deletePackageApi, 
@@ -57,6 +58,11 @@ export default function ExamPackageList() {
   const [editingPackageId, setEditingPackageId] = useState(null);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('');
+
+  // Native Questions Preview State (Soal Mandiri)
+  const [isNativePreviewOpen, setIsNativePreviewOpen] = useState(false);
+  const [previewPackage, setPreviewPackage] = useState(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -761,6 +767,22 @@ export default function ExamPackageList() {
     setIsPreviewModalOpen(true);
   };
 
+  const handleOpenNativePreview = async (pkg) => {
+    setIsLoadingPreview(true);
+    setPreviewPackage(pkg);
+    setIsNativePreviewOpen(true);
+    try {
+      const freshPkg = await getPackageDetailApi(pkg.id);
+      if (freshPkg) {
+        setPreviewPackage(freshPkg);
+      }
+    } catch (err) {
+      console.warn('Gagal memuat detail paket soal untuk pratinjau:', err);
+    } finally {
+      setIsLoadingPreview(false);
+    }
+  };
+
   const typeLabels = {
     MULTIPLE_CHOICE: 'Pilihan Ganda (1 Benar)',
     MULTIPLE_CHOICE_COMPLEX: 'Pilihan Ganda Kompleks (Multi-Centang)',
@@ -1014,14 +1036,24 @@ export default function ExamPackageList() {
 
                   <div className="flex items-center gap-1.5">
                     {pkgExamType === 'NATIVE_QUESTIONS' && (
-                      <button
-                        onClick={() => handleOpenImportModal(pkg.id)}
-                        className="px-2.5 py-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border-2 border-slate-300 hover:border-slate-400 rounded-lg transition flex items-center gap-1 shadow-2xs active:scale-[0.98] cursor-pointer"
-                        title="Import butir soal tambahan ke paket ini"
-                      >
-                        <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
-                        <span>+ Import</span>
-                      </button>
+                      <>
+                        <button
+                          onClick={() => handleOpenNativePreview(pkg)}
+                          className="px-2.5 py-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border-2 border-slate-300 hover:border-slate-400 rounded-lg transition flex items-center gap-1 shadow-2xs active:scale-[0.98] cursor-pointer"
+                          title="Pratinjau Tampilan Soal Siswa"
+                        >
+                          <Eye className="w-3.5 h-3.5 text-blue-600" />
+                          <span>Preview</span>
+                        </button>
+                        <button
+                          onClick={() => handleOpenImportModal(pkg.id)}
+                          className="px-2.5 py-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border-2 border-slate-300 hover:border-slate-400 rounded-lg transition flex items-center gap-1 shadow-2xs active:scale-[0.98] cursor-pointer"
+                          title="Import butir soal tambahan ke paket ini"
+                        >
+                          <UploadCloud className="w-3.5 h-3.5 text-blue-600" />
+                          <span>+ Import</span>
+                        </button>
+                      </>
                     )}
                     {pkgExamType === 'EXTERNAL_LINK' && (
                       <button
@@ -2131,6 +2163,220 @@ export default function ExamPackageList() {
             <button
               onClick={() => setIsPreviewModalOpen(false)}
               className="px-4 py-2 bg-zinc-900 text-white rounded-lg text-xs font-semibold hover:bg-zinc-800 transition hover:-translate-y-0.5 active:scale-[0.98]"
+            >
+              Tutup Pratinjau
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ======================================================== */}
+      {/* 6. MODAL PREVIEW SOAL MANDIRI (AKM / NATIVE)             */}
+      {/* ======================================================== */}
+      <Modal
+        isOpen={isNativePreviewOpen}
+        onClose={() => setIsNativePreviewOpen(false)}
+        title="Pratinjau Lembar Soal Ujian (Tampilan Siswa)"
+        maxWidth="max-w-4xl"
+      >
+        <div className="space-y-4">
+          {/* Header Info Paket */}
+          <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-2xs">
+                  Soal Mandiri (AKM)
+                </span>
+                <span className="text-xs text-emerald-800 font-bold">
+                  {previewPackage?.subjectName || previewPackage?.subject_name || 'Mata Pelajaran'}
+                </span>
+              </div>
+              <h3 className="text-sm sm:text-base font-extrabold text-slate-900 mt-1">
+                {previewPackage?.title || 'Judul Paket Soal'}
+              </h3>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs font-mono font-bold">
+              <span className="px-3 py-1 bg-white border-2 border-emerald-300 rounded-lg text-emerald-900 shadow-2xs">
+                {previewPackage?.questions?.length || 0} Butir Soal
+              </span>
+            </div>
+          </div>
+
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Berikut adalah simulasi visual lembar soal yang akan dikerjakan siswa. Mendukung rendering rumus matematika KaTeX serta gambar lampiran pada soal dan opsi jawaban yang diekstrak dari berkas Excel/Word.
+          </p>
+
+          {/* Konten Daftar Soal */}
+          {isLoadingPreview ? (
+            <div className="py-12 text-center text-slate-500 text-xs font-medium space-y-2">
+              <div className="w-7 h-7 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
+              <span>Memuat butir soal ujian...</span>
+            </div>
+          ) : !previewPackage?.questions || previewPackage.questions.length === 0 ? (
+            <div className="py-10 text-center text-slate-400 text-xs font-medium bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl">
+              Belum ada butir soal dalam paket ini. Silakan klik tombol <b>+ Import</b> untuk menambahkan soal dari berkas Excel.
+            </div>
+          ) : (
+            <div className="max-h-[60vh] overflow-y-auto space-y-4 pr-1">
+              {previewPackage.questions.map((q, idx) => {
+                const qType = q.questionType || q.question_type || 'MULTIPLE_CHOICE';
+                const qText = q.questionText || q.question_text || q.text || '';
+                const qImg = q.imageUrl || q.image_url;
+                const extra = q.extraData || q.extra_data || {};
+
+                return (
+                  <div key={q.id || idx} className="p-4 sm:p-5 rounded-xl bg-white border-2 border-slate-200 shadow-2xs space-y-3.5">
+                    {/* Baris Atas Soal: Nomor, Tipe, Poin */}
+                    <div className="flex items-center justify-between flex-wrap gap-2 pb-2.5 border-b border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2.5 py-0.5 rounded-lg bg-slate-900 text-white font-mono font-bold text-xs">
+                          #{idx + 1}
+                        </span>
+                        <span className="text-xs font-bold text-slate-700">
+                          {({
+                            MULTIPLE_CHOICE: 'Pilihan Ganda',
+                            MULTIPLE_CHOICE_COMPLEX: 'Pilihan Ganda Kompleks',
+                            SHORT_ANSWER: 'Isian Singkat',
+                            TRUE_FALSE_MATRIX: 'Benar / Salah',
+                            MATCHING_PAIR: 'Menjodohkan',
+                            ESSAY: 'Uraian / Esai',
+                          })[qType] || 'Pilihan Ganda'}
+                        </span>
+                      </div>
+                      <span className="text-xs font-mono font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                        {q.points || 10} Poin
+                      </span>
+                    </div>
+
+                    {/* Teks Pertanyaan dengan Rumus KaTeX */}
+                    <div className="text-xs sm:text-sm text-slate-900 font-medium leading-relaxed">
+                      <MathText text={qText} />
+                    </div>
+
+                    {/* Gambar Pertanyaan Soal (Jika Ada) */}
+                    {qImg && (
+                      <div className="my-2.5 p-2 rounded-xl bg-slate-950 border border-slate-800 max-w-xl">
+                        <img
+                          src={resolveImageUrl(qImg)}
+                          alt={`Gambar Soal Nomor ${idx + 1}`}
+                          className="max-h-72 w-auto object-contain rounded-lg mx-auto"
+                        />
+                      </div>
+                    )}
+
+                    {/* 1. Tipe Pilihan Ganda / Kompleks */}
+                    {(qType === 'MULTIPLE_CHOICE' || qType === 'MULTIPLE_CHOICE_COMPLEX') && (
+                      <div className="space-y-2 pt-1">
+                        {(q.options || []).map((opt, oIdx) => {
+                          const optLabel = opt.optionLabel || opt.option_label || opt.label || String.fromCharCode(65 + oIdx);
+                          const optText = opt.optionText || opt.option_text || opt.text || '';
+                          const optImg = opt.imageUrl || opt.image_url;
+                          const isCorrect = Boolean(opt.isCorrect || opt.is_correct);
+
+                          return (
+                            <div
+                              key={optLabel}
+                              className={`p-3 rounded-xl border-2 text-xs sm:text-sm font-medium flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition ${
+                                isCorrect
+                                  ? 'bg-emerald-50/90 border-emerald-400 text-emerald-950 ring-1 ring-emerald-300'
+                                  : 'bg-slate-50/60 border-slate-200 text-slate-800'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                                <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${
+                                  isCorrect 
+                                    ? 'bg-emerald-600 text-white shadow-2xs' 
+                                    : 'bg-white text-slate-700 border-2 border-slate-300'
+                                }`}>
+                                  {optLabel}
+                                </span>
+                                <div className="leading-relaxed">
+                                  {optText ? <MathText text={optText} /> : <span className="italic text-slate-400">(Opsi Bergambar)</span>}
+                                </div>
+                                {isCorrect && (
+                                  <span className="ml-auto sm:ml-2 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white shrink-0 shadow-2xs">
+                                    ✓ Kunci
+                                  </span>
+                                )}
+                              </div>
+
+                              {optImg && (
+                                <div className="sm:ml-auto p-1.5 rounded-lg bg-slate-950 border border-slate-800 max-h-32 shrink-0">
+                                  <img
+                                    src={resolveImageUrl(optImg)}
+                                    alt={`Gambar Opsi ${optLabel}`}
+                                    className="h-20 sm:h-24 object-contain rounded"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* 2. Tipe Isian Singkat */}
+                    {qType === 'SHORT_ANSWER' && (
+                      <div className="p-3 rounded-lg bg-amber-50/70 border border-amber-200 text-xs text-amber-900 space-y-1">
+                        <span className="font-bold">Kunci Jawaban yang Diterima Sistem:</span>
+                        <div className="font-mono bg-white p-2 rounded border border-amber-200">
+                          {Array.isArray(extra.exact_keys) 
+                            ? extra.exact_keys.join(' / ') 
+                            : (extra.exact_keys || '-')}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 3. Tipe Benar / Salah Matrix */}
+                    {qType === 'TRUE_FALSE_MATRIX' && extra.rows && (
+                      <div className="space-y-1.5 pt-1">
+                        <span className="text-xs font-bold text-slate-700">Pernyataan Benar / Salah:</span>
+                        {extra.rows.map((r, rIdx) => (
+                          <div key={rIdx} className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-xs flex items-center justify-between gap-2">
+                            <span>{r.statement}</span>
+                            <span className={`px-2 py-0.5 rounded font-bold text-[10px] ${
+                              r.correct || r.is_correct ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                            }`}>
+                              {r.correct || r.is_correct ? 'BENAR' : 'SALAH'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* 4. Tipe Menjodohkan */}
+                    {qType === 'MATCHING_PAIR' && extra.pairs && (
+                      <div className="space-y-1.5 pt-1">
+                        <span className="text-xs font-bold text-slate-700">Pasangan Menjodohkan:</span>
+                        {extra.pairs.map((p, pIdx) => (
+                          <div key={pIdx} className="p-2 rounded bg-slate-50 border border-slate-200 text-xs flex items-center gap-2">
+                            <span className="font-semibold text-slate-800">{p.left}</span>
+                            <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span className="text-emerald-700 font-bold">{p.right}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* 5. Tipe Esai */}
+                    {qType === 'ESSAY' && (
+                      <div className="p-3 rounded-lg bg-slate-50 border border-dashed border-slate-300 text-slate-500 text-xs italic">
+                        [Lembar Jawaban Esai Siswa - Dikoreksi Guru pada Menu Koreksi Esai]
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Footer Modal */}
+          <div className="flex justify-end pt-2 border-t border-slate-200">
+            <button
+              type="button"
+              onClick={() => setIsNativePreviewOpen(false)}
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 active:scale-[0.98] text-white rounded-lg text-xs font-semibold shadow-xs transition cursor-pointer"
             >
               Tutup Pratinjau
             </button>

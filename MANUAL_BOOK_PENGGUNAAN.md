@@ -254,10 +254,15 @@ Guru dapat menyusun bank soal menggunakan ragam format butir soal Kurikulum Merd
     1. Klik tombol **"Import Soal (Word / Excel)"** pada bilah atas Bank Soal.
     2. **Tab Impor Microsoft Word (`.docx`):**
        - Guru dapat mengunggah berkas Word yang sudah ada. Parser cerdas akan otomatis membaca nomor soal, paragraf pertanyaan, pilihan opsi jawaban (A, B, C, D), dan kunci jawaban `KUNCI: A` atau teks bertanda tebal (*bold*).
-    3. **Tab Impor Spreadsheet Excel (`.xlsx`):**
+    3. **Tab Impor Spreadsheet Excel (`.xlsx`) & Ekstraksi Gambar Otomatis:**
        - Klik tombol **"Unduh Template Excel"** untuk memperoleh template resmi `Template_Import_Soal_E-Ujian.xlsx`.
        - Isi lembar kerja dengan format kolom baku (`Tipe Soal`, `Teks Soal`, `Poin`, `Opsi A`, `Opsi B`, `Opsi C`, `Opsi D`, `Opsi E`, `Kunci Jawaban`).
-       - Unggah berkas `.xlsx` dan klik **"Mulai Impor Soal"**. Puluhan soal seketika terdaftar ke dalam paket soal tanpa perlu mengetik ulang satu per satu.
+       - **Ekstraksi Gambar Otomatis:** Guru dapat menyisipkan gambar ilustrasi, grafik, diagram, atau rumus langsung ke dalam sel Excel:
+         * Gambar pada kolom **Teks Soal (Kolom C)** akan otomatis diekstrak dan dijadikan lampiran gambar pertanyaan.
+         * Gambar pada kolom **Opsi A s/d E (Kolom D s/d H)** akan otomatis diekstrak dan dijadikan gambar pada pilihan jawaban.
+         * Jika posisi gambar berada di atas teks atau diikuti baris kosong (*newlines*), sistem secara otomatis merapikan teks pertanyaan.
+         * Jika butir soal atau opsi jawaban hanya berupa gambar (tanpa teks kata-kata), sistem tetap menyimpannya secara utuh tanpa terlewat.
+       - Unggah berkas `.xlsx` dan klik **"Mulai Impor Soal"**. Puluhan soal beserta seluruh gambar lampirannya seketika terdaftar ke dalam paket soal tanpa perlu mengunggah gambar satu per satu secara manual.
 
   - **Pilihan C: Tautan Google Form / MS Teams (Secure Iframe):**
     1. Pilih opsi **"Link Google Form / Teams"**.
@@ -266,6 +271,10 @@ Guru dapat menyusun bank soal menggunakan ragam format butir soal Kurikulum Merd
        - *Sistem secara otomatis mengubah URL menjadi mode sematan terproteksi (`/viewform?embedded=true`).*
     4. Anda dapat menguji tampilan form dengan menekan tombol **"Uji Tampilan (Preview Iframe)"**.
     5. Klik **"Simpan Paket Soal"**.
+
+  - **Fitur Pratinjau (Preview) Soal Mandiri Guru:**
+    - Pada setiap kartu paket bertipe **Soal Mandiri (AKM)**, kini tersedia tombol **"Preview"** (ikon mata).
+    - Membuka modal simulasi visual lembar soal yang interaktif persis seperti yang akan dikerjakan siswa, lengkap dengan rumus matematika KaTeX, gambar soal, opsi pilihan ganda A-E, gambar opsi jawaban, dan indikator kunci jawaban (`✓ Kunci`).
 
 ---
 

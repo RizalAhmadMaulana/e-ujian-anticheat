@@ -1,6 +1,9 @@
 import os
 import re
 import uuid
+import zipfile
+import posixpath
+import xml.etree.ElementTree as ET
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
@@ -54,6 +57,7 @@ def parse_docx_questions(docx_file):
             current_q = {
                 'order_number': order_num,
                 'question_text': raw_text,
+                'image_url': None,
                 'question_type': q_type,
                 'points': 10,
                 'options': [],
@@ -110,10 +114,178 @@ def parse_docx_questions(docx_file):
     return questions
 
 
+def extract_images_from_excel_workbook(excel_file):
+    """
+    Ekstrak seluruh gambar yang tertanam pada sel Excel (.xlsx) 
+    baik dari pertanyaan (kolom 3) maupun opsi jawaban (kolom 4 s/d 8).
+    Mengembalikan mapping: {(row, col): '/media/exam_images/img_name.ext'} (row dan col 1-indexed).
+    Menggunakan ZipFile XML Drawing Parsing sebagai metode primer (akurat & lossless tanpa dependensi Pillow)
+    dan openpyxl _images sebagai fallback.
+    """
+    images_map = {}
+    media_dir = os.path.join(settings.MEDIA_ROOT, 'exam_images')
+    os.makedirs(media_dir, exist_ok=True)
+
+    # 1. METODE PRIMER: ZipFile Drawing XML Parsing
+    try:
+        if hasattr(excel_file, 'seek'):
+            excel_file.seek(0)
+
+        with zipfile.ZipFile(excel_file) as zf:
+            namelist = zf.namelist()
+
+            # Cari semua file drawing XML di dalam berkas Excel
+            drawing_files = [f for f in namelist if f.startswith('xl/drawings/drawing') and f.endswith('.xml')]
+
+            for draw_path in drawing_files:
+                draw_dir, draw_fname = posixpath.split(draw_path)
+                rels_path = posixpath.join(draw_dir, '_rels', f"{draw_fname}.rels")
+
+                rel_id_to_target = {}
+                if rels_path in namelist:
+                    try:
+                        rels_tree = ET.fromstring(zf.read(rels_path))
+                        for r_node in rels_tree:
+                            r_id = r_node.attrib.get('Id')
+                            target = r_node.attrib.get('Target')
+                            if r_id and target:
+                                full_target = posixpath.normpath(posixpath.join(draw_dir, target))
+                                rel_id_to_target[r_id] = full_target
+                    except Exception:
+                        pass
+
+                try:
+                    draw_tree = ET.fromstring(zf.read(draw_path))
+                    for anchor in draw_tree:
+                        anchor_tag = anchor.tag.split('}')[-1]
+                        if anchor_tag not in ['twoCellAnchor', 'oneCellAnchor']:
+                            continue
+
+                        from_node = None
+                        for child in anchor:
+                            if child.tag.split('}')[-1] == 'from':
+                                from_node = child
+                                break
+
+                        if from_node is None:
+                            continue
+
+                        col_val = None
+                        row_val = None
+                        for sub in from_node:
+                            sub_tag = sub.tag.split('}')[-1]
+                            if sub_tag == 'col' and sub.text is not None:
+                                try:
+                                    col_val = int(sub.text) + 1  # 0-indexed ke 1-indexed
+                                except ValueError:
+                                    pass
+                            elif sub_tag == 'row' and sub.text is not None:
+                                try:
+                                    row_val = int(sub.text) + 1  # 0-indexed ke 1-indexed
+                                except ValueError:
+                                    pass
+
+                        if col_val is None or row_val is None:
+                            continue
+
+                        # Cari tag blip untuk mengambil relasi ID gambar
+                        r_id = None
+                        for elem in anchor.iter():
+                            if elem.tag.split('}')[-1] == 'blip':
+                                for k, v in elem.attrib.items():
+                                    if k == 'embed' or k.endswith('}embed') or k.endswith(':embed'):
+                                        r_id = v
+                                        break
+                                if r_id:
+                                    break
+
+                        if r_id and r_id in rel_id_to_target:
+                            media_zip_path = rel_id_to_target[r_id]
+                            if media_zip_path in namelist:
+                                ext = posixpath.splitext(media_zip_path)[1].lower() or '.png'
+                                if ext not in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
+                                    ext = '.png'
+                                unique_fname = f"excel_img_{uuid.uuid4().hex[:12]}{ext}"
+                                disk_path = os.path.join(media_dir, unique_fname)
+                                with open(disk_path, 'wb') as f_out:
+                                    f_out.write(zf.read(media_zip_path))
+
+                                rel_url = f"/media/exam_images/{unique_fname}"
+                                if (row_val, col_val) not in images_map:
+                                    images_map[(row_val, col_val)] = rel_url
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+    # 2. METODE SEKUNDER (Fallback jika ZipFile tidak menemukan gambar)
+    if not images_map:
+        try:
+            if hasattr(excel_file, 'seek'):
+                excel_file.seek(0)
+            wb_temp = openpyxl.load_workbook(excel_file, data_only=True)
+            ws_temp = wb_temp.active
+            for img in getattr(ws_temp, '_images', []):
+                anchor = getattr(img, 'anchor', None)
+                if anchor is None:
+                    continue
+                r_val = None
+                c_val = None
+                if hasattr(anchor, '_from'):
+                    r_val = anchor._from.row + 1
+                    c_val = anchor._from.col + 1
+                elif hasattr(anchor, 'from'):
+                    r_val = getattr(anchor, 'from').row + 1
+                    c_val = getattr(anchor, 'from').col + 1
+                elif isinstance(anchor, str):
+                    from openpyxl.utils import coordinate_to_tuple
+                    r_val, c_val = coordinate_to_tuple(anchor)
+
+                if r_val and c_val:
+                    img_bytes = None
+                    if hasattr(img, '_data') and callable(img._data):
+                        img_bytes = img._data()
+                    elif hasattr(img, 'image'):
+                        import io
+                        buf = io.BytesIO()
+                        img_format = getattr(img, 'format', None) or 'PNG'
+                        if img_format.upper() == 'JPG':
+                            img_format = 'JPEG'
+                        img.image.save(buf, format=img_format)
+                        img_bytes = buf.getvalue()
+
+                    if img_bytes:
+                        ext = (getattr(img, 'format', '') or 'png').lower()
+                        if ext == 'jpeg':
+                            ext = 'jpg'
+                        ext = f".{ext}"
+                        unique_fname = f"excel_img_{uuid.uuid4().hex[:12]}{ext}"
+                        disk_path = os.path.join(media_dir, unique_fname)
+                        with open(disk_path, 'wb') as f_out:
+                            f_out.write(img_bytes)
+                        rel_url = f"/media/exam_images/{unique_fname}"
+                        if (r_val, c_val) not in images_map:
+                            images_map[(r_val, c_val)] = rel_url
+        except Exception:
+            pass
+
+    if hasattr(excel_file, 'seek'):
+        excel_file.seek(0)
+
+    return images_map
+
+
 def parse_excel_questions(excel_file):
     """
     Parser Berkas Microsoft Excel (.xlsx) untuk Bank Soal E-Ujian.
+    Mendukung ekstraksi otomatis gambar lampiran pada soal dan opsi jawaban (A s/d E).
     """
+    # Ekstrak seluruh gambar pada lembar Excel ke media storage
+    images_map = extract_images_from_excel_workbook(excel_file)
+
+    if hasattr(excel_file, 'seek'):
+        excel_file.seek(0)
+
     wb = openpyxl.load_workbook(excel_file, data_only=True)
     sheet = wb.active
 
@@ -122,11 +294,25 @@ def parse_excel_questions(excel_file):
     # Kolom: 1: No, 2: Tipe, 3: Pertanyaan, 4: Opsi A, 5: Opsi B, 6: Opsi C, 7: Opsi D, 8: Opsi E, 9: Kunci, 10: Poin
     for row_idx in range(2, sheet.max_row + 1):
         no_val = sheet.cell(row=row_idx, column=1).value
-        q_text = sheet.cell(row=row_idx, column=3).value
-        if not q_text or not str(q_text).strip():
+        raw_q_text = sheet.cell(row=row_idx, column=3).value
+
+        # Deteksi lampiran gambar pada sel pertanyaan (Kolom 3)
+        q_img_url = images_map.get((row_idx, 3))
+
+        # Bersihkan enter dan spasi kosong di awal kalimat akibat peletakan gambar di atas teks
+        clean_q_text = ""
+        if raw_q_text is not None:
+            clean_q_text = re.sub(r'^\s*\n+', '', str(raw_q_text)).strip()
+
+        # Lewati baris jika tidak ada teks dan tidak ada gambar di kolom pertanyaan
+        if not clean_q_text and not q_img_url:
             continue
 
-        raw_type = str(sheet.cell(row=row_idx, column=2).value or 'MULTIPLE_CHOICE').strip().upper()
+        # Jika guru hanya melampirkan gambar tanpa teks, gunakan teks penjelas standar
+        if not clean_q_text and q_img_url:
+            clean_q_text = "[Perhatikan Gambar Berikut]"
+
+        raw_type = str(sheet.cell(row=row_idx, column=2).value or 'PILIHAN GANDA').strip().upper()
         q_type = 'MULTIPLE_CHOICE'
         if 'KOMPLEKS' in raw_type:
             q_type = 'MULTIPLE_CHOICE_COMPLEX'
@@ -150,12 +336,26 @@ def parse_excel_questions(excel_file):
 
         options = []
         labels = ['A', 'B', 'C', 'D', 'E']
-        for col_idx, label in enumerate(labels, start=4):
+        for col_offset, label in enumerate(labels):
+            col_idx = 4 + col_offset
             val = sheet.cell(row=row_idx, column=col_idx).value
-            if val and str(val).strip():
+            opt_text = str(val).strip() if val is not None else ""
+            opt_img_url = images_map.get((row_idx, col_idx))
+
+            # Jika ada teks ATAU ada gambar pada kolom opsi ini
+            if opt_text or opt_img_url:
+                if opt_img_url:
+                    # Format standard yang didukung serializer: [IMAGE:<url>] <text>
+                    if opt_text:
+                        final_opt_text = f"[IMAGE:{opt_img_url}] {opt_text}"
+                    else:
+                        final_opt_text = f"[IMAGE:{opt_img_url}]"
+                else:
+                    final_opt_text = opt_text
+
                 options.append({
                     'option_label': label,
-                    'option_text': str(val).strip(),
+                    'option_text': final_opt_text,
                     'is_correct': label in keys
                 })
 
@@ -165,7 +365,8 @@ def parse_excel_questions(excel_file):
 
         questions.append({
             'order_number': int(no_val) if no_val and str(no_val).isdigit() else len(questions) + 1,
-            'question_text': str(q_text).strip(),
+            'question_text': clean_q_text,
+            'image_url': q_img_url,
             'question_type': q_type,
             'points': points,
             'options': options,
