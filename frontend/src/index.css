@@ -81,8 +81,12 @@ html, body, #root {
   }
 }
 
-#instant-blackout-shield {
-  transition: opacity 0.05s ease-out;
+/* Cegah gesture pinch, multi-touch zoom & gesture OS multi-jari pada arena ujian */
+.exam-secure-workspace {
+  touch-action: pan-y !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
 }
 
 

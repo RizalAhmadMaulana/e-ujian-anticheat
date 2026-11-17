@@ -11,6 +11,7 @@ import Modal from '../../components/common/Modal';
 import MathText from '../../components/common/MathText';
 import NetworkSignalIndicator from '../../components/common/NetworkSignalIndicator';
 import { isValidSupervisorPin, getSessionTokens, generateDynamicToken } from '../../utils/tokenGenerator';
+import { enableAntiScreenshot, disableAntiScreenshot } from '../../utils/nativeMobileLock';
 import { 
   ShieldAlert, 
   Lock, 
@@ -66,19 +67,13 @@ export default function ExamWorkspace() {
   const [activeAnnouncement, setActiveAnnouncement] = useState(null); // { message, urgency, senderName, timestamp }
   const [isFullscreenActive, setIsFullscreenActive] = useState(true);
 
-  // Digital Clock Real-Time untuk Watermark Forensik Anti-Camera & Anti-Recording
-  const [watermarkTime, setWatermarkTime] = useState(new Date());
-
+  // Aktifkan FLAG_SECURE Anti-Screenshot jika berjalan pada wrapper native Android
   useEffect(() => {
-    const wTimer = setInterval(() => setWatermarkTime(new Date()), 1000);
-    return () => clearInterval(wTimer);
+    enableAntiScreenshot();
+    return () => {
+      disableAntiScreenshot();
+    };
   }, []);
-
-  const watermarkTimeString = watermarkTime.toLocaleTimeString('id-ID', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  });
 
   // Formatter Jenis Pelanggaran Human-Readable
   const formatViolationType = (type) => {
@@ -586,9 +581,23 @@ export default function ExamWorkspace() {
 
   return (
     <div 
-      className={`min-h-screen bg-[#090D16] text-zinc-100 flex flex-col relative select-none overflow-hidden selection:bg-zinc-800 ${
+      className={`min-h-screen bg-[#090D16] text-zinc-100 flex flex-col relative select-none overflow-hidden selection:bg-zinc-800 exam-secure-workspace ${
         isLandscape ? 'orientation-landscape' : 'orientation-portrait'
       }`}
+      onTouchStart={(e) => {
+        if (e.touches && e.touches.length >= 2) {
+          if (e.cancelable) e.preventDefault();
+          e.stopPropagation();
+          triggerViolationLock('SCREENSHOT_3FINGER_GESTURE', 'Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture multi-jari di HP');
+        }
+      }}
+      onTouchMove={(e) => {
+        if (e.touches && e.touches.length >= 2) {
+          if (e.cancelable) e.preventDefault();
+          e.stopPropagation();
+          triggerViolationLock('SCREENSHOT_3FINGER_GESTURE', 'Siswa terdeteksi mencoba tangkapan layar (Screenshot) menggunakan gesture multi-jari di HP');
+        }
+      }}
       onContextMenu={(e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -866,66 +875,17 @@ export default function ExamWorkspace() {
       )}
 
       {/* ======================================================== */}
-      {/* INSTANT BLACKOUT SHIELD (ANTI-SCREENSHOT & ANTI-RECORDING) */}
-      {/* Aktif seketika (0ms) saat terjadi blur, sentuhan multi-jari, */}
-      {/* tombol fisik screenshot, atau pintasan perekaman layar.    */}
-      {/* ======================================================== */}
-      <div
-        id="instant-blackout-shield"
-        style={{ display: 'none' }}
-        className="fixed inset-0 z-[9999999] bg-black text-white flex flex-col items-center justify-center p-6 text-center select-none"
-      >
-        <div className="w-16 h-16 rounded-2xl bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-500 mb-4 animate-pulse">
-          <ShieldAlert className="w-8 h-8" />
-        </div>
-        <h2 className="text-xl sm:text-2xl font-black text-rose-500 tracking-tight mb-2 uppercase">
-          Akses Ujian Terlindungi
-        </h2>
-        <p className="text-xs sm:text-sm text-zinc-300 max-w-md mx-auto mb-4 leading-relaxed">
-          Tangkapan layar (Screenshot) dan perekaman layar (Screen Recording) dilarang keras demi menjaga integritas pelaksanaan ujian sekolah.
-        </p>
-        <div className="px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-[11px] font-mono text-zinc-400">
-          Protokol Zero-Tolerance Active • Citra Layar Terproteksi Hitam
-        </div>
-      </div>
-
-      {/* ======================================================== */}
       {/* 3. AREA PENGERJAAN SOAL (HYBRID RENDERER) */}
-      {/* Disembunyikan (visibility: hidden) saat terkunci agar tidak membebani GPU & bebas blank */}
+      {/* Disembunyikan seketika saat terkunci agar bebas intip & tidak direkam */}
       {/* ======================================================== */}
       <main 
         className="flex-1 flex flex-col overflow-hidden relative"
         style={{
+          display: activeAttempt.isLocked ? 'none' : 'flex',
           visibility: activeAttempt.isLocked ? 'hidden' : 'visible',
           pointerEvents: activeAttempt.isLocked ? 'none' : 'auto'
         }}
       >
-        {/* ======================================================== */}
-        {/* DYNAMIC FORENSIC DIGITAL WATERMARK (ANTI-CAM & ANTI-RECORDING) */}
-        {/* Menampilkan identitas peserta & timestamp live berdetik   */}
-        {/* Melindungi lembar soal dari rekaman video & foto HP lain  */}
-        {/* ======================================================== */}
-        <div 
-          className="pointer-events-none select-none absolute inset-0 z-30 overflow-hidden grid grid-cols-2 md:grid-cols-4 gap-8 sm:gap-12 p-4 sm:p-8 opacity-[0.14] mix-blend-difference"
-          aria-hidden="true"
-        >
-          {Array.from({ length: 16 }).map((_, idx) => (
-            <div 
-              key={idx} 
-              className="transform -rotate-25 text-center font-mono select-none"
-            >
-              <div className="text-[10px] sm:text-xs font-black tracking-wider text-white uppercase whitespace-nowrap">
-                {studentDisplayName} • NISN: {studentNisn}
-              </div>
-              <div className="text-[8px] sm:text-[9px] font-semibold text-zinc-300 whitespace-nowrap">
-                {studentClassroom} • {watermarkTimeString} WIB
-              </div>
-              <div className="text-[7px] sm:text-[8px] tracking-widest text-zinc-400 whitespace-nowrap">
-                DOKUMEN RAHASIA ASESMEN • DILARANG MEREKAM / SCREENSHOT
-              </div>
-            </div>
-          ))}
-        </div>
         {selectedPackage?.examType === 'EXTERNAL_LINK' ? (
           /* ========================================== */
           /* MODE IFRAME SECURE: GOOGLE FORM / MS TEAMS */
