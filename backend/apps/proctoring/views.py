@@ -335,15 +335,32 @@ class ViolationHistoryListView(APIView):
 
         session_id = request.query_params.get('session_id')
         package_id = request.query_params.get('package_id')
-        classroom_id = request.query_params.get('classroom_id')
+        classroom_param = request.query_params.get('classroom_id') or request.query_params.get('classroom')
         search = request.query_params.get('search')
 
         if session_id and session_id != 'ALL':
             queryset = queryset.filter(attempt__session_id=session_id)
         if package_id and package_id != 'ALL':
             queryset = queryset.filter(attempt__session__package_id=package_id)
-        if classroom_id and classroom_id != 'ALL':
-            queryset = queryset.filter(attempt__session__classroom_id=classroom_id)
+        if classroom_param and str(classroom_param).strip().upper() != 'ALL':
+            from apps.accounts.models import ClassRoom
+            target_class = None
+            if str(classroom_param).strip().isdigit():
+                target_class = ClassRoom.objects.filter(id=int(classroom_param)).first()
+            if not target_class:
+                clean_cls_name = str(classroom_param).split('(')[0].strip()
+                target_class = ClassRoom.objects.filter(name__iexact=clean_cls_name).first() or ClassRoom.objects.filter(name__iexact=str(classroom_param).strip()).first()
+
+            if target_class:
+                queryset = queryset.filter(
+                    Q(attempt__student__classroom=target_class) |
+                    Q(attempt__session__classroom=target_class)
+                )
+            else:
+                queryset = queryset.filter(
+                    Q(attempt__student__classroom__name__icontains=str(classroom_param).strip()) |
+                    Q(attempt__session__classroom__name__icontains=str(classroom_param).strip())
+                )
         if search:
             from django.db.models import Q
             queryset = queryset.filter(

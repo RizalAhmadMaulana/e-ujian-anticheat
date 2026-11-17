@@ -14,8 +14,14 @@ class ClassRoomSerializer(serializers.ModelSerializer):
         return obj.students.count()
 
 
+class SimpleClassRoomSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ClassRoom
+        fields = ['id', 'name', 'academic_year']
+
+
 class UserSerializer(serializers.ModelSerializer):
-    classroom = ClassRoomSerializer(read_only=True)
+    classroom = SimpleClassRoomSerializer(read_only=True)
     classroom_name = serializers.CharField(source='classroom.name', read_only=True)
     classroom_id = serializers.IntegerField(source='classroom.id', read_only=True)
     is_profile_complete = serializers.SerializerMethodField()
@@ -50,6 +56,14 @@ class UserSerializer(serializers.ModelSerializer):
         return bool(has_name and has_email)
 
     def get_is_password_default(self, obj):
+        # Optimasi: Hanya jalankan PBKDF2 check_password untuk user profil sendiri (/api/auth/me/)
+        # Jika dijalankan saat listing banyak pengguna (/api/accounts/users/), 1800+ hash akan membuat server freeze 90+ detik!
+        request = self.context.get('request')
+        if not request or not hasattr(request, 'user') or not request.user.is_authenticated:
+            return False
+        if request.user.id != obj.id:
+            return False
+
         default_candidates = [
             obj.username,
             getattr(obj, 'nip', None),
@@ -67,6 +81,11 @@ class UserSerializer(serializers.ModelSerializer):
         return False
 
     def get_needs_profile_completion(self, obj):
+        request = self.context.get('request')
+        if not request or not hasattr(request, 'user') or not request.user.is_authenticated:
+            return False
+        if request.user.id != obj.id:
+            return False
         return (not self.get_is_profile_complete(obj)) or self.get_is_password_default(obj)
 
 
@@ -210,7 +229,7 @@ class UserCreateUpdateSerializer(serializers.ModelSerializer):
 # SERIALIZER KHUSUS DATA SISWA
 # ==========================================
 class StudentSerializer(serializers.ModelSerializer):
-    classroom = ClassRoomSerializer(read_only=True)
+    classroom = SimpleClassRoomSerializer(read_only=True)
     classroom_id = serializers.PrimaryKeyRelatedField(
         queryset=ClassRoom.objects.all(), 
         source='classroom', 

@@ -180,6 +180,7 @@
 - [x] Eksekusi **Tahap 5.60 — Fitur Export Rekap Nilai Siswa ke Excel (.xlsx) dengan Analisis Butir Soal, Auto-Close Modal Import Excel Siswa/Guru, Penegasan Desain Kartu (Bank Soal & Jadwal Sesi), dan Resolusi Ramah Empty State Rekap Nilai**.
 - [x] Eksekusi **Tahap 5.61 — Perapihan UI Halaman Rekap Nilai Siswa: Eliminasi 3 Tombol Aksesibilitas Duplikat pada Header Halaman**.
 - [x] Eksekusi **Tahap 5.62 — Presisi Filter Kelas, Default Tab Selesai, & Ekspor Excel Rekap Nilai Sesuai Filter**.
+- [x] Eksekusi **Tahap 5.63 — Filter Eksklusif Paket Soal Mandiri, Presisi Multi-Filter Riwayat Pelanggaran & E-Jurnal (Pratinjau, PDF & Excel), Resolusi Infinite Loading Manajemen Pengguna (PBKDF2 Optimization), & Auto-Close Modal Import Excel**.
 - [x] Seluruh sistem E-Ujian Anti-Cheat & E-Jurnal Asesmen Sekolah SIAP PRODUKSI MURNI DENGAN DATA NYATA!
 
 ---
@@ -220,5 +221,6 @@
 - [x] Eksekusi **Tahap 5.60 — Fitur Export Rekap Nilai Siswa ke Excel (.xlsx) dengan Analisis Butir Soal, Auto-Close Modal Import Excel Siswa/Guru, Penegasan Desain Kartu (Bank Soal & Jadwal Sesi), dan Resolusi Ramah Empty State Rekap Nilai**.
 - [x] Eksekusi **Tahap 5.61 — Perapihan UI Halaman Rekap Nilai Siswa: Eliminasi 3 Tombol Aksesibilitas Duplikat pada Header Halaman**.
 - [x] Eksekusi **Tahap 5.62 — Presisi Filter Kelas, Default Tab Selesai, & Ekspor Excel Rekap Nilai Sesuai Filter**.
+- [x] Eksekusi **Tahap 5.63 — Filter Eksklusif Paket Soal Mandiri, Presisi Multi-Filter Riwayat Pelanggaran & E-Jurnal (Pratinjau, PDF & Excel), Resolusi Infinite Loading Manajemen Pengguna (PBKDF2 Optimization), & Auto-Close Modal Import Excel**.
 - [x] Seluruh sistem E-Ujian Anti-Cheat & E-Jurnal Asesmen Sekolah SIAP PRODUKSI MURNI DENGAN DATA NYATA!
 

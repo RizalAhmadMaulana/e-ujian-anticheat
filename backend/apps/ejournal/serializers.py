@@ -6,7 +6,8 @@ from apps.accounts.models import User
 
 class ViolationLogItemSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='attempt.student.full_name', read_only=True)
-    nisn = serializers.CharField(source='attempt.student.username', read_only=True)
+    nisn = serializers.SerializerMethodField()
+    classroom = serializers.SerializerMethodField()
     violation_type_label = serializers.CharField(source='get_violation_type_display', read_only=True)
 
     class Meta:
@@ -15,12 +16,23 @@ class ViolationLogItemSerializer(serializers.ModelSerializer):
             'id',
             'student_name',
             'nisn',
+            'classroom',
             'violation_type',
             'violation_type_label',
             'description',
             'detected_at',
             'unlocked_by_teacher_at'
         ]
+
+    def get_nisn(self, obj):
+        student = getattr(obj.attempt, 'student', None)
+        return getattr(student, 'nisn', None) or getattr(student, 'username', '-')
+
+    def get_classroom(self, obj):
+        student = getattr(obj.attempt, 'student', None)
+        if student and getattr(student, 'classroom', None):
+            return student.classroom.name
+        return '-'
 
 class StudentAttendanceItemSerializer(serializers.Serializer):
     attempt_id = serializers.UUIDField(allow_null=True)
@@ -40,8 +52,8 @@ class ExamJournalDetailSerializer(serializers.ModelSerializer):
     session_id = serializers.UUIDField(source='session.id', read_only=True)
     subject_name = serializers.CharField(source='session.package.subject_name', read_only=True)
     title = serializers.CharField(source='session.package.title', read_only=True)
-    classroom_name = serializers.CharField(source='session.classroom.name', read_only=True)
-    academic_year = serializers.CharField(source='session.classroom.academic_year', read_only=True)
+    classroom_name = serializers.SerializerMethodField()
+    academic_year = serializers.SerializerMethodField()
     teacher_name = serializers.CharField(source='teacher.full_name', read_only=True)
     start_time = serializers.DateTimeField(source='session.start_time', read_only=True)
     end_time = serializers.DateTimeField(source='session.end_time', read_only=True)
@@ -53,6 +65,10 @@ class ExamJournalDetailSerializer(serializers.ModelSerializer):
     attendance_records = serializers.SerializerMethodField()
     violation_records = serializers.SerializerMethodField()
     average_score = serializers.SerializerMethodField()
+    total_students_scheduled = serializers.SerializerMethodField()
+    total_students_present = serializers.SerializerMethodField()
+    total_students_absent = serializers.SerializerMethodField()
+    total_violations_recorded = serializers.SerializerMethodField()
 
     class Meta:
         model = ExamJournal
@@ -84,22 +100,69 @@ class ExamJournalDetailSerializer(serializers.ModelSerializer):
             'total_students_absent', 'total_violations_recorded', 'generated_at'
         ]
 
-    def get_attendance_records(self, obj):
-        session = obj.session
-        classroom = session.classroom
-        all_students = User.objects.filter(role='STUDENT', classroom=classroom).order_by('full_name')
-        attempts_map = {att.student_id: att for att in session.attempts.all().select_related('student')}
+    def _get_target_classroom(self, obj):
+        target_classroom = self.context.get('target_classroom')
+        if target_classroom:
+            return target_classroom
+        request = self.context.get('request')
+        if request:
+            classroom_param = request.query_params.get('classroom') or request.query_params.get('classroom_id')
+            if classroom_param and str(classroom_param).strip().upper() != 'ALL':
+                from apps.accounts.models import ClassRoom
+                if str(classroom_param).strip().isdigit():
+                    return ClassRoom.objects.filter(id=int(classroom_param)).first()
+                clean_cls_name = str(classroom_param).split('(')[0].strip()
+                return ClassRoom.objects.filter(name__iexact=clean_cls_name).first() or ClassRoom.objects.filter(name__iexact=str(classroom_param).strip()).first()
+        return None
 
+    def get_classroom_name(self, obj):
+        target_classroom = self._get_target_classroom(obj)
+        if target_classroom:
+            return target_classroom.name
+        return obj.session.get_classrooms_display()
+
+    def get_academic_year(self, obj):
+        target_classroom = self._get_target_classroom(obj)
+        if target_classroom and target_classroom.academic_year:
+            return target_classroom.academic_year
+        if obj.session.classroom and obj.session.classroom.academic_year:
+            return obj.session.classroom.academic_year
+        return "2026/2027"
+
+    def _get_students_and_attempts(self, obj):
+        session = obj.session
+        target_classroom = self._get_target_classroom(obj)
+        if target_classroom:
+            all_students = User.objects.filter(role='STUDENT', classroom=target_classroom).select_related('classroom').order_by('full_name')
+            attempts_qs = session.attempts.filter(student__classroom=target_classroom).select_related('student', 'student__classroom')
+        else:
+            if getattr(session, 'allow_all_classes', False):
+                all_students = User.objects.filter(role='STUDENT').select_related('classroom').order_by('full_name')
+            elif hasattr(session, 'classrooms') and session.classrooms.exists():
+                all_students = User.objects.filter(role='STUDENT', classroom__in=session.classrooms.all()).distinct().select_related('classroom').order_by('full_name')
+            elif session.classroom:
+                all_students = User.objects.filter(role='STUDENT', classroom=session.classroom).select_related('classroom').order_by('full_name')
+            else:
+                all_students = User.objects.filter(role='STUDENT').select_related('classroom').order_by('full_name')
+            attempts_qs = session.attempts.all().select_related('student', 'student__classroom')
+
+        attempts_map = {att.student_id: att for att in attempts_qs}
+        return list(all_students), attempts_map, attempts_qs
+
+    def get_attendance_records(self, obj):
+        all_students, attempts_map, _ = self._get_students_and_attempts(obj)
+        target_classroom = self._get_target_classroom(obj)
         records = []
         for student in all_students:
             attempt = attempts_map.get(student.id)
+            cls_name = student.classroom.name if getattr(student, 'classroom', None) else (target_classroom.name if target_classroom else obj.session.get_classrooms_display())
             if attempt:
                 records.append({
                     'attempt_id': attempt.id,
                     'student_id': student.id,
-                    'nisn': student.username,
-                    'student_name': student.full_name,
-                    'classroom_name': classroom.name,
+                    'nisn': student.nisn or student.username,
+                    'student_name': student.full_name or student.username,
+                    'classroom_name': cls_name,
                     'status': attempt.status,
                     'status_label': attempt.get_status_display(),
                     'started_at': attempt.started_at,
@@ -112,9 +175,9 @@ class ExamJournalDetailSerializer(serializers.ModelSerializer):
                 records.append({
                     'attempt_id': None,
                     'student_id': student.id,
-                    'nisn': student.username,
-                    'student_name': student.full_name,
-                    'classroom_name': classroom.name,
+                    'nisn': student.nisn or student.username,
+                    'student_name': student.full_name or student.username,
+                    'classroom_name': cls_name,
                     'status': 'ABSENT',
                     'status_label': 'Belum Masuk / Tidak Hadir',
                     'started_at': None,
@@ -125,17 +188,47 @@ class ExamJournalDetailSerializer(serializers.ModelSerializer):
                 })
         return records
 
+    def get_total_students_scheduled(self, obj):
+        all_students, _, _ = self._get_students_and_attempts(obj)
+        return len(all_students)
+
+    def get_total_students_present(self, obj):
+        _, attempts_map, _ = self._get_students_and_attempts(obj)
+        return len(attempts_map)
+
+    def get_total_students_absent(self, obj):
+        all_students, attempts_map, _ = self._get_students_and_attempts(obj)
+        return max(0, len(all_students) - len(attempts_map))
+
+    def get_total_violations_recorded(self, obj):
+        target_classroom = self._get_target_classroom(obj)
+        if target_classroom:
+            return sum(att.violation_count for att in obj.session.attempts.filter(student__classroom=target_classroom))
+        return sum(att.violation_count for att in obj.session.attempts.all())
+
     def get_violation_records(self, obj):
-        violations = ViolationLog.objects.filter(
-            attempt__session=obj.session
-        ).select_related('attempt__student').order_by('-detected_at')
+        target_classroom = self._get_target_classroom(obj)
+        if target_classroom:
+            violations = ViolationLog.objects.filter(
+                attempt__session=obj.session,
+                attempt__student__classroom=target_classroom
+            ).select_related('attempt__student').order_by('-detected_at')
+        else:
+            violations = ViolationLog.objects.filter(
+                attempt__session=obj.session
+            ).select_related('attempt__student').order_by('-detected_at')
         return ViolationLogItemSerializer(violations, many=True).data
 
     def get_average_score(self, obj):
-        attempts_with_score = obj.session.attempts.filter(total_score__isnull=False)
+        target_classroom = self._get_target_classroom(obj)
+        if target_classroom:
+            attempts_with_score = obj.session.attempts.filter(student__classroom=target_classroom, total_score__isnull=False)
+        else:
+            attempts_with_score = obj.session.attempts.filter(total_score__isnull=False)
+
         if not attempts_with_score.exists():
             return 0.0
-        scores = [att.total_score for att in attempts_with_score]
+        scores = [float(att.total_score) for att in attempts_with_score]
         return round(sum(scores) / len(scores), 2)
 
 

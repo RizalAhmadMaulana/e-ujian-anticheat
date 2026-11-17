@@ -83,13 +83,24 @@ export default function StudentResults() {
         const pkgList = pkgRes.status === 'fulfilled' && Array.isArray(pkgRes.value) ? pkgRes.value : [];
         const clsList = clsRes.status === 'fulfilled' && Array.isArray(clsRes.value) ? clsRes.value : [];
 
-        setSessions(sessList);
-        setPackages(pkgList);
+        // Filter ketat: Hanya paket soal mandiri (native AKM/ANBK) yang memiliki lembar penilaian dan butir soal di sistem
+        const isNativePkg = (pkg) => {
+          if (!pkg) return false;
+          if (pkg.exam_type === 'EXTERNAL_LINK' || pkg.examType === 'EXTERNAL_LINK') return false;
+          if (pkg.external_url || pkg.externalUrl) return false;
+          return true;
+        };
+
+        const nativePackages = pkgList.filter(isNativePkg);
+        const nativeSessions = sessList.filter((s) => isNativePkg(s.package));
+
+        setSessions(nativeSessions);
+        setPackages(nativePackages);
         setClassrooms(clsList);
 
-        // Jika belum ada session terpilih dari URL, pilih sesi pertama
-        if (!selectedSessionId && sessList.length > 0) {
-          setSelectedSessionId(sessList[0].id);
+        // Jika belum ada session terpilih dari URL, pilih sesi pertama dari nativeSessions
+        if (!selectedSessionId && nativeSessions.length > 0) {
+          setSelectedSessionId(nativeSessions[0].id);
         }
       } catch (err) {
         console.error('Gagal mengambil master data filter:', err);
@@ -361,7 +372,7 @@ export default function StudentResults() {
               onChange={(e) => setSelectedPackageId(e.target.value)}
               className="w-full text-xs bg-zinc-50 hover:bg-white focus:bg-white border border-zinc-300 rounded-lg p-2.5 text-zinc-800 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition font-medium cursor-pointer"
             >
-              <option value="ALL">-- Seluruh Paket Soal ({packages.length}) --</option>
+              <option value="ALL">-- Seluruh Paket Soal Mandiri ({packages.length}) --</option>
               {packages.map((pkg) => (
                 <option key={pkg.id} value={pkg.id}>
                   {pkg.subject_name || pkg.subjectName} — {pkg.title}

@@ -4,7 +4,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from apps.accounts.models import SchoolSetting
 
-def generate_ejournal_excel(session, journal, attempts, absent_students, violations) -> bytes:
+def generate_ejournal_excel(session, journal, attempts, absent_students, violations, classroom_display=None) -> bytes:
     """
     Menghasilkan file Excel (.xlsx) resmi E-Jurnal & Rekapitulasi Ujian
     terdiri dari 2 sheet dengan identitas dinamis sekolah.
@@ -56,7 +56,7 @@ def generate_ejournal_excel(session, journal, attempts, absent_students, violati
     teacher_name = session.package.teacher.full_name if session.package and session.package.teacher else "Guru Pengawas"
     meta_info = [
         ("Mata Pelajaran", session.package.subject_name, "Hari / Tanggal", session.start_time.strftime("%d %B %Y")),
-        ("Kelas / Rombel", session.get_classrooms_display(), "Waktu Sesi", f"{session.start_time.strftime('%H:%M')} - {session.end_time.strftime('%H:%M')} WIB"),
+        ("Kelas / Rombel", classroom_display if classroom_display else session.get_classrooms_display(), "Waktu Sesi", f"{session.start_time.strftime('%H:%M')} - {session.end_time.strftime('%H:%M')} WIB"),
         ("Judul Paket", session.package.title, "Guru Pengawas", teacher_name),
         ("Mode Asesmen", "Zero-Tolerance Lockdown (Anti-Cheat)", "Durasi", f"{session.duration_minutes} Menit"),
     ]

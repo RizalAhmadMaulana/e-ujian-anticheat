@@ -67,7 +67,7 @@ class ExamJournalDetailView(APIView):
             id=session_id
         )
         journal = get_or_create_journal_with_stats(session, request.user)
-        serializer = ExamJournalDetailSerializer(journal)
+        serializer = ExamJournalDetailSerializer(journal, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def patch(self, request, session_id):
@@ -93,37 +93,63 @@ class ExamJournalExportPDFView(APIView):
         )
         journal = get_or_create_journal_with_stats(session, request.user)
 
-        # Kumpulkan seluruh data terkait
-        attempts = list(
-            session.attempts.all().select_related('student').order_by('student__full_name')
-        )
-        attempted_student_ids = [a.student_id for a in attempts]
+        classroom_param = request.query_params.get('classroom') or request.query_params.get('classroom_id')
+        target_classroom = None
+        if classroom_param and str(classroom_param).strip().upper() != 'ALL':
+            from apps.accounts.models import ClassRoom
+            if str(classroom_param).strip().isdigit():
+                target_classroom = ClassRoom.objects.filter(id=int(classroom_param)).first()
+            if not target_classroom:
+                clean_cls_name = str(classroom_param).split('(')[0].strip()
+                target_classroom = ClassRoom.objects.filter(name__iexact=clean_cls_name).first() or ClassRoom.objects.filter(name__iexact=str(classroom_param).strip()).first()
 
-        if getattr(session, 'allow_all_classes', False):
-            scheduled_students_qs = User.objects.filter(role='STUDENT')
-        elif hasattr(session, 'classrooms') and session.classrooms.exists():
-            scheduled_students_qs = User.objects.filter(role='STUDENT', classroom__in=session.classrooms.all()).distinct()
-        elif session.classroom:
-            scheduled_students_qs = User.objects.filter(role='STUDENT', classroom=session.classroom)
+        if target_classroom:
+            attempts = list(
+                session.attempts.filter(student__classroom=target_classroom).select_related('student').order_by('student__full_name')
+            )
+            attempted_student_ids = [a.student_id for a in attempts]
+            scheduled_students_qs = User.objects.filter(role='STUDENT', classroom=target_classroom)
+            absent_students = list(
+                scheduled_students_qs.exclude(id__in=attempted_student_ids).order_by('full_name')
+            )
+            violations = list(
+                ViolationLog.objects.filter(attempt__session=session, attempt__student__classroom=target_classroom)
+                .select_related('attempt__student')
+                .order_by('detected_at')
+            )
+            classroom_display_name = target_classroom.name
         else:
-            scheduled_students_qs = User.objects.filter(role='STUDENT')
+            attempts = list(
+                session.attempts.all().select_related('student').order_by('student__full_name')
+            )
+            attempted_student_ids = [a.student_id for a in attempts]
 
-        absent_students = list(
-            scheduled_students_qs
-            .exclude(id__in=attempted_student_ids)
-            .order_by('full_name')
-        )
-        violations = list(
-            ViolationLog.objects.filter(attempt__session=session)
-            .select_related('attempt__student')
-            .order_by('detected_at')
-        )
+            if getattr(session, 'allow_all_classes', False):
+                scheduled_students_qs = User.objects.filter(role='STUDENT')
+            elif hasattr(session, 'classrooms') and session.classrooms.exists():
+                scheduled_students_qs = User.objects.filter(role='STUDENT', classroom__in=session.classrooms.all()).distinct()
+            elif session.classroom:
+                scheduled_students_qs = User.objects.filter(role='STUDENT', classroom=session.classroom)
+            else:
+                scheduled_students_qs = User.objects.filter(role='STUDENT')
 
-        pdf_bytes = generate_ejournal_pdf(session, journal, attempts, absent_students, violations)
+            absent_students = list(
+                scheduled_students_qs
+                .exclude(id__in=attempted_student_ids)
+                .order_by('full_name')
+            )
+            violations = list(
+                ViolationLog.objects.filter(attempt__session=session)
+                .select_related('attempt__student')
+                .order_by('detected_at')
+            )
+            classroom_display_name = session.get_classrooms_display()
 
-        clean_subject = slugify(session.package.subject_name)
-        clean_class = slugify(session.get_classrooms_display())
-        date_str = session.start_time.strftime("%Y%m%d")
+        pdf_bytes = generate_ejournal_pdf(session, journal, attempts, absent_students, violations, classroom_display=classroom_display_name)
+
+        clean_subject = slugify(session.package.subject_name) if session.package else "ujian"
+        clean_class = slugify(classroom_display_name)
+        date_str = session.start_time.strftime("%Y%m%d") if session.start_time else "20261117"
         filename = f"E-Jurnal_{clean_subject}_{clean_class}_{date_str}.pdf"
 
         response = HttpResponse(pdf_bytes, content_type='application/pdf')
@@ -142,36 +168,63 @@ class ExamJournalExportExcelView(APIView):
         )
         journal = get_or_create_journal_with_stats(session, request.user)
 
-        attempts = list(
-            session.attempts.all().select_related('student').order_by('student__full_name')
-        )
-        attempted_student_ids = [a.student_id for a in attempts]
+        classroom_param = request.query_params.get('classroom') or request.query_params.get('classroom_id')
+        target_classroom = None
+        if classroom_param and str(classroom_param).strip().upper() != 'ALL':
+            from apps.accounts.models import ClassRoom
+            if str(classroom_param).strip().isdigit():
+                target_classroom = ClassRoom.objects.filter(id=int(classroom_param)).first()
+            if not target_classroom:
+                clean_cls_name = str(classroom_param).split('(')[0].strip()
+                target_classroom = ClassRoom.objects.filter(name__iexact=clean_cls_name).first() or ClassRoom.objects.filter(name__iexact=str(classroom_param).strip()).first()
 
-        if getattr(session, 'allow_all_classes', False):
-            scheduled_students_qs = User.objects.filter(role='STUDENT')
-        elif hasattr(session, 'classrooms') and session.classrooms.exists():
-            scheduled_students_qs = User.objects.filter(role='STUDENT', classroom__in=session.classrooms.all()).distinct()
-        elif session.classroom:
-            scheduled_students_qs = User.objects.filter(role='STUDENT', classroom=session.classroom)
+        if target_classroom:
+            attempts = list(
+                session.attempts.filter(student__classroom=target_classroom).select_related('student').order_by('student__full_name')
+            )
+            attempted_student_ids = [a.student_id for a in attempts]
+            scheduled_students_qs = User.objects.filter(role='STUDENT', classroom=target_classroom)
+            absent_students = list(
+                scheduled_students_qs.exclude(id__in=attempted_student_ids).order_by('full_name')
+            )
+            violations = list(
+                ViolationLog.objects.filter(attempt__session=session, attempt__student__classroom=target_classroom)
+                .select_related('attempt__student')
+                .order_by('detected_at')
+            )
+            classroom_display_name = target_classroom.name
         else:
-            scheduled_students_qs = User.objects.filter(role='STUDENT')
+            attempts = list(
+                session.attempts.all().select_related('student').order_by('student__full_name')
+            )
+            attempted_student_ids = [a.student_id for a in attempts]
 
-        absent_students = list(
-            scheduled_students_qs
-            .exclude(id__in=attempted_student_ids)
-            .order_by('full_name')
-        )
-        violations = list(
-            ViolationLog.objects.filter(attempt__session=session)
-            .select_related('attempt__student')
-            .order_by('detected_at')
-        )
+            if getattr(session, 'allow_all_classes', False):
+                scheduled_students_qs = User.objects.filter(role='STUDENT')
+            elif hasattr(session, 'classrooms') and session.classrooms.exists():
+                scheduled_students_qs = User.objects.filter(role='STUDENT', classroom__in=session.classrooms.all()).distinct()
+            elif session.classroom:
+                scheduled_students_qs = User.objects.filter(role='STUDENT', classroom=session.classroom)
+            else:
+                scheduled_students_qs = User.objects.filter(role='STUDENT')
 
-        excel_bytes = generate_ejournal_excel(session, journal, attempts, absent_students, violations)
+            absent_students = list(
+                scheduled_students_qs
+                .exclude(id__in=attempted_student_ids)
+                .order_by('full_name')
+            )
+            violations = list(
+                ViolationLog.objects.filter(attempt__session=session)
+                .select_related('attempt__student')
+                .order_by('detected_at')
+            )
+            classroom_display_name = session.get_classrooms_display()
 
-        clean_subject = slugify(session.package.subject_name)
-        clean_class = slugify(session.get_classrooms_display())
-        date_str = session.start_time.strftime("%Y%m%d")
+        excel_bytes = generate_ejournal_excel(session, journal, attempts, absent_students, violations, classroom_display=classroom_display_name)
+
+        clean_subject = slugify(session.package.subject_name) if session.package else "ujian"
+        clean_class = slugify(classroom_display_name)
+        date_str = session.start_time.strftime("%Y%m%d") if session.start_time else "20261117"
         filename = f"E-Jurnal_{clean_subject}_{clean_class}_{date_str}.xlsx"
 
         response = HttpResponse(

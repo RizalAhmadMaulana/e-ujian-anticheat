@@ -17,8 +17,9 @@ class ViolationHistorySerializer(serializers.ModelSerializer):
     attempt_id = serializers.UUIDField(source='attempt.id', read_only=True)
     student_id = serializers.UUIDField(source='attempt.student.id', read_only=True)
     student_name = serializers.CharField(source='attempt.student.full_name', read_only=True)
-    nisn = serializers.CharField(source='attempt.student.username', read_only=True)
-    classroom_name = serializers.CharField(source='attempt.session.classroom.name', read_only=True)
+    nisn = serializers.SerializerMethodField()
+    classroom_id = serializers.SerializerMethodField()
+    classroom_name = serializers.SerializerMethodField()
     subject_name = serializers.CharField(source='attempt.session.package.subject_name', read_only=True)
     session_title = serializers.CharField(source='attempt.session.title', read_only=True)
     session_id = serializers.UUIDField(source='attempt.session.id', read_only=True)
@@ -33,6 +34,7 @@ class ViolationHistorySerializer(serializers.ModelSerializer):
             'session_id',
             'student_name',
             'nisn',
+            'classroom_id',
             'classroom_name',
             'subject_name',
             'session_title',
@@ -42,6 +44,26 @@ class ViolationHistorySerializer(serializers.ModelSerializer):
             'detected_at',
             'unlocked_by_teacher_at'
         ]
+
+    def get_nisn(self, obj):
+        student = getattr(obj.attempt, 'student', None)
+        return getattr(student, 'nisn', None) or getattr(student, 'username', '-')
+
+    def get_classroom_id(self, obj):
+        student = getattr(obj.attempt, 'student', None)
+        if student and getattr(student, 'classroom_id', None):
+            return student.classroom_id
+        session = getattr(obj.attempt, 'session', None)
+        return getattr(session, 'classroom_id', None)
+
+    def get_classroom_name(self, obj):
+        student = getattr(obj.attempt, 'student', None)
+        if student and getattr(student, 'classroom', None):
+            return student.classroom.name
+        session = getattr(obj.attempt, 'session', None)
+        if session:
+            return session.get_classrooms_display()
+        return '-'
 
 
 class StudentAttemptDetailSerializer(serializers.ModelSerializer):

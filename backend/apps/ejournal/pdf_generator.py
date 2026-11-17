@@ -7,7 +7,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from django.utils import timezone
 from apps.accounts.models import SchoolSetting
 
-def generate_ejournal_pdf(session, journal, attempts, absent_students, violations) -> bytes:
+def generate_ejournal_pdf(session, journal, attempts, absent_students, violations, classroom_display=None) -> bytes:
     """
     Menghasilkan dokumen resmi PDF E-Jurnal & Berita Acara Ujian menggunakan ReportLab
     dengan data dinamis dari Pengaturan Sekolah (SchoolSetting).
@@ -125,7 +125,7 @@ def generate_ejournal_pdf(session, journal, attempts, absent_students, violation
     info_data = [
         [Paragraph("<b>Mata Pelajaran:</b>", cell_style), Paragraph(session.package.subject_name, cell_style),
          Paragraph("<b>Hari / Tanggal:</b>", cell_style), Paragraph(session.start_time.strftime("%d %B %Y"), cell_style)],
-        [Paragraph("<b>Kelas / Rombel:</b>", cell_style), Paragraph(session.get_classrooms_display(), cell_style),
+        [Paragraph("<b>Kelas / Rombel:</b>", cell_style), Paragraph(classroom_display if classroom_display else session.get_classrooms_display(), cell_style),
          Paragraph("<b>Waktu Sesi:</b>", cell_style), Paragraph(f"{session.start_time.strftime('%H:%M')} - {session.end_time.strftime('%H:%M')} WIB ({session.duration_minutes} Menit)", cell_style)],
         [Paragraph("<b>Judul Paket:</b>", cell_style), Paragraph(session.package.title, cell_style),
          Paragraph("<b>Guru Pengawas:</b>", cell_style), Paragraph(teacher_name, cell_style)],

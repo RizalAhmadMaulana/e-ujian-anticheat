@@ -2,9 +2,11 @@ import axiosInstance from './axiosInstance';
 
 /**
  * Mengambil rekapitulasi data lengkap E-Jurnal & Berita Acara untuk suatu sesi
+ * Mendukung filter rombel/kelas spesifik pada sesi multi-kelas
  */
-export const getSessionEJournalApi = async (sessionId) => {
-  const response = await axiosInstance.get(`/ejournal/sessions/${sessionId}/`);
+export const getSessionEJournalApi = async (sessionId, classroom = null) => {
+  const params = classroom && classroom !== 'ALL' ? { classroom } : {};
+  const response = await axiosInstance.get(`/ejournal/sessions/${sessionId}/`, { params });
   return response.data;
 };
 
@@ -19,10 +21,12 @@ export const updateSupervisorNotesApi = async (sessionId, supervisorNotes) => {
 };
 
 /**
- * Mengunduh file PDF resmi Berita Acara
+ * Mengunduh file PDF resmi Berita Acara (mendukung filter per kelas)
  */
-export const downloadEJournalPdfApi = async (sessionId, filename = 'Berita_Acara_Ujian.pdf') => {
+export const downloadEJournalPdfApi = async (sessionId, filename = 'Berita_Acara_Ujian.pdf', classroom = null) => {
+  const params = classroom && classroom !== 'ALL' ? { classroom } : {};
   const response = await axiosInstance.get(`/ejournal/sessions/${sessionId}/export-pdf/`, {
+    params,
     responseType: 'blob'
   });
   const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
@@ -36,10 +40,12 @@ export const downloadEJournalPdfApi = async (sessionId, filename = 'Berita_Acara
 };
 
 /**
- * Mengunduh file Excel (.xlsx) Rekapitulasi Nilai & Pelanggaran
+ * Mengunduh file Excel (.xlsx) Rekapitulasi Nilai & Pelanggaran (mendukung filter per kelas)
  */
-export const downloadEJournalExcelApi = async (sessionId, filename = 'Rekapitulasi_Nilai_Ujian.xlsx') => {
+export const downloadEJournalExcelApi = async (sessionId, filename = 'Rekapitulasi_Nilai_Ujian.xlsx', classroom = null) => {
+  const params = classroom && classroom !== 'ALL' ? { classroom } : {};
   const response = await axiosInstance.get(`/ejournal/sessions/${sessionId}/export-excel/`, {
+    params,
     responseType: 'blob'
   });
   const url = window.URL.createObjectURL(

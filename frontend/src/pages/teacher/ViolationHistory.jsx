@@ -82,18 +82,27 @@ export default function ViolationHistory() {
   // 2. Filter sesi berdasarkan pilihan Paket Soal & Kelas
   const filteredSessions = useMemo(() => {
     return allSessions.filter((ses) => {
-      const matchPackage = 
-        selectedPackageFilter === 'ALL' || 
-        ses.package === selectedPackageFilter || 
-        ses.packageId === selectedPackageFilter || 
-        ses.package_id === selectedPackageFilter;
+      // 1. Filter Paket Soal
+      if (selectedPackageFilter !== 'ALL') {
+        const pkgId = ses.package?.id || ses.package || ses.packageId || ses.package_id;
+        if (pkgId && String(pkgId) !== String(selectedPackageFilter)) return false;
+      }
 
-      const sessionClass = ses.classroom || ses.classroom_name;
-      const matchClass = 
-        selectedClassFilter === 'ALL' || 
-        sessionClass === selectedClassFilter;
+      // 2. Filter Kelas
+      if (selectedClassFilter !== 'ALL') {
+        if (ses.allow_all_classes || ses.is_all_classrooms) return true;
+        const cleanTarget = selectedClassFilter.trim().toLowerCase();
+        const multiClassNames = Array.isArray(ses.classrooms) 
+          ? ses.classrooms.map((c) => (c.name || String(c)).toLowerCase()) 
+          : [];
+        const singleClass = (ses.classroom_display || ses.classroom?.name || ses.classroom || ses.classroom_name || '').toLowerCase();
 
-      return matchPackage && matchClass;
+        const matchClass = multiClassNames.some(c => c === cleanTarget || cleanTarget.includes(c) || c.includes(cleanTarget)) ||
+                           singleClass.includes(cleanTarget);
+        if (!matchClass) return false;
+      }
+
+      return true;
     });
   }, [allSessions, selectedPackageFilter, selectedClassFilter]);
 
@@ -115,7 +124,7 @@ export default function ViolationHistory() {
   }, [selectedSessionId, allSessions, filteredSessions]);
 
   // 4. Ambil daftar pelanggaran terfilter dari backend
-  const fetchViolations = async () => {
+  const fetchViolations = useCallback(async () => {
     if (!currentSession?.id) {
       setViolations([]);
       setSelectedIds([]);
@@ -123,9 +132,17 @@ export default function ViolationHistory() {
     }
     setIsLoading(true);
     try {
-      const data = await proctoringApi.getViolations({
+      const params = {
         session_id: currentSession.id
-      });
+      };
+      if (selectedPackageFilter !== 'ALL') {
+        params.package_id = selectedPackageFilter;
+      }
+      if (selectedClassFilter !== 'ALL') {
+        params.classroom_id = selectedClassFilter;
+      }
+
+      const data = await proctoringApi.getViolations(params);
       setViolations(Array.isArray(data) ? data : []);
       setSelectedIds([]);
     } catch (err) {
@@ -135,29 +152,42 @@ export default function ViolationHistory() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentSession?.id, selectedPackageFilter, selectedClassFilter]);
 
   useEffect(() => {
     fetchViolations();
-  }, [currentSession?.id]);
+  }, [fetchViolations]);
 
-  // 5. Filter pencarian teks
+  // 5. Filter pelanggaran secara reaktif (Kelas + Search Query)
   const filteredViolations = useMemo(() => {
-    if (!searchQuery.trim()) return violations;
-    const q = searchQuery.toLowerCase();
-    return violations.filter(
-      (v) =>
-        (v.student_name && v.student_name.toLowerCase().includes(q)) ||
-        (v.nisn && v.nisn.toLowerCase().includes(q)) ||
-        (v.description && v.description.toLowerCase().includes(q)) ||
-        (v.violation_type_label && v.violation_type_label.toLowerCase().includes(q))
-    );
-  }, [violations, searchQuery]);
+    return violations.filter((v) => {
+      // Filter Kelas Siswa jika selectedClassFilter aktif
+      if (selectedClassFilter !== 'ALL') {
+        const targetCls = selectedClassFilter.trim().toLowerCase();
+        const vCls = (v.classroom_name || '').toLowerCase();
+        if (!vCls.includes(targetCls) && !targetCls.includes(vCls)) {
+          return false;
+        }
+      }
 
-  // Statistik Ringkasan
-  const totalViolations = violations.length;
-  const uniqueStudents = new Set(violations.map((v) => v.nisn || v.student_name)).size;
-  const unlockedCount = violations.filter((v) => Boolean(v.unlocked_by_teacher_at)).length;
+      // Filter Pencarian Teks
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchName = v.student_name && v.student_name.toLowerCase().includes(q);
+        const matchNisn = v.nisn && v.nisn.toLowerCase().includes(q);
+        const matchDesc = v.description && v.description.toLowerCase().includes(q);
+        const matchType = v.violation_type_label && v.violation_type_label.toLowerCase().includes(q);
+        if (!matchName && !matchNisn && !matchDesc && !matchType) return false;
+      }
+
+      return true;
+    });
+  }, [violations, selectedClassFilter, searchQuery]);
+
+  // Statistik Ringkasan Dihitung dari Data Terfilter
+  const totalViolations = filteredViolations.length;
+  const uniqueStudents = new Set(filteredViolations.map((v) => v.nisn || v.student_name)).size;
+  const unlockedCount = filteredViolations.filter((v) => Boolean(v.unlocked_by_teacher_at)).length;
   const stillLockedCount = Math.max(0, totalViolations - unlockedCount);
 
   // Toggle Pilihan Checkbox

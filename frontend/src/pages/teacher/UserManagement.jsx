@@ -91,9 +91,10 @@ export default function UserManagement() {
       if (searchTerm.trim()) params.search = searchTerm.trim();
 
       const data = await getUsersApi(params);
-      setUsers(data || []);
+      setUsers(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Gagal mengambil data user:', err);
+      setUsers([]);
     } finally {
       setIsLoading(false);
     }
@@ -267,6 +268,15 @@ export default function UserManagement() {
       showToast(res.message || 'Proses impor pengguna berhasil!');
       fetchUsers();
       fetchClassrooms();
+
+      // Otomatis menutup pop-up modal import setelah data berhasil masuk
+      setTimeout(() => {
+        setIsImportModalOpen(false);
+        setImportFile(null);
+        setImportResult(null);
+        setImportError('');
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }, 1200);
     } catch (err) {
       setImportError(err.response?.data?.error || 'Gagal mengimpor file Excel.');
     } finally {
