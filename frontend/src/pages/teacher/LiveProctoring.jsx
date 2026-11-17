@@ -220,6 +220,16 @@ export default function LiveProctoring() {
     }));
   }, []);
 
+  const handleStudentCancelled = useCallback((payload) => {
+    setLiveStudents((prev) =>
+      prev.filter(
+        (student) =>
+          student.attemptId !== payload.attempt_id &&
+          student.studentId !== payload.student_id
+      )
+    );
+  }, []);
+
   const handleNetworkHeartbeat = useCallback((payload) => {
     setLiveStudents((prev) =>
       prev.map((student) => {
@@ -242,6 +252,7 @@ export default function LiveProctoring() {
       onAllStudentsUnlocked: handleAllStudentsUnlocked,
       onStudentDisqualified: handleStudentDisqualified,
       onStudentSubmitted: handleStudentSubmitted,
+      onStudentCancelled: handleStudentCancelled,
       onNetworkHeartbeat: handleNetworkHeartbeat
     }
   );

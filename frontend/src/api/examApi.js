@@ -152,6 +152,13 @@ export const finishExamAttemptApi = async (sessionId, answersJson = null) => {
   return response.data;
 };
 
+export const cancelExamAttemptApi = async (sessionId, attemptId = null) => {
+  const response = await axiosInstance.post(`/exams/sessions/${sessionId}/cancel/`, {
+    attempt_id: attemptId
+  });
+  return response.data;
+};
+
 export const verifyExitPasswordApi = async (sessionId, exitPassword = '') => {
   const response = await axiosInstance.post(`/exams/sessions/${sessionId}/verify-exit/`, {
     exit_password: exitPassword
@@ -239,6 +246,7 @@ export const examApi = {
   startExamAttemptApi,
   submitExamAnswersApi,
   finishExamAttemptApi,
+  cancelExamAttemptApi,
   verifyExitPasswordApi,
   getEssaySubmissionsApi,
   saveEssayGradeApi,
@@ -265,6 +273,7 @@ export const examApi = {
   startAttempt: startExamAttemptApi,
   submitAttempt: submitExamAnswersApi,
   finishAttempt: finishExamAttemptApi,
+  cancelAttempt: cancelExamAttemptApi,
   verifyExitPassword: verifyExitPasswordApi,
   getEssaySubmissions: getEssaySubmissionsApi,
   saveEssayGrade: saveEssayGradeApi,

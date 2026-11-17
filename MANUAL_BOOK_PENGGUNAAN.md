@@ -699,6 +699,23 @@ Sistem menerapkan protokol **Zero-Tolerance Lockdown Anti-Cheat** terlengkap dan
 
 ---
 
+### 4.8. Prosedur Pembatalan Ujian (Fitur "Batal Ujian")
+Jika siswa tidak ingin melanjutkan ujian (misalnya salah memilih mata pelajaran, kondisi darurat, atau ingin membatalkan pengerjaan), siswa dapat keluar tanpa menyelesaikan seluruh soal menggunakan tombol **"Batal"**:
+
+1. **Letak Tombol:** Berada di Security Bar atas, tepat di sebelah kiri tombol "Selesai" (ikon `Ban`).
+2. **Modal Konfirmasi Pembatalan:**
+   - Mengklik tombol "Batal" akan membuka **Modal Konfirmasi Pembatalan Ujian** bertema keamanan tegas.
+   - Menjelaskan 3 konsekuensi utama:
+     1. Siswa keluar dari lembar ujian tanpa menyimpan jawaban.
+     2. Nilai ujian **TIDAK AKAN DIHITUNG ATAU DIREKAP** di sistem (status siswa di Rekap Nilai tetap *"Belum Masuk"* / `NOT_STARTED`).
+     3. Seluruh catatan pelanggaran sensor yang sempat terjadi pada sesi tersebut **AKAN DIHAPUS BERSIH SECARA OTOMATIS** dari basis data, sehingga tidak akan muncul di Riwayat Pelanggaran siswa maupun E-Jurnal Berita Acara Guru.
+3. **Pilihan Tindakan:**
+   - **"Lanjutkan Ujian":** Menutup modal dan siswa tetap berada di arena ujian.
+   - **"Ya, Batalkan & Keluar":** Sistem memanggil API pembatalan, menghapus log pelanggaran dan rekaman pengerjaan di server, melepaskan mode fullscreen, dan seketika mengembalikan siswa ke halaman utama (Lobby Siswa) tanpa memunculkan kartu nilai.
+4. **Pengerjaan di Lain Waktu:** Siswa yang telah membatalkan ujian dapat kembali mengikuti ujian di kemudian hari atau di sesi berikutnya dengan meminta Token Masuk aktif yang baru kepada guru pengawas.
+
+---
+
 ## 5. Tanya Jawab & Penanganan Kendala Lapangan (FAQ & Troubleshooting)
 
 ### Q1: Bagaimana jika siswa tidak sengaja menekan tombol Back atau keluar Fullscreen?

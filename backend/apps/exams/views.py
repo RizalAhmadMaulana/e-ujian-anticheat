@@ -386,6 +386,74 @@ class VerifyExitPasswordView(APIView):
         )
 
 
+class CancelExamSessionView(APIView):
+    """
+    POST /api/exams/sessions/<uuid:session_id>/cancel/
+    Siswa membatalkan pengerjaan ujian dan keluar tanpa menyelesaikan soal.
+    Menghapus seluruh rekaman pelanggaran (ViolationLog) pada sesi ini,
+    menghapus rekaman attempt sehingga nilai tidak terekap di sistem,
+    dan menyinkronkan data E-Jurnal serta Live Proctoring.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, session_id):
+        session = get_object_or_404(ExamSession, id=session_id)
+        student = request.user
+
+        attempt = StudentAttempt.objects.filter(session=session, student=student).first()
+        if not attempt:
+            attempt_id = request.data.get('attempt_id')
+            if attempt_id:
+                attempt = StudentAttempt.objects.filter(id=attempt_id, student=student).first()
+
+        if attempt:
+            # 1. Hapus seluruh log pelanggaran untuk attempt ini
+            attempt.violations.all().delete()
+            attempt_id_str = str(attempt.id)
+
+            # 2. Update E-Jurnal jika ada
+            try:
+                from apps.ejournal.models import ExamJournal
+                journal = ExamJournal.objects.filter(session=session).first()
+                if journal:
+                    journal.total_violations_recorded = sum(
+                        att.violation_count for att in session.attempts.exclude(id=attempt.id)
+                    )
+                    journal.save(update_fields=['total_violations_recorded'])
+            except Exception:
+                pass
+
+            # 3. Broadcast ke WebSocket Proctoring agar layar guru seketika terupdate
+            try:
+                from asgiref.sync import async_to_sync
+                from channels.layers import get_channel_layer
+                channel_layer = get_channel_layer()
+                if channel_layer:
+                    async_to_sync(channel_layer.group_send)(
+                        f"proctoring_{session.id}",
+                        {
+                            "type": "broadcast_message",
+                            "data": {
+                                "event": "STUDENT_CANCELLED",
+                                "attempt_id": attempt_id_str,
+                                "student_id": str(student.id),
+                                "student_name": student.full_name or student.username,
+                                "message": f"Siswa {student.full_name or student.username} membatalkan pengerjaan ujian."
+                            }
+                        }
+                    )
+            except Exception:
+                pass
+
+            # 4. Hapus attempt siswa sehingga nilai tidak terekap dan status kembali ke NOT_STARTED ("Belum Masuk")
+            attempt.delete()
+
+        return Response({
+            "success": True,
+            "message": "Pengerjaan ujian berhasil dibatalkan. Seluruh log pelanggaran pada sesi ini telah dihapus dan nilai tidak terekap."
+        }, status=status.HTTP_200_OK)
+
+
 class ExamImageUploadView(APIView):
     """
     POST /api/exams/upload-image/

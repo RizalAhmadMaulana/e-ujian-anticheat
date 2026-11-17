@@ -4,7 +4,7 @@ import { useExamStore } from '../../store/useExamStore';
 import { useExamSecurity } from '../../hooks/useExamSecurity';
 import { useProctorSocket } from '../../hooks/useProctorSocket';
 import { playExitSuccessAlarm } from '../../utils/soundEffects';
-import { submitExamAnswersApi, finishExamAttemptApi } from '../../api/examApi';
+import { submitExamAnswersApi, finishExamAttemptApi, cancelExamAttemptApi } from '../../api/examApi';
 import { proctoringApi } from '../../api/proctoringApi';
 import { resolveImageUrl } from '../../utils/imageUrlFormatter';
 import Modal from '../../components/common/Modal';
@@ -37,7 +37,10 @@ import {
   Trophy,
   Award,
   Sparkles,
-  ChevronRight
+  ChevronRight,
+  Ban,
+  XCircle,
+  AlertCircle
 } from 'lucide-react';
 
 export default function ExamWorkspace() {
@@ -56,9 +59,11 @@ export default function ExamWorkspace() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [doubtQuestions, setDoubtQuestions] = useState({}); // { [qId]: boolean }
   const [showExitConfirmModal, setShowExitConfirmModal] = useState(false);
+  const [showCancelConfirmModal, setShowCancelConfirmModal] = useState(false);
   const [showScoreResultModal, setShowScoreResultModal] = useState(false);
   const [studentFinalScoreData, setStudentFinalScoreData] = useState(null);
   const [isSubmittingExam, setIsSubmittingExam] = useState(false);
+  const [isCancellingExam, setIsCancellingExam] = useState(false);
   const [iframeKey, setIframeKey] = useState(1);
   const [screenshotToast, setScreenshotToast] = useState('');
   const [unlockSuccessToast, setUnlockSuccessToast] = useState('');
@@ -498,6 +503,38 @@ export default function ExamWorkspace() {
     }
   };
 
+  // Konfirmasi Batal & Keluar Ujian (Membatalkan Ujian, Menghapus Seluruh Log Pelanggaran Sesi Ini, & Tanpa Rekap Nilai)
+  const handleCancelAndExitExam = async () => {
+    setIsCancellingExam(true);
+
+    try {
+      if (activeAttempt.sessionId && activeAttempt.sessionId.length > 10) {
+        await cancelExamAttemptApi(activeAttempt.sessionId, activeAttempt.attemptId);
+      }
+    } catch (err) {
+      console.warn('Backend cancel attempt fallback ke local store:', err);
+    }
+
+    // 1. Reset attempt di Zustand store & localStorage
+    useExamStore.getState().cancelExam();
+
+    // 2. Lepaskan mode fullscreen
+    if (document.exitFullscreen && document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
+
+    setShowCancelConfirmModal(false);
+    setIsCancellingExam(false);
+
+    // 3. Langsung arahkan kembali ke Lobby Siswa tanpa memunculkan modal nilai
+    if (activeAttempt.isSimulation) {
+      useExamStore.getState().loginAsTeacher();
+      navigate('/teacher/dashboard');
+    } else {
+      navigate('/student/lobby');
+    }
+  };
+
   // Buka Kunci Mandiri oleh Siswa menggunakan PIN Pengawas Ruangan
   const handleSupervisorLocalUnlock = async (e) => {
     e.preventDefault();
@@ -780,6 +817,17 @@ export default function ExamWorkspace() {
             <Clock className="w-3 h-3 text-zinc-400 shrink-0" />
             <span>{formatTime(activeAttempt.remainingSeconds)}</span>
           </div>
+
+          {/* Tombol Batalkan Ujian */}
+          <button
+            type="button"
+            onClick={() => setShowCancelConfirmModal(true)}
+            className="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700 text-[11px] sm:text-xs font-medium shadow-2xs transition active:scale-[0.98] shrink-0 whitespace-nowrap"
+            title="Batalkan pengerjaan dan keluar tanpa menyelesaikan ujian"
+          >
+            <Ban className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+            <span>Batal</span>
+          </button>
 
           {/* Tombol Konfirmasi Selesai & Keluar Ujian */}
           <button
@@ -1480,6 +1528,87 @@ export default function ExamWorkspace() {
           </div>
         )}
       </main>
+
+      {/* ======================================================== */}
+      {/* MODAL KONFIRMASI BATAL & KELUAR UJIAN                    */}
+      {/* ======================================================== */}
+      {showCancelConfirmModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in select-none">
+          <div className="bg-zinc-900 border border-zinc-700/80 rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-5">
+            {/* Header Modal */}
+            <div className="flex items-start gap-4">
+              <div className="w-11 h-11 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 shrink-0">
+                <AlertCircle className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base sm:text-lg font-bold text-zinc-100 tracking-tight">
+                  Batalkan Pengerjaan Ujian?
+                </h3>
+                <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                  Apakah Anda yakin ingin membatalkan dan keluar tanpa menyelesaikan ujian ini?
+                </p>
+              </div>
+            </div>
+
+            {/* Kotak Informasi & Peringatan Konsekuensi */}
+            <div className="bg-zinc-950/80 border border-zinc-800 rounded-xl p-4 space-y-2.5 text-xs text-zinc-300">
+              <div className="font-semibold text-rose-300 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
+                <span>Konsekuensi Pembatalan Ujian:</span>
+              </div>
+              <ul className="space-y-1.5 text-zinc-300 text-[11px] leading-relaxed">
+                <li className="flex items-start gap-2">
+                  <span className="text-rose-400 font-bold">•</span>
+                  <span>Anda akan keluar dari ujian tanpa mengirimkan lembar jawaban.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-rose-400 font-bold">•</span>
+                  <span>Nilai ujian Anda <strong className="text-white">TIDAK AKAN DIREKAP / DIHITUNG</strong> di sistem.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-emerald-400 font-bold">•</span>
+                  <span>Seluruh log pelanggaran Anda pada sesi ini <strong className="text-emerald-300">AKAN DIHAPUS BERSIH</strong> dan tidak masuk ke rekap pelanggaran maupun E-Jurnal Guru.</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Peringatan Konfirmasi */}
+            <div className="text-xs text-zinc-400 bg-zinc-950/60 border border-zinc-800/80 p-3 rounded-lg leading-relaxed">
+              Jika Anda ingin melanjutkan pengerjaan di lain waktu, Anda dapat masuk kembali menggunakan Token Masuk baru dari guru pengawas.
+            </div>
+
+            {/* Tombol Aksi */}
+            <div className="flex items-center justify-end gap-2.5 pt-1">
+              <button
+                type="button"
+                disabled={isCancellingExam}
+                onClick={() => setShowCancelConfirmModal(false)}
+                className="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium transition active:scale-[0.98] disabled:opacity-50"
+              >
+                Lanjutkan Ujian
+              </button>
+              <button
+                type="button"
+                disabled={isCancellingExam}
+                onClick={handleCancelAndExitExam}
+                className="px-5 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-2xs transition active:scale-[0.98] flex items-center gap-2 disabled:opacity-50"
+              >
+                {isCancellingExam ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Membatalkan...</span>
+                  </>
+                ) : (
+                  <>
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Ya, Batalkan & Keluar</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ======================================================== */}
       {/* MODAL KONFIRMASI SELESAI & KELUAR UJIAN                  */}

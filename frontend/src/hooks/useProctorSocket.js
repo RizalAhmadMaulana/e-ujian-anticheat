@@ -94,6 +94,12 @@ export const useProctorSocket = (sessionId, callbacks = {}) => {
               if (onStudentSubmitted) onStudentSubmitted(data);
               break;
 
+            case 'STUDENT_CANCELLED':
+              if (callbacksRef.current.onStudentCancelled) {
+                callbacksRef.current.onStudentCancelled(data);
+              }
+              break;
+
             case 'NETWORK_HEARTBEAT':
               if (callbacksRef.current.onNetworkHeartbeat) {
                 callbacksRef.current.onNetworkHeartbeat(data);

@@ -49,6 +49,7 @@
    - [Layar 4: Arena Ujian Terkunci (Pengerjaan Soal Mandiri / Google Form)](#layar-4-arena-ujian-terkunci-pengerjaan-soal-mandiri--google-form)
    - [Penanganan Layar Terkunci Akibat Pelanggaran Sensor](#penanganan-layar-terkunci-akibat-pelanggaran-sensor)
    - [Penyelesaian Ujian & Konfirmasi Selesai Ujian (Alarm Resmi)](#penyelesaian-ujian--konfirmasi-selesai-ujian-alarm-resmi)
+   - [Pembatalan Ujian (Fitur "Batal Ujian")](#pembatalan-ujian-fitur-batal-ujian)
 7. [📁 Struktur Folder Proyek](#-struktur-folder-proyek)
 8. [❓ Tanya Jawab & Troubleshooting Lapangan (FAQ)](#-tanya-jawab--troubleshooting-lapangan-faq)
 
@@ -524,6 +525,14 @@ Jika siswa mencoba:
    - Melepaskan mode layar penuh (*exit fullscreen*).
    - **Menampilkan Modal Kartu Skor Hasil Ujian:** Memperlihatkan capaian nilai asesmen siswa (misal: `80 / 100 Poin`), identitas peserta, dan waktu pengiriman. **Kunci jawaban dan rincian butir benar/salah 100% dirahasiakan** demi menjaga integritas materi ujian sekolah.
    - Siswa mengklik tombol **"Selesai & Kembali ke Lobby"** untuk kembali ke beranda siswa secara aman dan tenang.
+
+### Pembatalan Ujian (Fitur "Batal Ujian")
+1. Jika siswa ingin menghentikan pengerjaan tanpa menyelesaikan ujian (misal: salah mata pelajaran atau kondisi darurat), siswa dapat mengklik tombol **"Batal"** di samping tombol "Selesai" pada bilah atas ujian.
+2. Muncul **Modal Konfirmasi Pembatalan Ujian** yang menegaskan bahwa:
+   - Siswa keluar dari lembar ujian tanpa menyimpan jawaban.
+   - Nilai ujian **TIDAK AKAN DIREKAP** di sistem (status siswa di Rekap Nilai tetap *"Belum Masuk"* / `NOT_STARTED`).
+   - Seluruh catatan pelanggaran pada sesi tersebut **DIHAPUS BERSIH SECARA OTOMATIS** dari basis data sehingga tidak masuk ke rekap pelanggaran maupun E-Jurnal Guru.
+3. Siswa mengklik tombol konfirmasi **"Ya, Batalkan & Keluar"** untuk keluar dari fullscreen dan kembali ke beranda siswa secara aman tanpa tampilan nilai. Siswa dapat mengikuti ujian kembali dengan meminta Token Masuk baru kepada pengawas.
 
 ---
 

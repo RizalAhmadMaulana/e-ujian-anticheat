@@ -576,6 +576,18 @@ export const useExamStore = create((set, get) => ({
     set({ activeAttempt: getInitialActiveAttempt() });
   },
 
+  cancelExam: () => {
+    clearActiveAttemptStorage();
+    const currentUser = get().currentUser || MOCK_STUDENT;
+    set((state) => ({
+      activeAttempt: getInitialActiveAttempt(),
+      proctoringStudents: state.proctoringStudents.filter(
+        (s) => s.studentId !== currentUser.id && s.id !== currentUser.id
+      ),
+    }));
+    return { success: true };
+  },
+
   verifyExitPassword: (_inputPassword) => {
     // Kompatibilitas mundur: keluar langsung tanpa memerlukan kata sandi
     return get().finishExam();
