@@ -409,9 +409,20 @@ class ExamSessionSerializer(serializers.ModelSerializer):
                 ans = attempt.answers_json or {}
                 is_rem = bool(isinstance(ans, dict) and ans.get('_remedial_allowed'))
                 prev_sc = ans.get('_previous_score') if isinstance(ans, dict) else None
+
+                # SELF-HEALING:
+                # Jika attempt memiliki finished_at (sudah selesai dikerjakan) dan BUKAN remidi aktif,
+                # maka status attempt mutlak HARUS SUBMITTED!
+                resolved_status = attempt.status
+                if attempt.finished_at is not None and not is_rem:
+                    resolved_status = StudentAttempt.AttemptStatus.SUBMITTED
+                    if attempt.status != StudentAttempt.AttemptStatus.SUBMITTED:
+                        attempt.status = StudentAttempt.AttemptStatus.SUBMITTED
+                        attempt.save(update_fields=['status'])
+
                 data['my_attempt'] = {
                     'id': str(attempt.id),
-                    'status': attempt.status,
+                    'status': resolved_status,
                     'total_score': float(attempt.total_score) if attempt.total_score is not None else None,
                     'is_remedial_allowed': is_rem,
                     'previous_score': float(prev_sc) if prev_sc is not None else None,

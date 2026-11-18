@@ -258,9 +258,14 @@ export default function StudentResults() {
   // 6. Hitung Statistik Nilai Khusus Kelas Terpilih
   const classStats = useMemo(() => {
     const total = classStudents.length;
-    const submitted = classStudents.filter((s) => s.status === 'SUBMITTED' || s.is_remedial_allowed);
+    const isStudentSubmitted = (s) => (
+      s.status === 'SUBMITTED' ||
+      s.is_remedial_allowed ||
+      Boolean(s.finished_at)
+    );
+    const submitted = classStudents.filter(isStudentSubmitted);
     const submittedCount = submitted.length;
-    const inProgressCount = classStudents.filter((s) => s.status !== 'SUBMITTED' && s.status !== 'NOT_STARTED').length;
+    const inProgressCount = classStudents.filter((s) => !isStudentSubmitted(s) && s.status !== 'NOT_STARTED').length;
 
     let average = '-';
     let highest = 0;
@@ -289,9 +294,15 @@ export default function StudentResults() {
     if (!classStudents) return [];
 
     return classStudents.filter((st) => {
-      // Filter Status Tab (Siswa dengan hak remidi terbuka tetap tampil di tab Selesai)
-      if (statusTab === 'SUBMITTED' && st.status !== 'SUBMITTED' && !st.is_remedial_allowed) return false;
-      if (statusTab === 'IN_PROGRESS' && ((st.status === 'SUBMITTED' && !st.is_remedial_allowed) || st.status === 'NOT_STARTED')) return false;
+      const isStudentSubmitted = (
+        st.status === 'SUBMITTED' ||
+        st.is_remedial_allowed ||
+        Boolean(st.finished_at)
+      );
+
+      // Filter Status Tab (Siswa dengan hak remidi terbuka atau sudah selesai tampil di tab Selesai)
+      if (statusTab === 'SUBMITTED' && !isStudentSubmitted) return false;
+      if (statusTab === 'IN_PROGRESS' && (isStudentSubmitted || st.status === 'NOT_STARTED')) return false;
 
       // Filter Pencarian Teks
       if (searchQuery.trim()) {
@@ -792,7 +803,7 @@ export default function StudentResults() {
                           <RotateCcw className="w-3 h-3 text-amber-600" />
                           <span>Remidi Terbuka</span>
                         </span>
-                      ) : st.status === 'SUBMITTED' ? (
+                      ) : (st.status === 'SUBMITTED' || Boolean(st.finished_at)) ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                           <CheckCircle className="w-3 h-3 text-emerald-500" />
                           <span>Selesai</span>

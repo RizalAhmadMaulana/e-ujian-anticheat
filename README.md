@@ -418,6 +418,8 @@ Setelah masuk melalui portal login terpadu (`/login`) menggunakan **NIP** dan ka
   4. **Tabel Rekapitulasi Nilai:** No, NISN, Nama Siswa, Kelas, Waktu Selesai (Tanggal & Jam), Durasi Pengerjaan, Butir Benar, Sensor Anti-Cheat, Status, Nilai Akhir, dan tombol **"Lihat Jawaban"**.
   5. **Modal Rincian Lembar Jawaban Siswa:** Bedah butir soal 1 s/d N (status Benar/Sebagian/Salah/Esai, perolehan poin, opsi pilihan siswa vs kunci jawaban sistem).
   6. **Fitur Unduh Rekap Excel (.xlsx) Sesuai Filter:** Tombol **"Download Excel"** di atas tabel untuk mengunduh berkas spreadsheet resmi 2-sheet yang difilter spesifik menurut kelas dan status terpilih (header berkas: `Kelas / Rombel: IXG`, nama file dinamis: `Rekap_Nilai_[Paket]_[Kelas]_[Status].xlsx`), dilengkapi analisis per butir nomor 1 s/d N dan kunci jawaban resmi.
+  7. **Fitur "Buka Remidi" Siswa dengan Otomatisasi Nilai Tertinggi (Max Score):** Guru dapat memberikan kesempatan ujian remidi khusus bagi siswa tertentu dengan mengklik tombol **"Buka Remidi"** pada kolom Aksi. Sistem secara otomatis mencatat dan menyimpan nilai awal (*previous score*), mereset catatan pelanggaran siswa pada sesi ini menjadi 0 bersih, dan secara otomatis menetapkan nilai akhir terbaik `max(nilai_awal, nilai_remidi)` yang otomatis disinkronkan ke E-Jurnal.
+  8. **Proteksi Single Attempt & Self-Healing Status:** Menjamin siswa hanya dapat mengerjakan ujian 1 kali. Siswa yang telah menyelesaikan ujian tidak dapat masuk kembali kecuali jika guru membuka akses remidi. Dilengkapi mekanisme *Self-Healing Data Recovery* yang menjamin status pengerjaan siswa selalu tercatat "Selesai" (`SUBMITTED`) dan tidak dapat tertimpa oleh event pelepasan fullscreen.
 
 ---
 

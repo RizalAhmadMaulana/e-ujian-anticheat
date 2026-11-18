@@ -114,7 +114,7 @@ export default function SubjectPortal() {
 
     const myAttempt = session.my_attempt;
     const isRemedial = Boolean(myAttempt?.is_remedial_allowed);
-    const isSubmitted = myAttempt?.status === 'SUBMITTED';
+    const isSubmitted = myAttempt?.status === 'SUBMITTED' || Boolean(myAttempt?.finished_at);
 
     // 1. Cek apakah siswa sudah selesai dan belum dibuka remidi oleh Guru
     if (isSubmitted && !isRemedial) {

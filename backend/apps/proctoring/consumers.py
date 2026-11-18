@@ -206,6 +206,10 @@ class ProctoringConsumer(AsyncJsonWebsocketConsumer):
     def record_violation_in_db(self, attempt_id, violation_type, description):
         try:
             attempt = StudentAttempt.objects.select_related('student').get(id=attempt_id)
+            # Guard Mutlak: Jika siswa sudah SUBMITTED atau finished_at ada, abaikan!
+            if attempt.status == StudentAttempt.AttemptStatus.SUBMITTED or attempt.finished_at is not None:
+                return None
+
             # Guard Mutlak: Jika status attempt sudah LOCKED_VIOLATION, jangan tambah akumulasi lagi!
             if attempt.status == StudentAttempt.AttemptStatus.LOCKED_VIOLATION:
                 return {

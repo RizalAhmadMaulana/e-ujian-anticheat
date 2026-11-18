@@ -422,7 +422,19 @@ Menu ini didesain khusus bagi guru mata pelajaran dan wali kelas untuk membedah 
        * Opsi jawaban visual (hijau untuk kunci jawaban, penanda pilihan siswa).
        * Komparasi teks eksplisit: **Jawaban Siswa** vs **Kunci Jawaban Sistem**.
        * Komentar umpan balik (*feedback*) guru jika ada.
-  7. **Integrasi Dua Arah:**
+  7. **Fitur "Buka Remidi" Siswa & Otomatisasi Nilai Tertinggi (Max Score):**
+     - Pada kolom Aksi di samping tombol "Lihat Jawaban", tersedia tombol kuning **"Buka Remidi"** untuk setiap siswa yang telah menyelesaikan ujian.
+     - Ketika guru mengklik tombol tersebut dan mengonfirmasi pada dialog pop-up:
+       * Hak akses pengerjaan ulang (remidi) seketika terbuka khusus untuk siswa bersangkutan.
+       * Sistem secara otomatis menyimpan nilai pengerjaan awal siswa (*previous score*) sebagai referensi dasar.
+       * Catatan log pelanggaran siswa pada sesi ini di-reset menjadi 0 (bersih) agar siswa dapat berkonsentrasi mengerjakan remidi tanpa terbebani catatan sebelumnya.
+       * **Jaminan Otomatisasi Nilai Tertinggi:** Saat siswa menyelesaikan ujian remidi, sistem secara cerdas mengambil **nilai tertinggi** di antara nilai awal vs nilai remidi (`max(previous_score, remedial_score)`), sehingga perolehan nilai siswa dijamin tidak akan pernah turun di bawah nilai awalnya.
+  8. **Proteksi Single Attempt Enforcement & Self-Healing Status:**
+     - Sistem menjamin bahwa siswa **hanya dapat mengerjakan ujian sebanyak 1 kali**.
+     - Setelah siswa menyelesaikan ujian dan menekan tombol konfirmasi "Selesai & Kirim Ujian" (atau waktu ujian habis), status pengerjaan siswa terkunci permanen menjadi **"Sudah Dikerjakan"**.
+     - Siswa tidak dapat masuk kembali untuk mengulang ujian melalui portal ujian maupun input PIN Masuk, kecuali guru pengawas secara eksplisit mengklik tombol **"Buka Remidi"**.
+     - Dilengkapi mekanisme *Self-Healing Data Recovery* di mana backend secara otomatis memulihkan status siswa ke **"Selesai" (`SUBMITTED`)** dan menolak segala event penguncian pasca-submit (misalnya akibat transisi pelepasan mode fullscreen).
+  9. **Integrasi Dua Arah:**
      - Tersedia tombol pintas instan menuju **Berita Acara E-Jurnal** (`/teacher/ejournal`) dan tombol pintas ke **Koreksi Esai** (`/teacher/grading`).
 
 ---

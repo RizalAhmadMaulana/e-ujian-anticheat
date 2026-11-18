@@ -229,10 +229,15 @@ class StartExamSessionView(APIView):
 
         # Cek apakah siswa sudah pernah menyelesaikan ujian ini sebelumnya (Single Attempt Enforcement)
         existing_attempt = StudentAttempt.objects.filter(session=session, student=student).first()
-        if existing_attempt and existing_attempt.status == StudentAttempt.AttemptStatus.SUBMITTED:
+        if existing_attempt:
             answers_dict = existing_attempt.answers_json or {}
             is_remedial_allowed = bool(isinstance(answers_dict, dict) and answers_dict.get('_remedial_allowed'))
-            if not is_remedial_allowed:
+            # Jika siswa sudah pernah SUBMITTED atau finished_at terisi dan bukan masa remidi aktif:
+            if (existing_attempt.status == StudentAttempt.AttemptStatus.SUBMITTED or existing_attempt.finished_at is not None) and not is_remedial_allowed:
+                # Self-healing jika status di database sempat tertimpa
+                if existing_attempt.status != StudentAttempt.AttemptStatus.SUBMITTED:
+                    existing_attempt.status = StudentAttempt.AttemptStatus.SUBMITTED
+                    existing_attempt.save(update_fields=['status'])
                 return Response({
                     "success": False,
                     "error": "Anda sudah menyelesaikan ujian ini dan lembar jawaban Anda telah tersimpan secara resmi. Pengerjaan ulang hanya dapat dilakukan jika Guru Pengawas membuka akses remidi untuk Anda."
@@ -251,11 +256,15 @@ class StartExamSessionView(APIView):
 
         # Jika attempt sudah pernah ada sebelumnya di basis data:
         if not created:
-            # 1. Jika attempt berstatus SUBMITTED dan hak remidi terbuka:
-            if attempt.status == StudentAttempt.AttemptStatus.SUBMITTED:
-                answers_dict = attempt.answers_json or {}
-                is_remedial_allowed = bool(isinstance(answers_dict, dict) and answers_dict.get('_remedial_allowed'))
+            answers_dict = attempt.answers_json or {}
+            is_remedial_allowed = bool(isinstance(answers_dict, dict) and answers_dict.get('_remedial_allowed'))
+
+            # 1. Jika attempt berstatus SUBMITTED (atau finished_at ada):
+            if attempt.status == StudentAttempt.AttemptStatus.SUBMITTED or attempt.finished_at is not None:
                 if not is_remedial_allowed:
+                    if attempt.status != StudentAttempt.AttemptStatus.SUBMITTED:
+                        attempt.status = StudentAttempt.AttemptStatus.SUBMITTED
+                        attempt.save(update_fields=['status'])
                     return Response({
                         "success": False,
                         "error": "Anda sudah menyelesaikan ujian ini dan lembar jawaban Anda telah tersimpan secara resmi. Pengerjaan ulang hanya dapat dilakukan jika Guru Pengawas membuka akses remidi untuk Anda."
@@ -1057,6 +1066,15 @@ class SessionStudentResultsView(APIView):
                 answers = att.answers_json or {}
                 essay_scores = att.essay_scores or {}
 
+                is_remedial_allowed = bool(isinstance(answers, dict) and answers.get('_remedial_allowed'))
+
+                # SELF-HEALING / DATA CONSISTENCY RECOVERY:
+                # Jika siswa sudah punya finished_at (sudah menyelesaikan ujian dan submit),
+                # dan BUKAN dalam masa remidi aktif, maka status MUTLAK HARUS SUBMITTED!
+                if att.finished_at is not None and not is_remedial_allowed and att.status != StudentAttempt.AttemptStatus.SUBMITTED:
+                    att.status = StudentAttempt.AttemptStatus.SUBMITTED
+                    att.save(update_fields=['status'])
+
                 # Hitung butir soal yang benar untuk pilihan ganda & objektif
                 correct_count = 0
                 for q in questions:
@@ -1484,6 +1502,15 @@ class ExportSessionResultsExcelView(APIView):
             if att:
                 answers = att.answers_json or {}
                 essay_scores = att.essay_scores or {}
+
+                is_remedial_allowed = bool(isinstance(answers, dict) and answers.get('_remedial_allowed'))
+
+                # SELF-HEALING / DATA CONSISTENCY RECOVERY:
+                # Jika siswa sudah punya finished_at (sudah menyelesaikan ujian dan submit),
+                # dan BUKAN dalam masa remidi aktif, maka status MUTLAK HARUS SUBMITTED!
+                if att.finished_at is not None and not is_remedial_allowed and att.status != StudentAttempt.AttemptStatus.SUBMITTED:
+                    att.status = StudentAttempt.AttemptStatus.SUBMITTED
+                    att.save(update_fields=['status'])
                 correct_count = 0
                 for q in questions:
                     ans = answers.get(str(q.id)) or answers.get(f"q_{q.order_number}")

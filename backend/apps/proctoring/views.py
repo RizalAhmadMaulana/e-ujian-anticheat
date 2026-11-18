@@ -44,6 +44,16 @@ class ReportViolationAPIView(APIView):
     def post(self, request, attempt_id):
         attempt = get_object_or_404(StudentAttempt, id=attempt_id)
 
+        # Guard Mutlak: Jika siswa sudah SUBMITTED atau sudah selesai (finished_at ada),
+        # ABAIKAN seluruh laporan pelanggaran dan jangan kunci layar / ubah status!
+        if attempt.status == StudentAttempt.AttemptStatus.SUBMITTED or attempt.finished_at is not None:
+            return Response({
+                "success": True,
+                "status": StudentAttempt.AttemptStatus.SUBMITTED,
+                "violation_count": attempt.violation_count,
+                "message": "Attempt already finished/submitted"
+            }, status=status.HTTP_200_OK)
+
         # Guard Mutlak: Jika siswa SUDAH dalam status terkunci, jangan tambah akumulasi lagi!
         if attempt.status == StudentAttempt.AttemptStatus.LOCKED_VIOLATION:
             return Response({

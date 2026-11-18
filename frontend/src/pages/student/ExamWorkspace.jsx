@@ -309,13 +309,18 @@ export default function ExamWorkspace() {
     }
   );
 
+  const isExamSubmittedRef = useRef(false);
+
   // Handler saat sensor useExamSecurity mendeteksi pelanggaran
   const handleSecurityViolation = useCallback((type, description) => {
+    if (isExamSubmittedRef.current || isSubmittingExam || showScoreResultModal) {
+      return;
+    }
     if (activeAttempt.attemptId && !activeAttempt.isLocked) {
       sendViolationReport(activeAttempt.attemptId, type, description);
       proctoringApi.reportViolation(activeAttempt.attemptId, type, description).catch(() => {});
     }
-  }, [activeAttempt.attemptId, activeAttempt.isLocked, sendViolationReport]);
+  }, [activeAttempt.attemptId, activeAttempt.isLocked, sendViolationReport, isSubmittingExam, showScoreResultModal]);
 
   // Sambungkan Sensor Keamanan Zero-Tolerance Lockdown
   useExamSecurity({
@@ -417,6 +422,7 @@ export default function ExamWorkspace() {
 
   // Konfirmasi Selesai & Keluar Ujian (Merekam Nilai & Membuka Modal Skor Hasil Ujian)
   const handleFinishAndExitExam = async () => {
+    isExamSubmittedRef.current = true;
     setIsSubmittingExam(true);
 
     let calculatedScore = null;
@@ -494,6 +500,7 @@ export default function ExamWorkspace() {
   };
 
   const handleAcknowledgeScoreAndExit = () => {
+    isExamSubmittedRef.current = true;
     setShowScoreResultModal(false);
     if (activeAttempt.isSimulation) {
       useExamStore.getState().loginAsTeacher();
@@ -505,6 +512,7 @@ export default function ExamWorkspace() {
 
   // Konfirmasi Batal & Keluar Ujian (Membatalkan Ujian, Menghapus Seluruh Log Pelanggaran Sesi Ini, & Tanpa Rekap Nilai)
   const handleCancelAndExitExam = async () => {
+    isExamSubmittedRef.current = true;
     setIsCancellingExam(true);
 
     try {

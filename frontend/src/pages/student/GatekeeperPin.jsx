@@ -127,7 +127,8 @@ export default function GatekeeperPin() {
   const isNative = selectedPackage?.examType === 'NATIVE_QUESTIONS';
 
   const isAlreadySubmitted = Boolean(
-    targetSession?.my_attempt?.status === 'SUBMITTED' && !targetSession?.my_attempt?.is_remedial_allowed
+    (targetSession?.my_attempt?.status === 'SUBMITTED' || Boolean(targetSession?.my_attempt?.finished_at)) &&
+    !targetSession?.my_attempt?.is_remedial_allowed
   );
 
   const handleVerifyAndStart = async (e) => {
