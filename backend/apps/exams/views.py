@@ -173,6 +173,19 @@ class VerifyEntryPasswordView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Validasi Pengerjaan Tunggal (Single Attempt Enforcement) untuk role Siswa
+        if getattr(request.user, 'role', None) == 'STUDENT':
+            existing_attempt = StudentAttempt.objects.filter(session=session, student=request.user).first()
+            if existing_attempt and existing_attempt.status == StudentAttempt.AttemptStatus.SUBMITTED:
+                answers_dict = existing_attempt.answers_json or {}
+                is_remedial_allowed = bool(isinstance(answers_dict, dict) and answers_dict.get('_remedial_allowed'))
+                if not is_remedial_allowed:
+                    return Response({
+                        "success": False,
+                        "status_code": "ALREADY_SUBMITTED",
+                        "message": "Anda sudah menyelesaikan ujian ini dan lembar jawaban Anda telah tersimpan secara resmi. Pengerjaan ulang hanya dapat dilakukan jika Guru Pengawas membuka akses remidi untuk Anda."
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
         return Response({
             "success": True,
             "message": "Token Masuk Terverifikasi. Layar Anda akan dikunci ke Mode Lockdown.",
@@ -214,6 +227,17 @@ class StartExamSessionView(APIView):
         student = request.user
         orientation = request.data.get('screen_orientation', 'PORTRAIT').upper()
 
+        # Cek apakah siswa sudah pernah menyelesaikan ujian ini sebelumnya (Single Attempt Enforcement)
+        existing_attempt = StudentAttempt.objects.filter(session=session, student=student).first()
+        if existing_attempt and existing_attempt.status == StudentAttempt.AttemptStatus.SUBMITTED:
+            answers_dict = existing_attempt.answers_json or {}
+            is_remedial_allowed = bool(isinstance(answers_dict, dict) and answers_dict.get('_remedial_allowed'))
+            if not is_remedial_allowed:
+                return Response({
+                    "success": False,
+                    "error": "Anda sudah menyelesaikan ujian ini dan lembar jawaban Anda telah tersimpan secara resmi. Pengerjaan ulang hanya dapat dilakukan jika Guru Pengawas membuka akses remidi untuk Anda."
+                }, status=status.HTTP_400_BAD_REQUEST)
+
         # Dapatkan atau buat attempt siswa
         attempt, created = StudentAttempt.objects.get_or_create(
             session=session,
@@ -227,25 +251,36 @@ class StartExamSessionView(APIView):
 
         # Jika attempt sudah pernah ada sebelumnya di basis data:
         if not created:
-            # 1. Jika siswa mengulang setelah sesi sebelumnya berstatus SUBMITTED (selesai resmi):
-            # Akumulasi pelanggaran sesi otomatis di-reset ke 0, jawaban dikosongkan, dan log lama dibersihkan
+            # 1. Jika attempt berstatus SUBMITTED dan hak remidi terbuka:
             if attempt.status == StudentAttempt.AttemptStatus.SUBMITTED:
+                answers_dict = attempt.answers_json or {}
+                is_remedial_allowed = bool(isinstance(answers_dict, dict) and answers_dict.get('_remedial_allowed'))
+                if not is_remedial_allowed:
+                    return Response({
+                        "success": False,
+                        "error": "Anda sudah menyelesaikan ujian ini dan lembar jawaban Anda telah tersimpan secara resmi. Pengerjaan ulang hanya dapat dilakukan jika Guru Pengawas membuka akses remidi untuk Anda."
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+                # Siswa memulai ujian remidi yang diizinkan pengawas:
+                # Simpan skor awal sebagai referensi untuk penentuan nilai tertinggi
+                prev_score = float(attempt.total_score) if attempt.total_score is not None else float(answers_dict.get('_previous_score', 0))
                 attempt.status = StudentAttempt.AttemptStatus.WORKING
                 attempt.screen_orientation = orientation
                 attempt.violation_count = 0
                 attempt.started_at = timezone.now()
                 attempt.finished_at = None
                 attempt.total_score = None
-                attempt.answers_json = {}
+                attempt.answers_json = {
+                    '_previous_score': prev_score,
+                    '_remedial_allowed': True,
+                    '_is_remedial': True
+                }
                 attempt.save()
-                # Hapus seluruh catatan pelanggaran lama untuk attempt ini agar Riwayat Pelanggaran & E-Jurnal bersih
+                # Hapus seluruh catatan pelanggaran lama untuk sesi ini agar Riwayat Pelanggaran & E-Jurnal bersih
                 attempt.violations.all().delete()
                 try:
-                    from apps.ejournal.models import ExamJournal
-                    journal = ExamJournal.objects.filter(session=session).first()
-                    if journal:
-                        journal.total_violations_recorded = sum(att.violation_count for att in session.attempts.all())
-                        journal.save(update_fields=['total_violations_recorded'])
+                    from apps.ejournal.views import get_or_create_journal_with_stats
+                    get_or_create_journal_with_stats(session, session.package.teacher if session.package else None)
                 except Exception:
                     pass
             elif attempt.status not in [StudentAttempt.AttemptStatus.DISQUALIFIED]:
@@ -452,6 +487,88 @@ class CancelExamSessionView(APIView):
         return Response({
             "success": True,
             "message": "Pengerjaan ujian berhasil dibatalkan. Seluruh log pelanggaran pada sesi ini telah dihapus dan nilai tidak terekap."
+        }, status=status.HTTP_200_OK)
+
+
+class OpenStudentRemedialView(APIView):
+    """
+    POST /api/exams/sessions/<uuid:session_id>/students/<uuid:student_id>/open-remedial/
+    Guru Pengawas membuka hak akses remidi untuk siswa tertentu pada sesi ujian mandiri.
+    Menyimpan skor awal siswa, mereset riwayat pelanggaran ke 0,
+    dan mengizinkan siswa mengerjakan ulang dengan jaminan sistem mengambil skor tertinggi.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, session_id, student_id):
+        # Validasi role Guru / Admin
+        if getattr(request.user, 'role', None) not in ['TEACHER', 'ADMIN'] and not request.user.is_staff:
+            return Response(
+                {"error": "Hanya Guru Pengawas atau Administrator yang berhak membuka akses remidi siswa."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        session = get_object_or_404(ExamSession, id=session_id)
+        from apps.accounts.models import User
+        student = get_object_or_404(User, id=student_id)
+        attempt = StudentAttempt.objects.filter(session=session, student=student).first()
+
+        if not attempt:
+            return Response(
+                {"error": "Siswa belum pernah memulai atau mengerjakan sesi ujian ini."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        action = request.data.get('action', 'open')
+        current_answers = attempt.answers_json or {}
+
+        if action == 'close':
+            current_answers['_remedial_allowed'] = False
+            attempt.answers_json = current_answers
+            attempt.save(update_fields=['answers_json'])
+            return Response({
+                "success": True,
+                "message": f"Akses remidi untuk {student.full_name or student.username} telah ditutup kembali.",
+                "student_id": str(student.id),
+                "is_remedial_allowed": False
+            }, status=status.HTTP_200_OK)
+
+        # Simpan skor sebelumnya sebagai acuan nilai tertinggi
+        prev_score = float(attempt.total_score) if attempt.total_score is not None else float(current_answers.get('_previous_score', 0))
+
+        # Reset log pelanggaran siswa pada sesi ini menjadi 0 (bersih)
+        attempt.violations.all().delete()
+        attempt.violation_count = 0
+
+        # Update metadata remedial di answers_json
+        current_answers['_previous_score'] = prev_score
+        current_answers['_remedial_allowed'] = True
+        current_answers['_remedial_opened_at'] = timezone.now().isoformat()
+        current_answers['_remedial_opened_by'] = request.user.full_name or request.user.username
+
+        attempt.answers_json = current_answers
+        attempt.save(update_fields=['answers_json', 'violation_count'])
+
+        # Sinkronkan rekap pelanggaran ke E-Jurnal
+        try:
+            from apps.ejournal.views import get_or_create_journal_with_stats
+            get_or_create_journal_with_stats(session, request.user)
+        except Exception:
+            try:
+                from apps.ejournal.models import ExamJournal
+                journal = ExamJournal.objects.filter(session=session).first()
+                if journal:
+                    journal.total_violations_recorded = sum(att.violation_count for att in session.attempts.all())
+                    journal.save(update_fields=['total_violations_recorded'])
+            except Exception:
+                pass
+
+        return Response({
+            "success": True,
+            "message": f"Akses remidi untuk {student.full_name or student.username} berhasil dibuka. Catatan pelanggaran telah dibersihkan dan nilai awal ({prev_score}) disimpan sebagai acuan skor tertinggi.",
+            "student_id": str(student.id),
+            "student_name": student.full_name or student.username,
+            "previous_score": prev_score,
+            "is_remedial_allowed": True
         }, status=status.HTTP_200_OK)
 
 
@@ -985,6 +1102,11 @@ class SessionStudentResultsView(APIView):
                 if score_val is not None:
                     scores_list.append(score_val)
 
+                is_remedial_allowed = bool(isinstance(answers, dict) and answers.get('_remedial_allowed'))
+                prev_score = answers.get('_previous_score') if isinstance(answers, dict) else None
+                rem_score = answers.get('_remedial_score') if isinstance(answers, dict) else None
+                highest_sc = answers.get('_highest_score') if isinstance(answers, dict) else None
+
                 students_data.append({
                     "attempt_id": str(att.id),
                     "student_id": str(st.id),
@@ -998,6 +1120,10 @@ class SessionStudentResultsView(APIView):
                     "correct_count": correct_count,
                     "total_questions": total_questions_count,
                     "violation_count": att.violation_count,
+                    "is_remedial_allowed": is_remedial_allowed,
+                    "previous_score": float(prev_score) if prev_score is not None else None,
+                    "remedial_score": float(rem_score) if rem_score is not None else None,
+                    "highest_score": float(highest_sc) if highest_sc is not None else None,
                     "started_at": att.started_at.isoformat() if att.started_at else None,
                     "finished_at": att.finished_at.isoformat() if att.finished_at else None,
                     "finished_date": timezone.localtime(att.finished_at).strftime("%d/%m/%Y") if att.finished_at else "-",
@@ -1017,6 +1143,10 @@ class SessionStudentResultsView(APIView):
                     "correct_count": 0,
                     "total_questions": total_questions_count,
                     "violation_count": 0,
+                    "is_remedial_allowed": False,
+                    "previous_score": None,
+                    "remedial_score": None,
+                    "highest_score": None,
                     "started_at": None,
                     "finished_at": None,
                 })

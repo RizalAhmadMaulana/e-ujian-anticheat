@@ -218,6 +218,7 @@
 - [x] Eksekusi **Tahap 5.79 — Resolusi Mutlak Gambar Soal & Opsi (Excel Import & Manual Upload): Extensionless Stream Endpoint (`/api/exams/image-stream/`), Pratinjau Instan Blob, Toleransi Fuzzy Anchor, & Penguatan Serializer**.
 - [x] Eksekusi **Tahap 5.80 — Eliminasi Duplikasi Gambar Import Excel (Strict Row Extraction & Pop) serta Fleksibilitas Opsi Bergambar Bebas Wajib Teks pada Edit Paket Soal**.
 - [x] Eksekusi **Tahap 5.81 — Redesain Kompak & Responsif Modal Skor Hasil Ujian Siswa (Anti-Tertutup Navigasi Bar HP & Scroll Proteksi)**.
+- [x] Eksekusi **Tahap 5.82 — Proteksi Pengerjaan Tunggal Ujian (Single Attempt Enforcement), Resolusi Siswa Hilang di Tab Selesai Rekap Nilai, & Implementasi Fitur "Buka Remidi" Guru dengan Jaminan Otomatisasi Nilai Tertinggi (Max Score)**.
 - [x] Seluruh sistem E-Ujian Anti-Cheat & E-Jurnal Asesmen Sekolah SIAP PRODUKSI MURNI DENGAN DATA NYATA!
 
 ---
@@ -277,5 +278,6 @@
 - [x] Eksekusi **Tahap 5.79 — Resolusi Mutlak Gambar Soal & Opsi (Excel Import & Manual Upload): Extensionless Stream Endpoint (`/api/exams/image-stream/`), Pratinjau Instan Blob, Toleransi Fuzzy Anchor, & Penguatan Serializer**.
 - [x] Eksekusi **Tahap 5.80 — Eliminasi Duplikasi Gambar Import Excel (Strict Row Extraction & Pop) serta Fleksibilitas Opsi Bergambar Bebas Wajib Teks pada Edit Paket Soal**.
 - [x] Eksekusi **Tahap 5.81 — Redesain Kompak & Responsif Modal Skor Hasil Ujian Siswa (Anti-Tertutup Navigasi Bar HP & Scroll Proteksi)**.
+- [x] Eksekusi **Tahap 5.82 — Proteksi Pengerjaan Tunggal Ujian (Single Attempt Enforcement), Resolusi Siswa Hilang di Tab Selesai Rekap Nilai, & Implementasi Fitur "Buka Remidi" Guru dengan Jaminan Otomatisasi Nilai Tertinggi (Max Score)**.
 - [x] Seluruh sistem E-Ujian Anti-Cheat & E-Jurnal Asesmen Sekolah SIAP PRODUKSI MURNI DENGAN DATA NYATA!
 

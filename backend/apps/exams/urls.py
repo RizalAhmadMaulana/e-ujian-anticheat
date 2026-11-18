@@ -21,6 +21,7 @@ from .views import (
     ExportSessionResultsExcelView,
     ServeExamMediaFileView,
     ServeExamImageStreamView,
+    OpenStudentRemedialView,
 )
 
 urlpatterns = [
@@ -61,6 +62,7 @@ urlpatterns = [
     # Rekap Nilai & Analisis Lembar Jawaban Siswa
     path('sessions/<uuid:session_id>/student-results/', SessionStudentResultsView.as_view(), name='session_student_results'),
     path('sessions/<uuid:session_id>/export-results-excel/', ExportSessionResultsExcelView.as_view(), name='session_export_results_excel'),
+    path('sessions/<uuid:session_id>/students/<uuid:student_id>/open-remedial/', OpenStudentRemedialView.as_view(), name='session_open_student_remedial'),
     path('attempts/<uuid:attempt_id>/breakdown/', StudentAttemptDetailBreakdownView.as_view(), name='attempt_detail_breakdown'),
 ]
 

@@ -399,5 +399,26 @@ class ExamSessionSerializer(serializers.ModelSerializer):
         data['packageId'] = str(instance.package_id) if instance.package_id else None
         data['classroomId'] = str(instance.classroom_id) if instance.classroom_id else None
         data['createdAt'] = instance.created_at.isoformat() if instance.created_at else None
+
+        # Sisipkan data attempt siswa jika request berasal dari role Siswa (Single Attempt & Status Remidi)
+        request = self.context.get('request')
+        if request and request.user.is_authenticated and getattr(request.user, 'role', None) == 'STUDENT':
+            from apps.proctoring.models import StudentAttempt
+            attempt = StudentAttempt.objects.filter(session=instance, student=request.user).first()
+            if attempt:
+                ans = attempt.answers_json or {}
+                is_rem = bool(isinstance(ans, dict) and ans.get('_remedial_allowed'))
+                prev_sc = ans.get('_previous_score') if isinstance(ans, dict) else None
+                data['my_attempt'] = {
+                    'id': str(attempt.id),
+                    'status': attempt.status,
+                    'total_score': float(attempt.total_score) if attempt.total_score is not None else None,
+                    'is_remedial_allowed': is_rem,
+                    'previous_score': float(prev_sc) if prev_sc is not None else None,
+                    'finished_at': attempt.finished_at.isoformat() if attempt.finished_at else None,
+                }
+            else:
+                data['my_attempt'] = None
+
         return data
 

@@ -227,6 +227,17 @@ export const downloadSessionResultsExcelApi = async (
   return true;
 };
 
+// -------------------------------------------------------------
+// BUKA AKSES REMIDI SISWA (ROLE GURU / ADMIN)
+// -------------------------------------------------------------
+export const openStudentRemedialApi = async (sessionId, studentId, action = 'open') => {
+  const response = await axiosInstance.post(
+    `/exams/sessions/${sessionId}/students/${studentId}/open-remedial/`,
+    { action }
+  );
+  return response.data;
+};
+
 export const examApi = {
   getPackagesApi,
   getPackageDetailApi,
@@ -253,6 +264,7 @@ export const examApi = {
   getSessionStudentResultsApi,
   getStudentAttemptBreakdownApi,
   downloadSessionResultsExcelApi,
+  openStudentRemedialApi,
 
   // Aliases for compatibility
   getPackages: getPackagesApi,

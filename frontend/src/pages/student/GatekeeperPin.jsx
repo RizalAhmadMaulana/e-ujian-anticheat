@@ -126,8 +126,16 @@ export default function GatekeeperPin() {
 
   const isNative = selectedPackage?.examType === 'NATIVE_QUESTIONS';
 
+  const isAlreadySubmitted = Boolean(
+    targetSession?.my_attempt?.status === 'SUBMITTED' && !targetSession?.my_attempt?.is_remedial_allowed
+  );
+
   const handleVerifyAndStart = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
+    if (isAlreadySubmitted) {
+      setErrorMsg('Anda sudah menyelesaikan ujian ini dan lembar jawaban Anda telah tersimpan secara resmi. Pengerjaan ulang hanya dapat dilakukan jika Guru Pengawas membuka akses remidi untuk Anda.');
+      return;
+    }
     setErrorMsg('');
     const inputPin = pin.trim().toUpperCase().replace(/\s+/g, '');
 
@@ -194,6 +202,11 @@ export default function GatekeeperPin() {
           }
         } catch (apiErr) {
           console.warn('API verifyEntryPassword fallback ke lokal token validator:', apiErr);
+          if (apiErr.response?.data?.status_code === 'ALREADY_SUBMITTED' || apiErr.response?.data?.message?.includes('sudah menyelesaikan')) {
+            setIsChecking(false);
+            setErrorMsg(apiErr.response.data.message);
+            return;
+          }
           if (apiErr.response?.data?.message) {
             setErrorMsg(apiErr.response.data.message);
           }
@@ -467,64 +480,94 @@ export default function GatekeeperPin() {
             </div>
           )}
 
-          {/* 4. Input Form Pin / Password Masuk */}
-          <div className="space-y-2">
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-[11px] font-semibold text-zinc-300 uppercase tracking-wider flex items-center gap-1">
-                  <KeyRound className="w-3.5 h-3.5 text-zinc-400" /> Password Masuk Ujian
-                </label>
-                <span className="text-[10px] text-zinc-400 font-normal">Dari Guru Pengawas</span>
+          {/* 4. Input Form Pin / Password Masuk ATAU State Sudah Dikerjakan */}
+          {isAlreadySubmitted ? (
+            <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-800/60 text-center space-y-3">
+              <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-5 h-5" />
               </div>
-              <div className="relative">
-                <input
-                  type="text"
-                  required
-                  autoFocus
-                  readOnly
-                  onFocus={(e) => e.target.removeAttribute('readonly')}
-                  autoComplete="one-time-code"
-                  autoCorrect="off"
-                  autoCapitalize="characters"
-                  spellCheck="false"
-                  role="presentation"
-                  data-lpignore="true"
-                  data-form-type="other"
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value.toUpperCase())}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleVerifyAndStart(e);
-                    }
-                  }}
-                  placeholder="CONTOH: MSK-2JM4"
-                  className="w-full text-center text-base sm:text-lg font-mono font-bold tracking-widest py-2 px-3 bg-zinc-950 border border-zinc-700 rounded-lg text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 uppercase transition"
-                />
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-white">Ujian Telah Selesai Dikerjakan</h3>
+                <p className="text-xs text-zinc-300 leading-relaxed">
+                  Anda sudah menyelesaikan ujian ini dan lembar jawaban Anda telah tersimpan secara resmi di portal guru pengawas.
+                  {targetSession?.my_attempt?.total_score !== null && targetSession?.my_attempt?.total_score !== undefined && (
+                    <span className="block mt-1.5 text-emerald-400 font-mono font-bold text-sm">
+                      Nilai Asesmen: {targetSession.my_attempt.total_score}
+                    </span>
+                  )}
+                </p>
+                <p className="text-[11px] text-zinc-400 pt-1">
+                  Pengerjaan ulang hanya dapat dilakukan jika Guru Pengawas membuka akses remidi melalui menu Rekap Nilai Siswa.
+                </p>
               </div>
-              <div className="flex items-center justify-between text-[10px] text-zinc-400 mt-1 px-1 font-mono">
-                <span>Huruf Besar / Angka</span>
-                <span className="text-zinc-500">Minta token ke guru pengawas</span>
-              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/student/subjects')}
+                className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-lg text-xs transition flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Kembali ke Portal Mapel</span>
+              </button>
             </div>
+          ) : (
+            <div className="space-y-2">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-semibold text-zinc-300 uppercase tracking-wider flex items-center gap-1">
+                    <KeyRound className="w-3.5 h-3.5 text-zinc-400" /> Password Masuk Ujian
+                  </label>
+                  <span className="text-[10px] text-zinc-400 font-normal">Dari Guru Pengawas</span>
+                </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    autoFocus
+                    readOnly
+                    onFocus={(e) => e.target.removeAttribute('readonly')}
+                    autoComplete="one-time-code"
+                    autoCorrect="off"
+                    autoCapitalize="characters"
+                    spellCheck="false"
+                    role="presentation"
+                    data-lpignore="true"
+                    data-form-type="other"
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleVerifyAndStart(e);
+                      }
+                    }}
+                    placeholder="CONTOH: MSK-2JM4"
+                    className="w-full text-center text-base sm:text-lg font-mono font-bold tracking-widest py-2 px-3 bg-zinc-950 border border-zinc-700 rounded-lg text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 uppercase transition"
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-zinc-400 mt-1 px-1 font-mono">
+                  <span>Huruf Besar / Angka</span>
+                  <span className="text-zinc-500">Minta token ke guru pengawas</span>
+                </div>
+              </div>
 
-            {/* Tombol Utama: MULAI UJIAN */}
-            <button
-              type="button"
-              onClick={handleVerifyAndStart}
-              disabled={isChecking || showPinnedToast}
-              className="w-full py-2.5 px-4 bg-zinc-100 hover:bg-white text-zinc-900 font-semibold rounded-lg text-xs sm:text-sm shadow-2xs transition flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98] cursor-pointer"
-            >
-              {isChecking ? (
-                <div className="w-4 h-4 border-2 border-zinc-900/30 border-t-zinc-900 rounded-full animate-spin" />
-              ) : (
-                <>
-                  <span>MULAI UJIAN</span>
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </div>
+              {/* Tombol Utama: MULAI UJIAN */}
+              <button
+                type="button"
+                onClick={handleVerifyAndStart}
+                disabled={isChecking || showPinnedToast}
+                className="w-full py-2.5 px-4 bg-zinc-100 hover:bg-white text-zinc-900 font-semibold rounded-lg text-xs sm:text-sm shadow-2xs transition flex items-center justify-center gap-2 disabled:opacity-50 active:scale-[0.98] cursor-pointer"
+              >
+                {isChecking ? (
+                  <div className="w-4 h-4 border-2 border-zinc-900/30 border-t-zinc-900 rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <span>MULAI UJIAN</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </div>
+          )}
 
           {/* Footer Card: Tombol Kembali & Status Keamanan */}
           <div className="pt-2 border-t border-zinc-800 flex items-center justify-between text-[11px]">

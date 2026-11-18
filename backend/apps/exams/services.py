@@ -146,10 +146,32 @@ def calculate_auto_grading_score(attempt, answers_dict: dict) -> Decimal:
                     pass
 
     total_score += essay_total
+
+    # =========================================================================
+    # LOGIKA REMIDI: PRESERVASI NILAI AWAL & JAMINAN NILAI TERTINGGI (MAX)
+    # =========================================================================
+    prev_score_val = None
+    if isinstance(attempt.answers_json, dict) and '_previous_score' in attempt.answers_json:
+        prev_score_val = attempt.answers_json.get('_previous_score')
+    elif isinstance(answers_dict, dict) and '_previous_score' in answers_dict:
+        prev_score_val = answers_dict.get('_previous_score')
+
+    if prev_score_val is not None:
+        try:
+            prev_dec = Decimal(str(prev_score_val))
+            remedial_score = total_score
+            # Aturan Mutlak: Sistem secara otomatis mengambil dan mencatat NILAI TERTINGGI
+            highest_score = max(prev_dec, remedial_score)
+            answers_dict['_previous_score'] = float(prev_dec)
+            answers_dict['_remedial_score'] = float(remedial_score)
+            answers_dict['_highest_score'] = float(highest_score)
+            answers_dict['_remedial_allowed'] = False
+            total_score = highest_score
+        except Exception:
+            pass
+
     attempt.total_score = total_score
     attempt.answers_json = answers_dict
-    attempt.save(update_fields=['total_score', 'answers_json'])
-    return total_score
     attempt.save(update_fields=['total_score', 'answers_json'])
 
     return total_score

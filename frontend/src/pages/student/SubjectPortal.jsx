@@ -16,6 +16,8 @@ import {
   Monitor,
   Clock,
   AlertCircle,
+  CheckCircle,
+  RotateCcw,
   GraduationCap,
   LogOut,
   Settings
@@ -107,6 +109,39 @@ export default function SubjectPortal() {
         btnText: 'BELUM TERJADWAL',
         timeText: 'Belum ada jadwal sesi asesmen dari pengawas',
         alertMessage: 'Ujian ini belum dijadwalkan oleh guru pengawas.',
+      };
+    }
+
+    const myAttempt = session.my_attempt;
+    const isRemedial = Boolean(myAttempt?.is_remedial_allowed);
+    const isSubmitted = myAttempt?.status === 'SUBMITTED';
+
+    // 1. Cek apakah siswa sudah selesai dan belum dibuka remidi oleh Guru
+    if (isSubmitted && !isRemedial) {
+      return {
+        status: 'COMPLETED',
+        canStart: false,
+        badgeText: 'Sudah Dikerjakan',
+        btnText: 'SUDAH DIKERJAKAN',
+        timeText: myAttempt.total_score !== null && myAttempt.total_score !== undefined
+          ? `Nilai Akhir: ${myAttempt.total_score} • Selesai Dikerjakan`
+          : 'Ujian selesai dan jawaban telah tersimpan resmi',
+        alertMessage: 'Anda sudah menyelesaikan ujian ini dan lembar jawaban Anda telah tersimpan secara resmi. Pengerjaan ulang hanya dapat dilakukan jika Guru Pengawas membuka akses remidi untuk Anda.',
+      };
+    }
+
+    // 2. Jika akses remidi terbuka oleh Guru
+    if (isRemedial) {
+      const prevScoreText = myAttempt?.previous_score !== null && myAttempt?.previous_score !== undefined
+        ? `Nilai Awal: ${myAttempt.previous_score} • Diambil Nilai Tertinggi`
+        : 'Akses Remidi Diizinkan Guru Pengawas';
+      return {
+        status: 'REMEDIAL',
+        canStart: true,
+        badgeText: 'Remidi Terbuka',
+        btnText: 'KERJAKAN REMIDI',
+        timeText: prevScoreText,
+        alertMessage: null,
       };
     }
 
@@ -349,15 +384,23 @@ export default function SubjectPortal() {
                   <div
                     className={`w-11 h-11 rounded-lg flex items-center justify-center shrink-0 border transition-transform group-hover:scale-105 ${
                       !schedule.canStart
-                        ? schedule.status === 'CLOSED'
+                        ? schedule.status === 'COMPLETED'
+                          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                          : schedule.status === 'CLOSED'
                           ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
                           : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                        : schedule.status === 'REMEDIAL'
+                        ? 'bg-amber-500/15 text-amber-400 border-amber-500/30'
                         : isNative
                         ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                         : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
                     }`}
                   >
-                    {!schedule.canStart ? (
+                    {schedule.status === 'COMPLETED' ? (
+                      <CheckCircle className="w-5 h-5 text-emerald-400" />
+                    ) : schedule.status === 'REMEDIAL' ? (
+                      <RotateCcw className="w-5 h-5 text-amber-400" />
+                    ) : !schedule.canStart ? (
                       <Lock className="w-5 h-5" />
                     ) : isNative ? (
                       <BookOpen className="w-5 h-5" />
@@ -370,7 +413,13 @@ export default function SubjectPortal() {
                   <div>
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <span className={`text-sm sm:text-base font-bold uppercase tracking-tight transition ${
-                        !schedule.canStart ? 'text-zinc-300' : 'text-white group-hover:text-blue-300'
+                        schedule.status === 'COMPLETED'
+                          ? 'text-emerald-300'
+                          : schedule.status === 'REMEDIAL'
+                          ? 'text-amber-300'
+                          : !schedule.canStart 
+                          ? 'text-zinc-300' 
+                          : 'text-white group-hover:text-blue-300'
                       }`}>
                         {pkg.subjectName}
                       </span>
@@ -383,6 +432,18 @@ export default function SubjectPortal() {
                       </span>
 
                       {/* Schedule Status Badge */}
+                      {schedule.status === 'COMPLETED' && (
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3 text-emerald-400" />
+                          <span>Sudah Dikerjakan</span>
+                        </span>
+                      )}
+                      {schedule.status === 'REMEDIAL' && (
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1 animate-pulse">
+                          <RotateCcw className="w-3 h-3 text-amber-400" />
+                          <span>Remidi Terbuka</span>
+                        </span>
+                      )}
                       {schedule.status === 'CLOSED' && (
                         <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center gap-1">
                           <AlertCircle className="w-3 h-3 text-rose-400" />
@@ -409,7 +470,11 @@ export default function SubjectPortal() {
 
                     {/* Schedule Time Information */}
                     <div className={`text-[11px] flex items-center gap-1.5 mt-1 font-mono font-medium tabular-nums ${
-                      schedule.status === 'CLOSED'
+                      schedule.status === 'COMPLETED'
+                        ? 'text-emerald-400/90'
+                        : schedule.status === 'REMEDIAL'
+                        ? 'text-amber-400/90'
+                        : schedule.status === 'CLOSED'
                         ? 'text-rose-400/90'
                         : schedule.status === 'UPCOMING'
                         ? 'text-amber-400/90'
@@ -426,6 +491,10 @@ export default function SubjectPortal() {
                   <span className={`hidden sm:inline-block font-mono tracking-wider ${
                     isSelected 
                       ? 'text-blue-400' 
+                      : schedule.status === 'COMPLETED'
+                      ? 'text-emerald-400 font-bold'
+                      : schedule.status === 'REMEDIAL'
+                      ? 'text-amber-400 font-bold'
                       : !schedule.canStart 
                       ? schedule.status === 'CLOSED'
                         ? 'text-rose-400'
@@ -436,12 +505,16 @@ export default function SubjectPortal() {
                       ? 'MEMBUKA...' 
                       : !schedule.canStart 
                       ? schedule.btnText 
-                      : 'MULAI UJIAN'}
+                      : schedule.btnText || 'MULAI UJIAN'}
                   </span>
 
                   <div className={`w-8 h-8 rounded-lg border flex items-center justify-center transition ${
                     isSelected
                       ? 'bg-blue-600 border-blue-500 text-white'
+                      : schedule.status === 'COMPLETED'
+                      ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-400'
+                      : schedule.status === 'REMEDIAL'
+                      ? 'bg-amber-950/40 border-amber-500/30 text-amber-400'
                       : !schedule.canStart
                       ? schedule.status === 'CLOSED'
                         ? 'bg-zinc-800 border-zinc-700/80 text-rose-400'
@@ -450,6 +523,10 @@ export default function SubjectPortal() {
                   }`}>
                     {isSelected ? (
                       <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : schedule.status === 'COMPLETED' ? (
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                    ) : schedule.status === 'REMEDIAL' ? (
+                      <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
                     ) : !schedule.canStart ? (
                       <Lock className="w-3.5 h-3.5" />
                     ) : (

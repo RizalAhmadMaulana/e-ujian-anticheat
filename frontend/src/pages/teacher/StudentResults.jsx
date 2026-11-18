@@ -27,14 +27,16 @@ import {
   ShieldAlert, 
   ShieldCheck, 
   ExternalLink,
-  ChevronDown
+  ChevronDown,
+  RotateCcw
 } from 'lucide-react';
 import { 
   getSessionsApi, 
   getPackagesApi, 
   getSessionStudentResultsApi, 
   getStudentAttemptBreakdownApi,
-  downloadSessionResultsExcelApi
+  downloadSessionResultsExcelApi,
+  openStudentRemedialApi
 } from '../../api/examApi';
 import { getClassroomsApi } from '../../api/authApi';
 import MathText from '../../components/common/MathText';
@@ -67,6 +69,11 @@ export default function StudentResults() {
   const [breakdownData, setBreakdownData] = useState(null);
   const [isLoadingBreakdown, setIsLoadingBreakdown] = useState(false);
   const [breakdownFilter, setBreakdownFilter] = useState('ALL'); // ALL | CORRECT | INCORRECT | ESSAY
+
+  // Student Remedial Modal State
+  const [remedialStudent, setRemedialStudent] = useState(null);
+  const [isOpeningRemedial, setIsOpeningRemedial] = useState(false);
+  const [remedialFeedback, setRemedialFeedback] = useState(null);
 
   // 1. Inisialisasi Filter Data (Paket, Kelas, dan Sesi)
   useEffect(() => {
@@ -201,17 +208,49 @@ export default function StudentResults() {
     setBreakdownData(null);
   };
 
+  // 4b. Handler Buka Akses Remidi Siswa
+  const handleOpenRemedialModal = (student) => {
+    setRemedialStudent(student);
+  };
+
+  const handleCloseRemedialModal = () => {
+    setRemedialStudent(null);
+  };
+
+  const handleConfirmOpenRemedial = async () => {
+    if (!remedialStudent || !selectedSessionId) return;
+    setIsOpeningRemedial(true);
+    try {
+      const res = await openStudentRemedialApi(selectedSessionId, remedialStudent.student_id, 'open');
+      setRemedialFeedback({
+        type: 'success',
+        message: res.message || `Akses remidi untuk ${remedialStudent.student_name} berhasil dibuka.`
+      });
+      handleCloseRemedialModal();
+      await fetchSessionResults(selectedSessionId, selectedClassId);
+    } catch (err) {
+      console.error('Gagal membuka akses remidi:', err);
+      alert(err.response?.data?.error || 'Gagal membuka akses remidi siswa. Silakan coba lagi.');
+    } finally {
+      setIsOpeningRemedial(false);
+    }
+  };
+
   // 5. Isolasi Data Siswa Berdasarkan Kelas Terpilih
   const classStudents = useMemo(() => {
     if (!sessionResults?.students) return [];
     if (selectedClassId === 'ALL') return sessionResults.students;
 
     const targetName = selectedClassObj?.name?.trim().toLowerCase();
+    const targetNameClean = targetName ? targetName.replace(/\s+/g, '') : '';
     const targetIdStr = String(selectedClassId);
 
     return sessionResults.students.filter((st) => {
       if (st.classroom_id && String(st.classroom_id) === targetIdStr) return true;
-      if (targetName && st.classroom_name && st.classroom_name.trim().toLowerCase() === targetName) return true;
+      if (targetName && st.classroom_name) {
+        const cName = st.classroom_name.trim().toLowerCase();
+        if (cName === targetName || cName.replace(/\s+/g, '') === targetNameClean) return true;
+      }
       return false;
     });
   }, [sessionResults, selectedClassId, selectedClassObj]);
@@ -219,7 +258,7 @@ export default function StudentResults() {
   // 6. Hitung Statistik Nilai Khusus Kelas Terpilih
   const classStats = useMemo(() => {
     const total = classStudents.length;
-    const submitted = classStudents.filter((s) => s.status === 'SUBMITTED');
+    const submitted = classStudents.filter((s) => s.status === 'SUBMITTED' || s.is_remedial_allowed);
     const submittedCount = submitted.length;
     const inProgressCount = classStudents.filter((s) => s.status !== 'SUBMITTED' && s.status !== 'NOT_STARTED').length;
 
@@ -228,7 +267,7 @@ export default function StudentResults() {
     let lowest = 0;
 
     if (submittedCount > 0) {
-      const scores = submitted.map((s) => Number(s.final_score !== undefined ? s.final_score : s.total_score) || 0);
+      const scores = submitted.map((s) => Number(s.final_score !== undefined ? s.final_score : (s.total_score !== null && s.total_score !== undefined ? s.total_score : s.previous_score)) || 0);
       const sum = scores.reduce((a, b) => a + b, 0);
       average = Math.round((sum / submittedCount) * 10) / 10;
       highest = Math.max(...scores);
@@ -250,9 +289,9 @@ export default function StudentResults() {
     if (!classStudents) return [];
 
     return classStudents.filter((st) => {
-      // Filter Status Tab
-      if (statusTab === 'SUBMITTED' && st.status !== 'SUBMITTED') return false;
-      if (statusTab === 'IN_PROGRESS' && (st.status === 'SUBMITTED' || st.status === 'NOT_STARTED')) return false;
+      // Filter Status Tab (Siswa dengan hak remidi terbuka tetap tampil di tab Selesai)
+      if (statusTab === 'SUBMITTED' && st.status !== 'SUBMITTED' && !st.is_remedial_allowed) return false;
+      if (statusTab === 'IN_PROGRESS' && ((st.status === 'SUBMITTED' && !st.is_remedial_allowed) || st.status === 'NOT_STARTED')) return false;
 
       // Filter Pencarian Teks
       if (searchQuery.trim()) {
@@ -598,6 +637,23 @@ export default function StudentResults() {
           </div>
         </div>
 
+        {/* Remedial Feedback Banner */}
+        {remedialFeedback && (
+          <div className="mx-4 mt-3 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between shadow-2xs">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-amber-600 shrink-0" />
+              <span className="font-medium">{remedialFeedback.message}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setRemedialFeedback(null)}
+              className="p-1 hover:bg-amber-100 rounded text-amber-700 hover:text-amber-900 transition font-bold"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+
         {/* Tabel Data Siswa */}
         <div className="overflow-x-auto">
           {isLoadingResults ? (
@@ -731,7 +787,12 @@ export default function StudentResults() {
                       )}
                     </td>
                     <td className="py-3 px-3 text-center">
-                      {st.status === 'SUBMITTED' ? (
+                      {st.is_remedial_allowed ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs">
+                          <RotateCcw className="w-3 h-3 text-amber-600" />
+                          <span>Remidi Terbuka</span>
+                        </span>
+                      ) : st.status === 'SUBMITTED' ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                           <CheckCircle className="w-3 h-3 text-emerald-500" />
                           <span>Selesai</span>
@@ -755,25 +816,56 @@ export default function StudentResults() {
                     </td>
                     <td className="py-3 px-4 text-center">
                       {st.total_score !== null && st.total_score !== undefined && st.status !== 'NOT_STARTED' ? (
-                        <div className="inline-flex items-baseline gap-1 px-2.5 py-1 rounded-lg bg-zinc-900 text-white font-mono font-bold text-xs shadow-2xs">
-                          <span className="text-sm font-black text-emerald-400">{st.total_score}</span>
-                          <span className="text-[10px] text-zinc-400">/ 100</span>
+                        <div className="flex flex-col items-center gap-1">
+                          <div className="inline-flex items-baseline gap-1 px-2.5 py-1 rounded-lg bg-zinc-900 text-white font-mono font-bold text-xs shadow-2xs">
+                            <span className="text-sm font-black text-emerald-400">{st.total_score}</span>
+                            <span className="text-[10px] text-zinc-400">/ 100</span>
+                          </div>
+                          {st.previous_score !== null && st.previous_score !== undefined && (
+                            <span 
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200" 
+                              title={`Nilai Awal: ${st.previous_score}${st.remedial_score !== null && st.remedial_score !== undefined ? `, Nilai Remidi: ${st.remedial_score}` : ''} (Sistem Otomatis Mengambil Nilai Tertinggi)`}
+                            >
+                              <RotateCcw className="w-2.5 h-2.5 text-amber-600" />
+                              <span>Awal: {st.previous_score}</span>
+                            </span>
+                          )}
                         </div>
                       ) : (
                         <span className="text-zinc-400 font-mono">-</span>
                       )}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenBreakdownModal(st)}
-                        disabled={!st.attempt_id || st.status === 'NOT_STARTED'}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white hover:bg-emerald-50 border border-zinc-200 hover:border-emerald-300 text-zinc-700 hover:text-emerald-700 font-semibold text-xs transition shadow-2xs active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                        title={st.status === 'NOT_STARTED' ? 'Siswa belum memulai ujian' : 'Lihat Rincian Analisis Jawaban Siswa per Butir Soal'}
-                      >
-                        <Eye className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Lihat Jawaban</span>
-                      </button>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenBreakdownModal(st)}
+                          disabled={!st.attempt_id || st.status === 'NOT_STARTED'}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white hover:bg-emerald-50 border border-zinc-200 hover:border-emerald-300 text-zinc-700 hover:text-emerald-700 font-semibold text-xs transition shadow-2xs active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                          title={st.status === 'NOT_STARTED' ? 'Siswa belum memulai ujian' : 'Lihat Rincian Analisis Jawaban Siswa per Butir Soal'}
+                        >
+                          <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Lihat Jawaban</span>
+                        </button>
+
+                        {/* Tombol Buka Remidi */}
+                        {st.status !== 'NOT_STARTED' && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenRemedialModal(st)}
+                            disabled={isOpeningRemedial}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-semibold text-xs transition shadow-2xs active:scale-[0.98] cursor-pointer ${
+                              st.is_remedial_allowed
+                                ? 'bg-amber-500 hover:bg-amber-600 text-white border border-amber-600 shadow-amber-500/20'
+                                : 'bg-white hover:bg-amber-50 border border-amber-200 hover:border-amber-300 text-amber-700'
+                            }`}
+                            title="Buka akses remidi untuk siswa ini (nilai awal disimpan & sistem otomatis mencatat nilai tertinggi)"
+                          >
+                            <RotateCcw className={`w-3.5 h-3.5 ${st.is_remedial_allowed ? 'animate-spin' : 'text-amber-600'}`} />
+                            <span>{st.is_remedial_allowed ? 'Remidi Aktif' : 'Buka Remidi'}</span>
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -1109,6 +1201,107 @@ export default function StudentResults() {
                 className="px-5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-semibold transition active:scale-[0.98]"
               >
                 Tutup Lembar Jawaban
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* 6. MODAL KONFIRMASI BUKA REMIDI SISWA                   */}
+      {/* ======================================================== */}
+      {remedialStudent && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-zinc-200 overflow-hidden">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-zinc-100 bg-amber-50/50 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 font-bold shrink-0">
+                  <RotateCcw className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-zinc-900">
+                    Buka Akses Remidi Siswa
+                  </h3>
+                  <p className="text-xs text-zinc-500">
+                    Konfirmasi pembukaan sesi remedial mandiri
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseRemedialModal}
+                disabled={isOpeningRemedial}
+                className="w-8 h-8 rounded-lg hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 flex items-center justify-center transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4 text-xs">
+              {/* Card Siswa */}
+              <div className="p-3.5 rounded-xl bg-zinc-50 border border-zinc-200/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-zinc-900 text-sm">{remedialStudent.student_name}</span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800">
+                    Nilai Awal: {remedialStudent.total_score ?? remedialStudent.previous_score ?? 0}
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-zinc-500 font-mono text-[11px]">
+                  <span>NISN: <strong>{remedialStudent.nisn}</strong></span>
+                  <span>•</span>
+                  <span>Kelas: <strong>{remedialStudent.classroom_name}</strong></span>
+                </div>
+              </div>
+
+              {/* Ketentuan Remidi */}
+              <div className="space-y-2">
+                <div className="font-semibold text-zinc-800 flex items-center gap-1.5 text-xs">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Ketentuan Otomatisasi Sistem Remidi:</span>
+                </div>
+                <ul className="space-y-2 text-zinc-600 pl-5 list-disc leading-relaxed text-[11px]">
+                  <li>
+                    Siswa diizinkan masuk dan mengerjakan kembali lembar asesmen ini melalui ExamBrowser.
+                  </li>
+                  <li>
+                    <strong className="text-emerald-700">Pembersihan Pelanggaran:</strong> Seluruh catatan pelanggaran sensor siswa pada sesi ini di-reset menjadi <strong>0 Bersih</strong> dan disinkronkan ke E-Jurnal Guru.
+                  </li>
+                  <li>
+                    <strong className="text-amber-700">Prinsip Nilai Tertinggi:</strong> Sistem menyimpan nilai awal siswa (<strong>{remedialStudent.total_score ?? remedialStudent.previous_score ?? 0}</strong>). Jika perolehan nilai remidi lebih rendah dari nilai awal, sistem secara otomatis <strong>tetap mengambil dan mencatat nilai yang paling tinggi</strong>.
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="px-6 py-4 bg-zinc-50 border-t border-zinc-100 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={handleCloseRemedialModal}
+                disabled={isOpeningRemedial}
+                className="px-4 py-2 rounded-xl border border-zinc-300 text-zinc-700 font-semibold text-xs hover:bg-white transition cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmOpenRemedial}
+                disabled={isOpeningRemedial}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs shadow-2xs transition cursor-pointer disabled:opacity-60"
+              >
+                {isOpeningRemedial ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Membuka Remidi...</span>
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Ya, Buka Remidi</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
