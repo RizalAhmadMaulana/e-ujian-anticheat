@@ -1549,8 +1549,8 @@ export default function ExamWorkspace() {
       {/* MODAL KONFIRMASI BATAL & KELUAR UJIAN                    */}
       {/* ======================================================== */}
       {showCancelConfirmModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in select-none">
-          <div className="bg-zinc-900 border border-zinc-700/80 rounded-2xl max-w-md w-full p-6 shadow-2xl relative space-y-5">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in select-none">
+          <div className="bg-zinc-900 border border-zinc-700/80 rounded-2xl max-w-md w-full p-4 sm:p-6 shadow-2xl relative space-y-4 max-h-[94dvh] overflow-y-auto my-auto">
             {/* Header Modal */}
             <div className="flex items-start gap-4">
               <div className="w-11 h-11 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 shrink-0">
@@ -1630,8 +1630,8 @@ export default function ExamWorkspace() {
       {/* MODAL KONFIRMASI SELESAI & KELUAR UJIAN                  */}
       {/* ======================================================== */}
       {showExitConfirmModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in select-none">
-          <div className="bg-zinc-900 border border-zinc-700/80 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative space-y-5">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in select-none">
+          <div className="bg-zinc-900 border border-zinc-700/80 rounded-2xl max-w-lg w-full p-4 sm:p-6 shadow-2xl relative space-y-4 max-h-[94dvh] overflow-y-auto my-auto">
             {/* Header Modal */}
             <div className="flex items-start gap-4">
               <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
@@ -1763,109 +1763,108 @@ export default function ExamWorkspace() {
       {/* ======================================================== */}
       {/* MODAL KARTU SKOR HASIL UJIAN SISWA (POST-EXAM RESULT)   */}
       {/* HANYA MENAMPILKAN NILAI TANPA KUNCI/LEMBAR JAWABAN       */}
+      {/* DESAIN RINGKAS, RESPONSIVE, ANTI-TERTUTUP NAV BAR HP     */}
       {/* ======================================================== */}
       {showScoreResultModal && studentFinalScoreData && (
-        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in select-none">
-          <div className="bg-[#0e131f] border border-zinc-700/80 rounded-2xl max-w-lg w-full p-6 sm:p-7 shadow-2xl relative space-y-6 text-zinc-100">
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in select-none">
+          <div className="bg-[#0e131f] border border-zinc-700/80 rounded-2xl max-w-sm sm:max-w-md w-full p-3.5 sm:p-5 shadow-2xl relative space-y-2.5 sm:space-y-3.5 text-zinc-100 max-h-[94dvh] overflow-y-auto my-auto flex flex-col">
             {/* Header / Celebration Icon */}
-            <div className="text-center space-y-2">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-500/30 text-emerald-400 mb-1 shadow-lg shadow-emerald-950/50">
-                <Trophy className="w-8 h-8 text-emerald-400 animate-pulse" />
+            <div className="text-center space-y-1">
+              <div className="inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 border border-emerald-500/30 text-emerald-400 shadow-md shadow-emerald-950/50">
+                <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400 animate-pulse" />
               </div>
-              <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center justify-center gap-2">
-                <span>Ujian Berhasil Diselesaikan!</span>
+              <h2 className="text-base sm:text-lg font-black tracking-tight text-white">
+                Ujian Berhasil Diselesaikan!
               </h2>
-              <p className="text-xs text-zinc-400 max-w-sm mx-auto">
-                Seluruh jawaban telah berhasil disimpan dan disinkronkan secara permanen ke server portal guru pengawas.
+              <p className="text-[11px] sm:text-xs text-zinc-400 max-w-xs mx-auto leading-tight">
+                Seluruh jawaban telah berhasil disimpan dan disinkronkan ke server portal guru pengawas.
               </p>
             </div>
 
             {/* Kartu Skor Nilai Utama */}
-            <div className="bg-zinc-950/90 border border-zinc-800 rounded-xl p-5 text-center relative overflow-hidden">
+            <div className="bg-zinc-950/90 border border-zinc-800 rounded-xl p-3 sm:p-3.5 text-center relative overflow-hidden">
               <div className="absolute top-0 right-0 transform translate-x-2 -translate-y-2 opacity-5 pointer-events-none">
-                <Award className="w-32 h-32 text-emerald-400" />
+                <Award className="w-20 h-20 text-emerald-400" />
               </div>
 
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 mb-1">
+              <div className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-zinc-400 mb-0.5">
                 Perolehan Nilai Asesmen
               </div>
 
               {studentFinalScoreData.isForm ? (
-                <div className="py-3 space-y-1">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-semibold">
-                    <CheckCircle className="w-4 h-4" />
+                <div className="py-2 space-y-1">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-semibold">
+                    <CheckCircle className="w-3.5 h-3.5" />
                     <span>Lembar Form Berhasil Terkirim</span>
                   </div>
-                  <p className="text-xs text-zinc-400 pt-2">
+                  <p className="text-[11px] text-zinc-400 pt-1">
                     Nilai dan rekap jawaban sedang diproses oleh guru mata pelajaran.
                   </p>
                 </div>
               ) : (
-                <div className="py-2 space-y-1">
-                  <div className="text-5xl sm:text-6xl font-black font-mono tracking-tight text-emerald-400">
+                <div className="py-1 space-y-0.5">
+                  <div className="text-3xl sm:text-4xl font-black font-mono tracking-tight text-emerald-400">
                     {studentFinalScoreData.score}
                   </div>
-                  <div className="text-xs text-zinc-400 font-medium">
-                    dari total <span className="font-semibold text-zinc-200">{studentFinalScoreData.maxPoints}</span> Poin Maksimal
-                  </div>
-                  {studentFinalScoreData.maxPoints > 0 && (
-                    <div className="pt-2">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                  <div className="text-[11px] text-zinc-400 flex items-center justify-center gap-2 flex-wrap">
+                    <span>
+                      dari total <span className="font-semibold text-zinc-200">{studentFinalScoreData.maxPoints}</span> Poin Maksimal
+                    </span>
+                    {studentFinalScoreData.maxPoints > 0 && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
                         {Math.round((studentFinalScoreData.score / studentFinalScoreData.maxPoints) * 100)}% Capaian
                       </span>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               )}
 
               {studentFinalScoreData.hasEssay && (
-                <div className="mt-3 pt-3 border-t border-zinc-800 text-[11px] text-amber-300 bg-amber-500/10 p-2.5 rounded-lg flex items-center justify-center gap-1.5 text-left">
-                  <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
+                <div className="mt-2 pt-2 border-t border-zinc-800 text-[10px] sm:text-[11px] text-amber-300 bg-amber-500/10 p-2 rounded-lg flex items-center justify-center gap-1.5 text-left">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-400" />
                   <span>
-                    <strong>Catatan:</strong> Nilai di atas adalah hasil penilaian butir objektif/AKM. Butir soal esai akan diperiksa manual oleh guru pengawas.
+                    <strong>Catatan:</strong> Nilai di atas hasil penilaian butir objektif. Butir soal esai akan diperiksa manual oleh guru pengawas.
                   </span>
                 </div>
               )}
             </div>
 
-            {/* Rincian Identitas Peserta & Asesmen */}
-            <div className="bg-zinc-950/60 border border-zinc-800/80 rounded-xl p-3.5 text-xs divide-y divide-zinc-800/60">
-              <div className="flex justify-between py-1.5">
-                <span className="text-zinc-400">Nama Siswa:</span>
-                <span className="font-semibold text-zinc-200">{studentFinalScoreData.studentName}</span>
-              </div>
-              <div className="flex justify-between py-1.5">
-                <span className="text-zinc-400">NISN:</span>
-                <span className="font-mono text-zinc-200">{studentFinalScoreData.nisn}</span>
-              </div>
-              <div className="flex justify-between py-1.5">
-                <span className="text-zinc-400">Kelas / Rombel:</span>
-                <span className="font-semibold text-zinc-200">{studentFinalScoreData.classroom}</span>
-              </div>
-              <div className="flex justify-between py-1.5">
-                <span className="text-zinc-400">Mata Pelajaran:</span>
-                <span className="font-semibold text-zinc-200">{studentFinalScoreData.subjectName}</span>
-              </div>
-              <div className="flex justify-between py-1.5">
-                <span className="text-zinc-400">Waktu Pengiriman:</span>
-                <span className="font-mono text-emerald-400 font-medium">{studentFinalScoreData.finishedAt}</span>
+            {/* Rincian Identitas Peserta & Asesmen (Grid 2 Kolom Kompak) */}
+            <div className="bg-zinc-950/60 border border-zinc-800/80 rounded-xl p-2.5 sm:p-3 text-[11px] sm:text-xs">
+              <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                <div>
+                  <span className="text-zinc-500 text-[10px] block leading-tight">Nama Siswa:</span>
+                  <span className="font-semibold text-zinc-200 truncate block">{studentFinalScoreData.studentName}</span>
+                </div>
+                <div>
+                  <span className="text-zinc-500 text-[10px] block leading-tight">NISN:</span>
+                  <span className="font-mono text-zinc-200 block">{studentFinalScoreData.nisn}</span>
+                </div>
+                <div>
+                  <span className="text-zinc-500 text-[10px] block leading-tight">Kelas / Mapel:</span>
+                  <span className="font-medium text-zinc-200 truncate block">{studentFinalScoreData.classroom} • {studentFinalScoreData.subjectName}</span>
+                </div>
+                <div>
+                  <span className="text-zinc-500 text-[10px] block leading-tight">Waktu Pengiriman:</span>
+                  <span className="font-mono text-emerald-400 font-medium block">{studentFinalScoreData.finishedAt}</span>
+                </div>
               </div>
             </div>
 
-            {/* Peringatan Kerahasiaan Kunci Jawaban */}
-            <div className="bg-zinc-950/80 border border-zinc-800 p-3 rounded-xl flex items-start gap-2.5 text-xs text-zinc-400 leading-relaxed">
-              <Lock className="w-4 h-4 text-zinc-500 shrink-0 mt-0.5" />
+            {/* Peringatan Kerahasiaan Kunci Jawaban Ringkas */}
+            <div className="bg-zinc-950/60 border border-zinc-800/80 p-2 sm:p-2.5 rounded-lg flex items-center gap-2 text-[10px] text-zinc-400 leading-tight">
+              <Lock className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
               <span>
-                <strong>Kerahasiaan Jawaban:</strong> Rincian lembar kunci jawaban dan butir soal yang benar/salah dirahasiakan oleh sistem demi integritas pelaksanaan ujian. Guru pengawas dapat memeriksa analisis jawaban melalui portal pengawas.
+                <strong className="text-zinc-300">Kerahasiaan Jawaban:</strong> Rincian kunci jawaban dirahasiakan demi integritas asesmen sekolah.
               </span>
             </div>
 
-            {/* Tombol Aksi */}
-            <div>
+            {/* Tombol Aksi - Selalu Terlihat & Nyaman Diklik */}
+            <div className="pt-1">
               <button
                 type="button"
                 onClick={handleAcknowledgeScoreAndExit}
-                className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg shadow-emerald-950 transition active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full py-2.5 sm:py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-emerald-950 transition active:scale-[0.99] flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <span>{activeAttempt.isSimulation ? 'Kembali ke Dashboard Guru' : 'Selesai & Kembali ke Lobby'}</span>
                 <ChevronRight className="w-4 h-4" />
