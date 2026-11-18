@@ -25,6 +25,12 @@ export default function LoginPage() {
 
   useEffect(() => {
     fetchSchoolSettings?.();
+    // Bersihkan residual sisa lock ujicoba sebelumnya dari browser perangkat (khusus HP/iPhone)
+    try {
+      localStorage.removeItem('exam_active_attempt');
+      localStorage.removeItem('exam_screen_orientation');
+      sessionStorage.removeItem('exam_active_attempt');
+    } catch (_) {}
   }, [fetchSchoolSettings]);
 
   const handleManualLogin = async (e) => {
@@ -38,6 +44,13 @@ export default function LoginPage() {
     setErrorMessage('');
 
     try {
+      // Bersihkan sisa attempt usang dari pengerjaan / ujicoba sebelumnya di perangkat ini
+      try {
+        localStorage.removeItem('exam_active_attempt');
+        localStorage.removeItem('exam_screen_orientation');
+        sessionStorage.removeItem('exam_active_attempt');
+      } catch (_) {}
+
       // 1. Login ke REST API Django
       const res = await loginApi(username.trim(), password.trim());
       if (res && res.user) {
@@ -123,13 +136,11 @@ export default function LoginPage() {
                 <input
                   type="text"
                   required
-                  readOnly
-                  onFocus={(e) => e.target.removeAttribute('readonly')}
-                  autoComplete="one-time-code"
+                  autoComplete="username"
                   autoCorrect="off"
-                  autoCapitalize="off"
+                  autoCapitalize="none"
                   spellCheck="false"
-                  role="presentation"
+                  inputMode="text"
                   data-lpignore="true"
                   data-form-type="other"
                   value={username}
@@ -152,13 +163,10 @@ export default function LoginPage() {
                 <input
                   type="text"
                   required
-                  readOnly
-                  onFocus={(e) => e.target.removeAttribute('readonly')}
-                  autoComplete="one-time-code"
+                  autoComplete="current-password"
                   autoCorrect="off"
-                  autoCapitalize="off"
+                  autoCapitalize="none"
                   spellCheck="false"
-                  role="presentation"
                   data-lpignore="true"
                   data-form-type="other"
                   style={{

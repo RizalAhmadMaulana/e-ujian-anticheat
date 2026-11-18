@@ -343,6 +343,17 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     Serializer JWT Login yang mengembalikan token dan data detail pengguna
     """
     def validate(self, attrs):
+        username = attrs.get('username', '')
+        if username:
+            clean_username = str(username).strip()
+            # Dukungan case-insensitive untuk pengguna HP iPhone/mobile
+            # (mencegah kegagalan login akibat auto-capitalization huruf pertama di keyboard iOS)
+            matched_user = User.objects.filter(username__iexact=clean_username).first()
+            if matched_user:
+                attrs['username'] = matched_user.username
+            else:
+                attrs['username'] = clean_username
+
         data = super().validate(attrs)
         
         # Sertakan payload user lengkap pada respons login

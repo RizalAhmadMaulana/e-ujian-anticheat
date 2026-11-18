@@ -761,6 +761,13 @@ Jika siswa tidak ingin melanjutkan ujian (misalnya salah memilih mata pelajaran,
 > 2. **Pencegatan Fokus Sistem Operasi (OS Focus Watchdog $\le 500\text{ms}$):** Ketika Gemini Live dipicu di HP (baik via panggilan *"Hey Google"*, tombol fisik daya/Power hold, usapan sudut layar, maupun floating ambient bar), atau ketika siswa membuka panel samping Gemini/Copilot di laptop, sistem operasi Android/Windows/Mac **secara mutlak merebut fokus interaksi dari peramban (`document.hasFocus() === false` & `window.onblur`)**.
 > 3. **Pembekuan Instan:** Dalam waktu $< 500\text{ms}$, sensor seketika mendeteksi perpindahan fokus tersebut dan langsung membekukan lembar ujian ke mode terkunci merah dengan log resmi *"Asisten Mengambang (Gemini Live / Floating Window)"*, sehingga asisten suara AI tidak sempat membacakan jawaban kepada siswa.
 
+### Q7: Bagaimana penanganan bagi siswa yang menggunakan HP iPhone (Apple iOS Safari)?
+> **Jawaban:** E-UJIAN PRO mendukung penuh pengerjaan asesmen melalui peramban Safari di iPhone dan iPad:
+> 1. **Adaptasi Non-Fullscreen iOS:** Safari pada iPhone secara rancangan bawaan Apple tidak mengizinkan Fullscreen DOM API (`requestFullscreen`) pada elemen halaman web. Sistem secara cerdas mendeteksi iOS dan meniadakan sensor `EXIT_FULLSCREEN` di iPhone, sehingga tidak terjadi penguncian palsu (false-lock).
+> 2. **Pembersihan Kunci Sisa Sesi Sebelumnya (Residual Lock Purge):** Sistem secara otomatis menghapus rekaman data kunci sisa uji coba hari kemarin di `localStorage` saat halaman login dimuat, memastikan siswa tidak terhadang pesan keblokir saat baru membuka halaman login.
+> 3. **Netralisasi Huruf Kapital Otomatis (Auto-Capitalize):** Papan ketik (keyboard) bawaan iPhone cenderung mengkapitalkan huruf pertama (contoh: "Siswa" bukannya "siswa"). Sistem frontend dan backend secara otomatis menormalkan huruf menjadi case-insensitive sehingga autentikasi selalu berhasil.
+> 4. **Proteksi Anti-Cheat Tetap 100% Aktif:** Siswa iPhone yang mencoba keluar peramban (membuka WhatsApp, browser lain, kembali ke Home Screen, atau app switcher) tetap langsung terkunci seketika melalui Page Visibility API (`visibilityState === 'hidden'`).
+
 ---
 *Manual Book ini disusun secara komprehensif untuk memastikan kelancaran dan integritas pelaksanaan asesmen digital sekolah.*
 

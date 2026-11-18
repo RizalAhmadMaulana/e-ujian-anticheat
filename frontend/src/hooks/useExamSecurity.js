@@ -78,6 +78,14 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       );
     };
 
+    const isIOSDevice = () => {
+      return (
+        /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+        (typeof navigator.userAgent === 'string' && /iPhone/i.test(navigator.userAgent))
+      );
+    };
+
     // Helper: Pastikan style filter & tampilan selalu bersih
     const ensureCleanDisplay = () => {
       try {
@@ -98,6 +106,10 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     // SENSOR 1: FULLSCREEN ENFORCEMENT (fullscreenchange)
     // ========================================================
     const handleFullscreenChange = () => {
+      // iPhone / iOS Safari TIDAK MENDUKUNG Fullscreen API pada elemen DOM (document.documentElement).
+      // Jangan pernah memicu EXIT_FULLSCREEN pada perangkat iOS untuk mencegah false-lock.
+      if (isIOSDevice()) return;
+
       const isFullscreen = Boolean(
         document.fullscreenElement ||
         document.webkitFullscreenElement ||
@@ -160,6 +172,20 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
             navigator.clipboard.writeText('');
           }
         } catch (_) {}
+
+        // KHUSUS PERANGKAT iOS (iPhone / iPad):
+        // Peramban Safari di iOS kerap memancarkan window blur saat keyboard virtual menutup atau bar URL berubah.
+        // Pada iOS, deteksi keluar aplikasi secara mutlak mengandalkan document.visibilityState === 'hidden'
+        // (yang 100% akurat saat siswa benar-benar keluar, beralih ke WhatsApp, Home Screen, atau app switcher).
+        if (isIOSDevice()) {
+          if (document.visibilityState === 'hidden' || document.hidden) {
+            handleViolation(
+              'APP_SWITCH',
+              'Siswa terdeteksi keluar dari layar ujian atau beralih aplikasi di HP'
+            );
+          }
+          return;
+        }
 
         if (document.visibilityState === 'visible') {
           const activeEl = document.activeElement;
@@ -243,7 +269,8 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         }
 
         // 3. Deteksi Gesture Usapan Tepi Samping Layar (Bilah Sisi / Smart Sidebar Aplikasi Mengambang di HP)
-        if (touch.clientX < 20 || touch.clientX > (screenW - 20)) {
+        // Di iOS iPhone tidak ada Smart Sidebar Android; hindari false positive saat jempol menyentuh tepi layar iPhone
+        if (!isIOSDevice() && (touch.clientX < 20 || touch.clientX > (screenW - 20))) {
           edgeSwipeCandidateRef.current = {
             startX: touch.clientX,
             startY: touch.clientY,
@@ -815,45 +842,63 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
       // SENSOR 10B: Deteksi Kehilangan Fokus OS & Gemini Live Floating Bar
       // Memeriksa jika jendela peramban kehilangan fokus interaksi OS secara persisten (> 800ms)
       // ----------------------------------------------------
-      const activeEl = document.activeElement;
-      const isFocusInsideIframe = activeEl && (activeEl.tagName === 'IFRAME' || activeEl.closest('iframe'));
-
-      // Jika fokus berada di dalam iframe sah Google Form/MS Teams, abaikan
-      if (isFocusInsideIframe) {
-        consecutiveBlurChecksRef.current = 0;
-      } else {
-        const hasFocus = typeof document.hasFocus === 'function' ? document.hasFocus() : true;
-        if (!hasFocus) {
+      if (isIOSDevice()) {
+        // Pada iOS Safari, document.hasFocus() kerap mengembalikan false palsu (WebKit bug).
+        // Oleh karena itu, pengawasan di iOS difokuskan pada event visibilityState (100% akurat saat keluar).
+        if (document.visibilityState === 'hidden' || document.hidden) {
           consecutiveBlurChecksRef.current += 1;
-          // Kehilangan fokus persisten selama 2-3 siklus beruntun (~400ms - 500ms)
           if (consecutiveBlurChecksRef.current >= 2) {
             consecutiveBlurChecksRef.current = 0;
-            if (document.visibilityState === 'visible') {
-              handleViolation(
-                'FLOATING_WINDOW_ATTEMPT',
-                isMobileDevice()
-                  ? 'Siswa terdeteksi mengaktifkan asisten suara / jendela mengambang (Gemini Live / Google Assistant)'
-                  : 'Siswa terdeteksi membuka panel samping peramban (Gemini / Copilot) atau jendela aplikasi lain di Laptop'
-              );
-            } else {
-              handleViolation(
-                isMobileDevice() ? 'APP_SWITCH' : 'TAB_SWITCH',
-                isMobileDevice()
-                  ? 'Siswa terdeteksi keluar dari layar ujian atau beralih aplikasi di HP'
-                  : 'Siswa terdeteksi berpindah tab peramban atau meminimalkan browser ujian'
-              );
-            }
+            handleViolation(
+              'APP_SWITCH',
+              'Siswa terdeteksi keluar dari layar ujian atau beralih aplikasi di HP'
+            );
             return;
           }
         } else {
           consecutiveBlurChecksRef.current = 0;
+        }
+      } else {
+        const activeEl = document.activeElement;
+        const isFocusInsideIframe = activeEl && (activeEl.tagName === 'IFRAME' || activeEl.closest('iframe'));
+
+        // Jika fokus berada di dalam iframe sah Google Form/MS Teams, abaikan
+        if (isFocusInsideIframe) {
+          consecutiveBlurChecksRef.current = 0;
+        } else {
+          const hasFocus = typeof document.hasFocus === 'function' ? document.hasFocus() : true;
+          if (!hasFocus) {
+            consecutiveBlurChecksRef.current += 1;
+            // Kehilangan fokus persisten selama 2-3 siklus beruntun (~400ms - 500ms)
+            if (consecutiveBlurChecksRef.current >= 2) {
+              consecutiveBlurChecksRef.current = 0;
+              if (document.visibilityState === 'visible') {
+                handleViolation(
+                  'FLOATING_WINDOW_ATTEMPT',
+                  isMobileDevice()
+                    ? 'Siswa terdeteksi mengaktifkan asisten suara / jendela mengambang (Gemini Live / Google Assistant)'
+                    : 'Siswa terdeteksi membuka panel samping peramban (Gemini / Copilot) atau jendela aplikasi lain di Laptop'
+                );
+              } else {
+                handleViolation(
+                  isMobileDevice() ? 'APP_SWITCH' : 'TAB_SWITCH',
+                  isMobileDevice()
+                    ? 'Siswa terdeteksi keluar dari layar ujian atau beralih aplikasi di HP'
+                    : 'Siswa terdeteksi berpindah tab peramban atau meminimalkan browser ujian'
+                );
+              }
+              return;
+            }
+          } else {
+            consecutiveBlurChecksRef.current = 0;
+          }
         }
       }
 
       // ----------------------------------------------------
       // SENSOR 10C: Deteksi Mode Layar Belah (Split Screen di HP)
       // ----------------------------------------------------
-      if (isMobileDevice()) {
+      if (isMobileDevice() && !isIOSDevice()) {
         const isFullscreen = Boolean(
           document.fullscreenElement ||
           document.webkitFullscreenElement ||

@@ -595,6 +595,9 @@ E-UJIAN/
 ### Q4: Bagaimana cara menyesuaikan nama sekolah dan kepala sekolah pada lembar PDF?
 > Buka menu **Pengaturan Sekolah** (`/teacher/settings`) di portal guru. Ubah nama sekolah, alamat, kota, dan nama kepala sekolah, lalu klik Simpan. Seluruh lembar cetak PDF ReportLab dan Excel OpenPyXL akan langsung mengikuti data tersebut secara dinamis.
 
+### Q5: Bagaimana jika ada siswa yang mengakses menggunakan HP iPhone (iOS Safari)?
+> **Didukung penuh secara mulus.** E-UJIAN PRO secara otomatis mendeteksi perangkat iOS (iPhone / iPad) dan menerapkan adaptasi cerdas: menonaktifkan sensor Fullscreen DOM API yang tidak didukung Safari iPhone tanpa mengurangi proteksi keluar tab/aplikasi (`visibilityState`), menetralkan auto-capitalize keyboard iOS pada input NISN/Password, serta membersihkan status terkunci sisa uji coba hari sebelumnya secara otomatis saat membuka halaman login.
+
 ---
 
 ## 📄 Lisensi & Kontribusi

@@ -625,7 +625,7 @@ class ExamImageUploadView(APIView):
 
 
 class ServeExamImageStreamView(APIView):
-    """
+    r"""
     GET /api/exams/image-stream/?file=<filename>
     GET /api/exams/image-stream/<path:filename>
     Melayani stream biner gambar soal & opsi jawaban tanpa ekstensi di path URL.

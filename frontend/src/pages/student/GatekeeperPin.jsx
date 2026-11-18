@@ -524,8 +524,6 @@ export default function GatekeeperPin() {
                     type="text"
                     required
                     autoFocus
-                    readOnly
-                    onFocus={(e) => e.target.removeAttribute('readonly')}
                     autoComplete="one-time-code"
                     autoCorrect="off"
                     autoCapitalize="characters"

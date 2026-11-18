@@ -121,6 +121,15 @@ export default function ExamWorkspace() {
     return true;
   };
 
+  // Deteksi perangkat iOS (iPhone / iPad) yang tidak mendukung Fullscreen DOM API
+  const isIOS = (() => {
+    return (
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+      (typeof navigator.userAgent === 'string' && /iPhone/i.test(navigator.userAgent))
+    );
+  })();
+
   const selectedPackage = activeAttempt.selectedPackage || 
     (useExamStore.getState().examPackages || []).find((p) => p.id === activeAttempt.packageId) || 
     useExamStore.getState().examPackages?.[0];
@@ -807,8 +816,8 @@ export default function ExamWorkspace() {
             </button>
           )}
 
-          {/* Tombol Re-Enter Fullscreen jika Layar Penuh Terlepas */}
-          {!isFullscreenActive && !activeAttempt.isLocked && (
+          {/* Tombol Re-Enter Fullscreen jika Layar Penuh Terlepas (Kecuali iOS iPhone yang tidak mendukung Fullscreen API) */}
+          {!isFullscreenActive && !isIOS && !activeAttempt.isLocked && (
             <button
               type="button"
               onClick={handleReEnterFullscreen}
