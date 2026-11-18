@@ -6,10 +6,14 @@ from .tokens import get_session_tokens
 
 class QuestionOptionSerializer(serializers.ModelSerializer):
     image_url = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    option_text = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
         model = QuestionOption
         fields = ['id', 'option_label', 'option_text', 'image_url', 'is_correct']
+        extra_kwargs = {
+            'option_text': {'required': False, 'allow_blank': True}
+        }
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

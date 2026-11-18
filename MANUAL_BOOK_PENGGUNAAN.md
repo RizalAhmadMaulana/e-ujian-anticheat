@@ -247,7 +247,7 @@ Guru dapat menyusun bank soal menggunakan ragam format butir soal Kurikulum Merd
        - Tersedia **Formula Toolbar** di atas kotak input teks soal dengan tombol pintas sekali klik untuk simbol umum: Pecahan (`\frac{a}{b}`), Akar Kuadrat (`\sqrt{x}`), Pangkat/Eksponen (`x^{n}`), Indeks Bawah (`x_{i}`), Integral (`\int`), Notasi Sigma (`\sum`), Simbol Pi (`\pi`), Alfa (`\alpha`), Beta (`\beta`), Tanda Derajat (`^\circ`), Simbol Kali silang (`\times`), dan Pembagian (`\div`).
        - Dilengkapi **Live KaTeX Preview** langsung di bawah input soal sehingga guru dapat melihat pratinjau ketepatan rumus seketika sebelum disimpan.
     5. **Sisipkan Gambar pada Soal & Pilihan Jawaban:** Guru dapat mengunggah ilustrasi grafis, bagan, atau diagram pada setiap teks pertanyaan maupun tiap opsi pilihan jawaban.
-    6. **Opsi Jawaban Fleksibel & Dinamis:** Bebas menambah opsi baru (`+ Tambahkan Opsi`) atau menghapus opsi tertentu (minimal 2 opsi).
+    6. **Opsi Jawaban Fleksibel & Dinamis:** Bebas menambah opsi baru (`+ Tambahkan Opsi`) atau menghapus opsi tertentu (minimal 2 opsi). Mendukung opsi yang hanya melampirkan gambar tanpa wajib mengisi teks kalimat.
     7. Klik **"Simpan Paket Soal"**.
 
   - **Pilihan B: Import Soal Massal via Microsoft Word (.docx) & Excel (.xlsx):**
@@ -257,11 +257,12 @@ Guru dapat menyusun bank soal menggunakan ragam format butir soal Kurikulum Merd
     3. **Tab Impor Spreadsheet Excel (`.xlsx`) & Ekstraksi Gambar Otomatis:**
        - Klik tombol **"Unduh Template Excel"** untuk memperoleh template resmi `Template_Import_Soal_E-Ujian.xlsx`.
        - Isi lembar kerja dengan format kolom baku (`Tipe Soal`, `Teks Soal`, `Poin`, `Opsi A`, `Opsi B`, `Opsi C`, `Opsi D`, `Opsi E`, `Kunci Jawaban`).
-       - **Ekstraksi Gambar Otomatis:** Guru dapat menyisipkan gambar ilustrasi, grafik, diagram, atau rumus langsung ke dalam sel Excel:
+       - **Ekstraksi Gambar Otomatis & Bebas Duplikasi:** Guru dapat menyisipkan gambar ilustrasi, grafik, diagram, atau rumus langsung ke dalam sel Excel:
          * Gambar pada kolom **Teks Soal (Kolom C)** akan otomatis diekstrak dan dijadikan lampiran gambar pertanyaan.
          * Gambar pada kolom **Opsi A s/d E (Kolom D s/d H)** akan otomatis diekstrak dan dijadikan gambar pada pilihan jawaban.
+         * Penarikan gambar dilakukan secara strictly per-baris (`pop()`), menjamin gambar tidak pernah terduplikasi atau terserap ke nomor soal lain.
          * Jika posisi gambar berada di atas teks atau diikuti baris kosong (*newlines*), sistem secara otomatis merapikan teks pertanyaan.
-         * Jika butir soal atau opsi jawaban hanya berupa gambar (tanpa teks kata-kata), sistem tetap menyimpannya secara utuh tanpa terlewat.
+         * Jika butir soal atau opsi jawaban hanya berupa gambar (tanpa teks kata-kata), sistem tetap menyimpannya secara utuh dan valid tanpa terlewat.
        - Unggah berkas `.xlsx` dan klik **"Mulai Impor Soal"**. Puluhan soal beserta seluruh gambar lampirannya seketika terdaftar ke dalam paket soal tanpa perlu mengunggah gambar satu per satu secara manual.
 
   - **Pilihan C: Tautan Google Form / MS Teams (Secure Iframe):**

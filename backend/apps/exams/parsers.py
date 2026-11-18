@@ -296,13 +296,13 @@ def parse_excel_questions(excel_file):
         no_val = sheet.cell(row=row_idx, column=1).value
         raw_q_text = sheet.cell(row=row_idx, column=3).value
 
-        # Deteksi lampiran gambar pada sel pertanyaan (Kolom 3)
-        # Mendukung pencocokan tepat dan toleransi pergeseran anchor (-1 baris atau +1 baris)
+        # Deteksi lampiran gambar pada sel pertanyaan (Kolom 3 / Kolom C)
+        # Ambil secara eksklusif dari baris yang sama (row_idx) menggunakan .pop()
+        # agar gambar tidak pernah terduplikasi atau terserap ke butir soal lain!
         q_img_url = (
-            images_map.get((row_idx, 3)) 
-            or images_map.get((row_idx - 1, 3)) 
-            or images_map.get((row_idx + 1, 3))
-            or images_map.get((row_idx, 2))
+            images_map.pop((row_idx, 3), None) 
+            or images_map.pop((row_idx, 2), None) 
+            or images_map.pop((row_idx, 1), None)
         )
 
         # Bersihkan enter dan spasi kosong di awal kalimat akibat peletakan gambar di atas teks
@@ -346,11 +346,8 @@ def parse_excel_questions(excel_file):
             col_idx = 4 + col_offset
             val = sheet.cell(row=row_idx, column=col_idx).value
             opt_text = str(val).strip() if val is not None else ""
-            opt_img_url = (
-                images_map.get((row_idx, col_idx)) 
-                or images_map.get((row_idx - 1, col_idx)) 
-                or images_map.get((row_idx + 1, col_idx))
-            )
+            # Ambil lampiran gambar khusus kolom opsi ini pada baris yang sama via .pop()
+            opt_img_url = images_map.pop((row_idx, col_idx), None)
 
             # Jika ada teks ATAU ada gambar pada kolom opsi ini
             if opt_text or opt_img_url:

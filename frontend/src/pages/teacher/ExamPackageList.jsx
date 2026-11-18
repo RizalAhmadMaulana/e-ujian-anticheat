@@ -682,9 +682,19 @@ export default function ExamPackageList() {
         questions: [],
       });
     } else {
-      const hasEmptyQuestion = questions.some((q) => !q.questionText.trim());
+      const hasEmptyQuestion = questions.some((q) => !q.questionText?.trim() && !q.imageUrl);
       if (hasEmptyQuestion) {
-        alert('Mohon lengkapi seluruh teks pertanyaan pada butir soal.');
+        alert('Mohon lengkapi teks pertanyaan atau lampirkan gambar pada setiap butir soal.');
+        return;
+      }
+
+      const hasInvalidOption = questions.some(
+        (q) =>
+          (q.questionType === 'MULTIPLE_CHOICE' || q.questionType === 'MULTIPLE_CHOICE_COMPLEX') &&
+          (q.options || []).some((opt) => !opt.text?.trim() && !opt.imageUrl)
+      );
+      if (hasInvalidOption) {
+        alert('Setiap opsi pilihan ganda wajib memiliki teks atau lampiran gambar.');
         return;
       }
 
@@ -695,8 +705,8 @@ export default function ExamPackageList() {
         if (q.questionType === 'MULTIPLE_CHOICE') {
           options = (q.options || []).map((opt) => ({
             option_label: opt.label,
-            option_text: opt.text,
-            text: opt.text,
+            option_text: opt.text?.trim() || '',
+            text: opt.text?.trim() || '',
             image_url: opt.imageUrl || null,
             imageUrl: opt.imageUrl || null,
             is_correct: opt.label === q.correctOption,
@@ -705,8 +715,8 @@ export default function ExamPackageList() {
           const correctSet = new Set(q.correctOptions || []);
           options = (q.options || []).map((opt) => ({
             option_label: opt.label,
-            option_text: opt.text,
-            text: opt.text,
+            option_text: opt.text?.trim() || '',
+            text: opt.text?.trim() || '',
             image_url: opt.imageUrl || null,
             imageUrl: opt.imageUrl || null,
             is_correct: correctSet.has(opt.label),
@@ -1692,10 +1702,10 @@ export default function ExamPackageList() {
                         <div className="relative">
                           <textarea
                             rows={3}
-                            required
+                            required={!q.imageUrl}
                             value={q.questionText}
                             onChange={(e) => handleQuestionTextChange(idx, e.target.value)}
-                            placeholder="Tuliskan teks pertanyaan soal di sini... (Mendukung rumus KaTeX diapit tanda $...$)"
+                            placeholder={q.imageUrl ? "Tuliskan teks pertanyaan soal di sini... (opsional jika sudah ada gambar)" : "Tuliskan teks pertanyaan soal di sini... (Mendukung rumus KaTeX diapit tanda $...$)"}
                             className="w-full px-3 py-2 pr-10 border border-zinc-200 rounded-lg text-xs sm:text-sm focus:outline-none focus:border-zinc-400 bg-white leading-relaxed placeholder:text-zinc-400"
                           />
 
@@ -1787,10 +1797,10 @@ export default function ExamPackageList() {
                                   <div className="flex-1 w-full relative flex items-center">
                                     <input
                                       type="text"
-                                      required
+                                      required={!opt.imageUrl}
                                       value={opt.text}
                                       onChange={(e) => handleOptionTextChange(idx, optIdx, e.target.value)}
-                                      placeholder={`Teks pilihan ${opt.label}... (Mendukung rumus $...$)`}
+                                      placeholder={opt.imageUrl ? `(Opsi ${opt.label} Bergambar - teks opsional)` : `Teks pilihan ${opt.label}... (Mendukung rumus $...$)`}
                                       className="w-full pl-3 pr-8 py-1.5 border border-zinc-200 rounded-md text-xs sm:text-sm bg-white focus:outline-none focus:border-zinc-400"
                                     />
                                     <label
@@ -1892,10 +1902,10 @@ export default function ExamPackageList() {
                                   <div className="flex-1 w-full relative flex items-center">
                                     <input
                                       type="text"
-                                      required
+                                      required={!opt.imageUrl}
                                       value={opt.text}
                                       onChange={(e) => handleOptionTextChange(idx, optIdx, e.target.value)}
-                                      placeholder={`Teks pilihan ${opt.label}...`}
+                                      placeholder={opt.imageUrl ? `(Opsi ${opt.label} Bergambar - teks opsional)` : `Teks pilihan ${opt.label}...`}
                                       className="w-full pl-3 pr-8 py-1.5 border border-zinc-200 rounded-md text-xs sm:text-sm bg-white focus:outline-none focus:border-zinc-400"
                                     />
                                     <label
@@ -1916,7 +1926,24 @@ export default function ExamPackageList() {
                                     </label>
                                   </div>
 
-                                  <div className="flex items-center justify-end gap-1 shrink-0">
+                                  <div className="flex items-center justify-end gap-1.5 shrink-0">
+                                    {opt.imageUrl && (
+                                      <div className="flex items-center gap-1 bg-white p-0.5 rounded border border-zinc-200">
+                                        <img
+                                          src={resolveImageUrl(opt.imageUrl)}
+                                          alt={`Gbr ${opt.label}`}
+                                          className="h-6 w-6 object-contain rounded bg-white"
+                                          onError={handleImageErrorFallback}
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => handleRemoveOptionImage(idx, optIdx)}
+                                          className="text-[10px] text-rose-600 hover:underline px-1"
+                                        >
+                                          Hapus Gbr
+                                        </button>
+                                      </div>
+                                    )}
                                     <button
                                       type="button"
                                       onClick={() => handleRemoveOption(idx, optIdx)}
