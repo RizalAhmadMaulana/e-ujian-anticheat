@@ -60,6 +60,19 @@ export default function GatekeeperPin() {
     ? (currentUser.classroom.name || currentUser.classroom_name || '-')
     : (currentUser?.classroom || currentUser?.classroom_name || '-');
 
+  // Deteksi perangkat iOS (iPhone / iPad) yang tidak mendukung Fullscreen DOM API
+  const isIOSDevice = () => {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
+    const ua = navigator.userAgent || '';
+    const platform = navigator.platform || '';
+    const isDirectIOS = /iPad|iPhone|iPod/i.test(ua);
+    const isMacTouch = (platform === 'MacIntel' || /Macintosh/i.test(ua)) && navigator.maxTouchPoints > 1;
+    const isAppleVendorTouch = (navigator.vendor && navigator.vendor.includes('Apple')) && 
+      ('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0));
+    const isAppleStandalone = 'standalone' in navigator;
+    return Boolean(isDirectIOS || isMacTouch || isAppleVendorTouch || isAppleStandalone);
+  };
+
   // Ambil paket ujian terpilih dari state aktif
   const selectedPackage = activeAttempt?.selectedPackage || examPackages[0];
 
@@ -147,14 +160,17 @@ export default function GatekeeperPin() {
 
     // 1. PANGGIL FULLSCREEN SEGERA PADA USER GESTURE SINKRON (Sebelum Async Network Calls)
     // Menjamin browser HP langsung masuk ke mode Fullscreen otomatis tanpa terblokir batasan gesture async
-    try {
-      const docEl = document.documentElement;
-      if (docEl.requestFullscreen) {
-        docEl.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
-      } else if (docEl.webkitRequestFullscreen) {
-        docEl.webkitRequestFullscreen();
-      }
-    } catch (_) {}
+    // (Dilewati pada perangkat iOS yang tidak mendukung Fullscreen DOM API)
+    if (!isIOSDevice()) {
+      try {
+        const docEl = document.documentElement;
+        if (docEl.requestFullscreen) {
+          docEl.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
+        } else if (docEl.webkitRequestFullscreen) {
+          docEl.webkitRequestFullscreen();
+        }
+      } catch (_) {}
+    }
 
     setIsChecking(true);
 
@@ -269,22 +285,24 @@ export default function GatekeeperPin() {
       // 3. Tampilkan toast Screen Pinned & Kunci Layar Penuh (Fullscreen)
       setShowPinnedToast(true);
 
-      try {
-        if (document.activeElement && typeof document.activeElement.blur === 'function') {
-          document.activeElement.blur();
+      if (!isIOSDevice()) {
+        try {
+          if (document.activeElement && typeof document.activeElement.blur === 'function') {
+            document.activeElement.blur();
+          }
+          const docEl = document.documentElement;
+          if (docEl.requestFullscreen) {
+            await docEl.requestFullscreen({ navigationUI: 'hide' });
+          } else if (docEl.webkitRequestFullscreen) {
+            await docEl.webkitRequestFullscreen();
+          } else if (docEl.mozRequestFullScreen) {
+            await docEl.mozRequestFullScreen();
+          } else if (docEl.msRequestFullscreen) {
+            await docEl.msRequestFullscreen();
+          }
+        } catch (fullErr) {
+          console.warn('Fullscreen request blocked or not user-gesture triggered:', fullErr);
         }
-        const docEl = document.documentElement;
-        if (docEl.requestFullscreen) {
-          await docEl.requestFullscreen({ navigationUI: 'hide' });
-        } else if (docEl.webkitRequestFullscreen) {
-          await docEl.webkitRequestFullscreen();
-        } else if (docEl.mozRequestFullScreen) {
-          await docEl.mozRequestFullScreen();
-        } else if (docEl.msRequestFullscreen) {
-          await docEl.msRequestFullscreen();
-        }
-      } catch (fullErr) {
-        console.warn('Fullscreen request blocked or not user-gesture triggered:', fullErr);
       }
 
       // 4. Kunci Orientasi Layar Sesuai Pilihan Siswa (PORTRAIT / LANDSCAPE)

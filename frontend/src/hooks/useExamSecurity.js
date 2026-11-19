@@ -18,9 +18,9 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
 
   const isSubmittedRef = useRef(Boolean(activeAttempt.examSubmittedAt));
   const isLockedRef = useRef(activeAttempt.isLocked);
-  // Berikan masa tenggang awal 6 detik saat siswa baru masuk ke arena ujian
+  // Berikan masa tenggang awal 12 detik saat siswa baru masuk ke arena ujian
   // Menjamin inisialisasi fullscreen, orientasi, dan rendering awal tidak memicu false lock
-  const gracePeriodUntilRef = useRef(Date.now() + 6000);
+  const gracePeriodUntilRef = useRef(Date.now() + 12000);
   const prevIsLockedRef = useRef(activeAttempt.isLocked);
   const consecutiveBlurChecksRef = useRef(0);
   const threeFingerSwipeRef = useRef(null);
@@ -79,11 +79,15 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     };
 
     const isIOSDevice = () => {
-      return (
-        /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
-        (typeof navigator.userAgent === 'string' && /iPhone/i.test(navigator.userAgent))
-      );
+      if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
+      const ua = navigator.userAgent || '';
+      const platform = navigator.platform || '';
+      const isDirectIOS = /iPad|iPhone|iPod/i.test(ua);
+      const isMacTouch = (platform === 'MacIntel' || /Macintosh/i.test(ua)) && navigator.maxTouchPoints > 1;
+      const isAppleVendorTouch = (navigator.vendor && navigator.vendor.includes('Apple')) && 
+        ('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0));
+      const isAppleStandalone = 'standalone' in navigator;
+      return Boolean(isDirectIOS || isMacTouch || isAppleVendorTouch || isAppleStandalone);
     };
 
     // Helper: Pastikan style filter & tampilan selalu bersih
@@ -117,6 +121,15 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         document.msFullscreenElement
       );
 
+      // KETIKA BERHASIL MASUK KE FULLSCREEN:
+      // Berikan perpanjangan grace period 5 detik agar animasi peramban, penyesuaian status bar,
+      // dan pelepasan keyboard virtual tidak memicu false-lock akibat kedipan window.onblur!
+      if (isFullscreen) {
+        gracePeriodUntilRef.current = Math.max(gracePeriodUntilRef.current, Date.now() + 5000);
+        consecutiveBlurChecksRef.current = 0;
+        return;
+      }
+
       if (!isFullscreen && !isSubmittedRef.current && !isLockedRef.current) {
         if (Date.now() < gracePeriodUntilRef.current) return;
         handleViolation(
@@ -129,20 +142,42 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
     // ========================================================
     // SENSOR 2: ANTI-TAB SWITCH & MINIMIZE (visibilitychange)
     // ========================================================
+    let visibilityTimeout = null;
     const handleVisibilityChange = () => {
       ensureCleanDisplay();
+
+      if (visibilityTimeout) {
+        clearTimeout(visibilityTimeout);
+        visibilityTimeout = null;
+      }
 
       if (document.visibilityState === 'hidden' || document.hidden) {
         if (isSubmittedRef.current || isLockedRef.current) return;
         // PENTING: Hormati masa tenggang awal saat inisialisasi fullscreen & orientasi
         if (Date.now() < gracePeriodUntilRef.current) return;
 
-        handleViolation(
-          isMobileDevice() ? 'APP_SWITCH' : 'TAB_SWITCH',
-          isMobileDevice()
-            ? 'Siswa terdeteksi keluar dari layar ujian atau beralih aplikasi di HP'
-            : 'Siswa terdeteksi berpindah tab peramban atau meminimalkan browser ujian'
-        );
+        // Berikan penundaan verifikasi 350ms: jika siswa benar-benar keluar ke aplikasi lain / Home / WhatsApp,
+        // visibilityState akan tetap 'hidden' secara persisten!
+        // Namun jika hanya kedipan transient saat transisi fullscreen atau rotasi layar,
+        // event akan dibatalkan saat visibilityState kembali menjadi 'visible'.
+        visibilityTimeout = setTimeout(() => {
+          if (isSubmittedRef.current || isLockedRef.current) return;
+          if (Date.now() < gracePeriodUntilRef.current) return;
+
+          if (document.visibilityState === 'hidden' || document.hidden) {
+            handleViolation(
+              isMobileDevice() ? 'APP_SWITCH' : 'TAB_SWITCH',
+              isMobileDevice()
+                ? 'Siswa terdeteksi keluar dari layar ujian atau beralih aplikasi di HP'
+                : 'Siswa terdeteksi berpindah tab peramban atau meminimalkan browser ujian'
+            );
+          }
+        }, 350);
+      } else {
+        if (visibilityTimeout) {
+          clearTimeout(visibilityTimeout);
+          visibilityTimeout = null;
+        }
       }
     };
 
@@ -175,14 +210,20 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
 
         // KHUSUS PERANGKAT iOS (iPhone / iPad):
         // Peramban Safari di iOS kerap memancarkan window blur saat keyboard virtual menutup atau bar URL berubah.
-        // Pada iOS, deteksi keluar aplikasi secara mutlak mengandalkan document.visibilityState === 'hidden'
+        // Pada iOS, deteksi keluar aplikasi secara mutlak mengandalkan document.visibilityState === 'hidden' persisten
         // (yang 100% akurat saat siswa benar-benar keluar, beralih ke WhatsApp, Home Screen, atau app switcher).
         if (isIOSDevice()) {
           if (document.visibilityState === 'hidden' || document.hidden) {
-            handleViolation(
-              'APP_SWITCH',
-              'Siswa terdeteksi keluar dari layar ujian atau beralih aplikasi di HP'
-            );
+            setTimeout(() => {
+              if (isSubmittedRef.current || isLockedRef.current) return;
+              if (Date.now() < gracePeriodUntilRef.current) return;
+              if (document.visibilityState === 'hidden' || document.hidden) {
+                handleViolation(
+                  'APP_SWITCH',
+                  'Siswa terdeteksi keluar dari layar ujian atau beralih aplikasi di HP'
+                );
+              }
+            }, 300);
           }
           return;
         }
@@ -206,7 +247,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
           }
         }
 
-        if (document.visibilityState === 'hidden' || document.hidden || !document.hasFocus()) {
+        if (document.visibilityState === 'hidden' || document.hidden) {
           handleViolation(
             isMobileDevice() ? 'APP_SWITCH' : 'TAB_SWITCH',
             isMobileDevice()
@@ -847,7 +888,7 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
         // Oleh karena itu, pengawasan di iOS difokuskan pada event visibilityState (100% akurat saat keluar).
         if (document.visibilityState === 'hidden' || document.hidden) {
           consecutiveBlurChecksRef.current += 1;
-          if (consecutiveBlurChecksRef.current >= 2) {
+          if (consecutiveBlurChecksRef.current >= 3) {
             consecutiveBlurChecksRef.current = 0;
             handleViolation(
               'APP_SWITCH',
@@ -1002,6 +1043,14 @@ export function useExamSecurity({ onScreenshotBlocked, onViolationDetected, isEx
 
     return () => {
       clearInterval(heartbeatInterval);
+      if (visibilityTimeout) {
+        clearTimeout(visibilityTimeout);
+        visibilityTimeout = null;
+      }
+      if (blurTimeout) {
+        clearTimeout(blurTimeout);
+        blurTimeout = null;
+      }
 
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);

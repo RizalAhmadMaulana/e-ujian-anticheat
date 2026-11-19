@@ -123,11 +123,15 @@ export default function ExamWorkspace() {
 
   // Deteksi perangkat iOS (iPhone / iPad) yang tidak mendukung Fullscreen DOM API
   const isIOS = (() => {
-    return (
-      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
-      (typeof navigator.userAgent === 'string' && /iPhone/i.test(navigator.userAgent))
-    );
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') return false;
+    const ua = navigator.userAgent || '';
+    const platform = navigator.platform || '';
+    const isDirectIOS = /iPad|iPhone|iPod/i.test(ua);
+    const isMacTouch = (platform === 'MacIntel' || /Macintosh/i.test(ua)) && navigator.maxTouchPoints > 1;
+    const isAppleVendorTouch = (navigator.vendor && navigator.vendor.includes('Apple')) && 
+      ('ontouchstart' in window || (navigator.maxTouchPoints && navigator.maxTouchPoints > 0));
+    const isAppleStandalone = 'standalone' in navigator;
+    return Boolean(isDirectIOS || isMacTouch || isAppleVendorTouch || isAppleStandalone);
   })();
 
   const selectedPackage = activeAttempt.selectedPackage || 
@@ -226,6 +230,12 @@ export default function ExamWorkspace() {
   // Pantau status fullscreen aktif secara real-time
   useEffect(() => {
     const updateFullscreenState = () => {
+      // Pada perangkat iOS (iPhone / iPad), Fullscreen DOM API tidak didukung Apple.
+      // Selalu anggap fullscreen aktif pada iOS agar tidak memicu overlay atau false-lock.
+      if (isIOS) {
+        setIsFullscreenActive(true);
+        return;
+      }
       const isFull = Boolean(
         document.fullscreenElement ||
         document.webkitFullscreenElement ||
@@ -247,10 +257,11 @@ export default function ExamWorkspace() {
       document.removeEventListener('mozfullscreenchange', updateFullscreenState);
       document.removeEventListener('MSFullscreenChange', updateFullscreenState);
     };
-  }, []);
+  }, [isIOS]);
 
   // Masuk Kembali ke Mode Fullscreen & Kunci Orientasi secara Handal
   const handleReEnterFullscreen = async () => {
+    if (isIOS) return; // iOS Safari tidak mendukung DOM Fullscreen pada documentElement
     try {
       if (document.activeElement && typeof document.activeElement.blur === 'function') {
         document.activeElement.blur();
@@ -1016,9 +1027,9 @@ export default function ExamWorkspace() {
       {/* ======================================================== */}
       {/* 2B. 1-TAP FULLSCREEN ENFORCEMENT OVERLAY */}
       {/* Mengunci layar seketika ke mode fullscreen saat siswa mulai masuk ujian */}
-      {/* Bebas popup izin mikrofon & 100% fullscreen otomatis tanpa kendala */}
+      {/* (Dilewati pada perangkat iOS yang tidak mendukung Fullscreen DOM API) */}
       {/* ======================================================== */}
-      {!isFullscreenActive && !activeAttempt.isLocked && !activeAttempt.examSubmittedAt && (
+      {!isFullscreenActive && !isIOS && !activeAttempt.isLocked && !activeAttempt.examSubmittedAt && (
         <div 
           onClick={handleReEnterFullscreen}
           className="fixed inset-0 z-[99990] bg-[#090D16]/95 backdrop-blur-md flex items-center justify-center p-4 text-center cursor-pointer select-none"
