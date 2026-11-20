@@ -90,24 +90,14 @@ export default function StudentResults() {
         const pkgList = pkgRes.status === 'fulfilled' && Array.isArray(pkgRes.value) ? pkgRes.value : [];
         const clsList = clsRes.status === 'fulfilled' && Array.isArray(clsRes.value) ? clsRes.value : [];
 
-        // Filter ketat: Hanya paket soal mandiri (native AKM/ANBK) yang memiliki lembar penilaian dan butir soal di sistem
-        const isNativePkg = (pkg) => {
-          if (!pkg) return false;
-          if (pkg.exam_type === 'EXTERNAL_LINK' || pkg.examType === 'EXTERNAL_LINK') return false;
-          if (pkg.external_url || pkg.externalUrl) return false;
-          return true;
-        };
-
-        const nativePackages = pkgList.filter(isNativePkg);
-        const nativeSessions = sessList.filter((s) => isNativePkg(s.package));
-
-        setSessions(nativeSessions);
-        setPackages(nativePackages);
+        // Tampilkan seluruh paket ujian dan sesi (pilihan ganda, esai, campuran, dll) tanpa dibatasi
+        setSessions(sessList);
+        setPackages(pkgList);
         setClassrooms(clsList);
 
-        // Jika belum ada session terpilih dari URL, pilih sesi pertama dari nativeSessions
-        if (!selectedSessionId && nativeSessions.length > 0) {
-          setSelectedSessionId(nativeSessions[0].id);
+        // Jika belum ada session terpilih dari URL, pilih sesi pertama yang tersedia
+        if (!selectedSessionId && sessList.length > 0) {
+          setSelectedSessionId(sessList[0].id);
         }
       } catch (err) {
         console.error('Gagal mengambil master data filter:', err);
@@ -272,11 +262,15 @@ export default function StudentResults() {
     let lowest = 0;
 
     if (submittedCount > 0) {
-      const scores = submitted.map((s) => Number(s.final_score !== undefined ? s.final_score : (s.total_score !== null && s.total_score !== undefined ? s.total_score : s.previous_score)) || 0);
-      const sum = scores.reduce((a, b) => a + b, 0);
-      average = Math.round((sum / submittedCount) * 10) / 10;
-      highest = Math.max(...scores);
-      lowest = Math.min(...scores);
+      // Siswa yang belum dinilai esainya dikecualikan dari kalkulasi rerata/tertinggi/terendah
+      const gradedStudents = submitted.filter((s) => !s.has_ungraded_essay);
+      if (gradedStudents.length > 0) {
+        const scores = gradedStudents.map((s) => Number(s.final_score !== undefined ? s.final_score : (s.total_score !== null && s.total_score !== undefined ? s.total_score : s.previous_score)) || 0);
+        const sum = scores.reduce((a, b) => a + b, 0);
+        average = Math.round((sum / gradedStudents.length) * 10) / 10;
+        highest = Math.max(...scores);
+        lowest = Math.min(...scores);
+      }
     }
 
     return {
@@ -826,7 +820,17 @@ export default function StudentResults() {
                       )}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      {st.total_score !== null && st.total_score !== undefined && st.status !== 'NOT_STARTED' ? (
+                      {st.has_ungraded_essay ? (
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-300 font-semibold text-xs shadow-2xs">
+                            <Clock className="w-3.5 h-3.5 text-amber-600" />
+                            <span>Belum Dinilai</span>
+                          </span>
+                          <span className="text-[10px] text-zinc-400 font-medium">
+                            {st.essay_graded_count !== undefined ? `${st.essay_graded_count}/${st.total_essay_questions || 0} Esai Dinilai` : 'Menunggu Koreksi'}
+                          </span>
+                        </div>
+                      ) : st.total_score !== null && st.total_score !== undefined && st.status !== 'NOT_STARTED' ? (
                         <div className="flex flex-col items-center gap-1">
                           <div className="inline-flex items-baseline gap-1 px-2.5 py-1 rounded-lg bg-zinc-900 text-white font-mono font-bold text-xs shadow-2xs">
                             <span className="text-sm font-black text-emerald-400">{st.total_score}</span>

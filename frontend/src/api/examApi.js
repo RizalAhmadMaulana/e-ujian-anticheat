@@ -169,8 +169,12 @@ export const verifyExitPasswordApi = async (sessionId, exitPassword = '') => {
 // -------------------------------------------------------------
 // PENILAIAN & KOREKSI ESAI GURU (ROLE GURU)
 // -------------------------------------------------------------
-export const getEssaySubmissionsApi = async (sessionId) => {
-  const response = await axiosInstance.get(`/exams/sessions/${sessionId}/essay-submissions/`);
+export const getEssaySubmissionsApi = async (sessionId, classroomId = null) => {
+  const params = {};
+  if (classroomId && String(classroomId).toUpperCase() !== 'ALL') {
+    params.classroom = classroomId;
+  }
+  const response = await axiosInstance.get(`/exams/sessions/${sessionId}/essay-submissions/`, { params });
   return response.data;
 };
 

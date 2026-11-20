@@ -146,11 +146,13 @@ def generate_session_results_excel(session, questions, students_data, attempts_b
 
         status_display = "Selesai" if st.get("status") == "SUBMITTED" else ("Mengerjakan" if st.get("status") == "WORKING" else "Belum Masuk")
         score_val = st.get("total_score")
-        if score_val is not None:
+        has_ungraded = bool(st.get("has_ungraded_essay"))
+        if score_val is not None and not has_ungraded:
             scores_list.append(score_val)
 
         viol_display = f"{st.get('violation_count', 0)} Pelanggaran" if st.get('violation_count', 0) > 0 else "0 Bersih"
         correct_display = f"{st.get('correct_count', 0)} / {len(questions)}" if st.get("status") == "SUBMITTED" else "-"
+        display_score_val = "Belum Dinilai" if has_ungraded else (score_val if score_val is not None else "-")
 
         # Isi Fixed Columns
         fixed_values = [
@@ -163,7 +165,7 @@ def generate_session_results_excel(session, questions, students_data, attempts_b
             (duration_str, align_center, font_data),
             (viol_display, align_center, font_data),
             (correct_display, align_center, font_bold),
-            (score_val if score_val is not None else "-", align_center, font_bold),
+            (display_score_val, align_center, font_bold),
         ]
 
         for col_idx, (val, align, font_style) in enumerate(fixed_values, start=1):
@@ -173,8 +175,12 @@ def generate_session_results_excel(session, questions, students_data, attempts_b
             cell.border = thin_border
             if default_row_fill:
                 cell.fill = default_row_fill
-            if col_idx == 10 and score_val is not None:
-                cell.font = font_correct if score_val >= 75 else font_bold
+            if col_idx == 10:
+                if has_ungraded:
+                    cell.font = font_partial
+                    cell.fill = fill_partial
+                elif score_val is not None:
+                    cell.font = font_correct if score_val >= 75 else font_bold
 
         # Isi Per-Question Columns
         for q_idx, q in enumerate(questions):

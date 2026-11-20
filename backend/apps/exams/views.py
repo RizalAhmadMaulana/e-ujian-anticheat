@@ -866,15 +866,17 @@ class SessionEssaySubmissionsView(APIView):
     """
     GET /api/exams/sessions/<uuid:session_id>/essay-submissions/
     Mengambil daftar butir soal esai dan lembar jawaban seluruh siswa untuk dikoreksi guru
+    Mendukung filter query ?classroom=... atau ?classroom_id=...
     """
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, session_id):
-        session = get_object_or_404(ExamSession, id=session_id)
+        session = get_object_or_404(ExamSession.objects.select_related('package', 'classroom'), id=session_id)
+        package = session.package
         
         # Ambil soal-soal bertipe ESSAY pada paket sesi
         essay_questions = Question.objects.filter(
-            package=session.package,
+            package=package,
             question_type=Question.QuestionTypeChoices.ESSAY
         ).order_by('order_number')
 
@@ -882,15 +884,32 @@ class SessionEssaySubmissionsView(APIView):
             {
                 "id": str(q.id),
                 "order_number": q.order_number,
+                "order": q.order_number,
                 "text": q.question_text,
-                "image_url": q.image_url.url if q.image_url else None,
-                "points": q.points
+                "question_text": q.question_text,
+                "image_url": str(q.image_url) if q.image_url else None,
+                "imageUrl": str(q.image_url) if q.image_url else None,
+                "points": q.points,
+                "max_score": q.points,
+                "max_points": q.points,
+                "extra_data": q.extra_data or {}
             }
             for q in essay_questions
         ]
 
-        # Ambil seluruh attempt siswa pada sesi ini
-        attempts = StudentAttempt.objects.filter(session=session).select_related('student').order_by('student__full_name')
+        # Ambil filter kelas dari parameter query (ID atau nama kelas)
+        classroom_param = request.query_params.get('classroom') or request.query_params.get('classroom_id')
+        target_classroom = None
+        if classroom_param and str(classroom_param).strip().upper() != 'ALL':
+            from apps.accounts.models import ClassRoom
+            if str(classroom_param).strip().isdigit():
+                target_classroom = ClassRoom.objects.filter(id=int(classroom_param)).first()
+            if not target_classroom:
+                target_classroom = ClassRoom.objects.filter(name__iexact=str(classroom_param).strip()).first()
+
+        attempts = StudentAttempt.objects.filter(session=session).select_related('student', 'student__classroom').order_by('student__full_name')
+        if target_classroom:
+            attempts = attempts.filter(student__classroom=target_classroom)
 
         submissions = []
         for att in attempts:
@@ -898,41 +917,72 @@ class SessionEssaySubmissionsView(APIView):
             essay_scores = att.essay_scores or {}
 
             student_essay_data = []
+            answers_by_qid = {}
             for q in essay_questions:
                 q_id_str = str(q.id)
-                # Siswa mungkin menyimpan jawaban dengan ID atau q_{order_number}
-                student_answer_text = answers.get(q_id_str) or answers.get(f"q_{q.order_number}") or ""
-                grading_info = essay_scores.get(q_id_str, {})
+                # Siswa mungkin menyimpan jawaban dengan ID, format lowercase/uppercase, atau q_{order_number}
+                raw_ans = (
+                    answers.get(q_id_str) or 
+                    answers.get(q_id_str.lower()) or 
+                    answers.get(q_id_str.upper()) or 
+                    answers.get(f"q_{q.order_number}") or 
+                    answers.get(str(q.order_number)) or 
+                    ""
+                )
+                if isinstance(raw_ans, dict):
+                    student_answer_text = raw_ans.get('text') or raw_ans.get('answer') or raw_ans.get('value') or raw_ans.get('student_answer') or str(raw_ans)
+                else:
+                    student_answer_text = str(raw_ans) if raw_ans is not None else ""
 
-                student_essay_data.append({
+                grading_info = essay_scores.get(q_id_str, {})
+                score_val = grading_info.get('score')
+                item_obj = {
                     "question_id": q_id_str,
                     "order_number": q.order_number,
+                    "order": q.order_number,
                     "student_answer": student_answer_text,
+                    "points": q.points,
                     "max_points": q.points,
-                    "score": grading_info.get('score'),
+                    "max_score": q.points,
+                    "score": score_val,
                     "feedback": grading_info.get('feedback', ''),
                     "graded_at": grading_info.get('graded_at'),
-                    "is_graded": grading_info.get('score') is not None
-                })
+                    "is_graded": score_val is not None
+                }
+                student_essay_data.append(item_obj)
+                answers_by_qid[q_id_str] = item_obj
 
-            submissions.append({
+            graded_count = sum(1 for item in student_essay_data if item["is_graded"])
+            total_essays = len(essay_questions)
+            is_fully_graded = (graded_count >= total_essays) if total_essays > 0 else True
+            essay_earned_points = sum(float(item["score"]) for item in student_essay_data if item["score"] is not None)
+
+            student_entry = {
                 "attempt_id": str(att.id),
-                "student_id": att.student.id,
-                "student_name": att.student.full_name,
-                "nisn": att.student.nisn,
+                "student_id": str(att.student.id),
+                "student_name": att.student.full_name or att.student.username,
+                "nisn": att.student.nisn or att.student.username or "-",
                 "classroom": att.student.classroom.name if getattr(att.student, 'classroom', None) else session.get_classrooms_display(),
+                "classroom_id": att.student.classroom_id if getattr(att.student, 'classroom_id', None) else None,
                 "status": att.status,
                 "status_label": att.get_status_display(),
                 "total_score": float(att.total_score) if att.total_score is not None else 0.0,
-                "answers": student_essay_data
-            })
+                "essay_score": essay_earned_points,
+                "graded_count": graded_count,
+                "total_essays": total_essays,
+                "is_fully_graded": is_fully_graded,
+                # Sediakan KEDUA format: dictionary dan list agar kompatibel 100%!
+                "answers": answers_by_qid,
+                "answers_list": student_essay_data
+            }
+            submissions.append(student_entry)
 
         return Response({
             "success": True,
             "session_id": str(session.id),
-            "session_title": session.package.title if session.package else "Sesi Ujian",
-            "subject_name": session.package.subject_name if session.package else "-",
-            "classroom": session.get_classrooms_display(),
+            "session_title": package.title if package else "Sesi Ujian",
+            "subject_name": package.subject_name if package else "-",
+            "classroom": target_classroom.name if target_classroom else session.get_classrooms_display(),
             "total_essay_questions": len(questions_data),
             "essay_questions": questions_data,
             "submissions": submissions,
@@ -950,17 +1000,28 @@ class GradeEssaySubmissionView(APIView):
     def post(self, request, session_id):
         session = get_object_or_404(ExamSession, id=session_id)
         attempt_id = request.data.get('attempt_id')
+        student_id = request.data.get('student_id')
         question_id = request.data.get('question_id')
         raw_score = request.data.get('score')
         feedback = request.data.get('feedback', '').strip()
 
-        if not attempt_id or not question_id or raw_score is None:
+        if not attempt_id and not student_id:
             return Response(
-                {"error": "Parameter attempt_id, question_id, dan score wajib disertakan."},
+                {"error": "Parameter attempt_id atau student_id wajib disertakan."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        attempt = get_object_or_404(StudentAttempt, id=attempt_id, session=session)
+        if not question_id or raw_score is None:
+            return Response(
+                {"error": "Parameter question_id dan score wajib disertakan."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if attempt_id:
+            attempt = get_object_or_404(StudentAttempt, id=attempt_id, session=session)
+        else:
+            attempt = get_object_or_404(StudentAttempt, student_id=student_id, session=session)
+
         question = get_object_or_404(Question, id=question_id, package=session.package)
 
         try:
@@ -1016,6 +1077,8 @@ class SessionStudentResultsView(APIView):
         questions = list(Question.objects.filter(package=package).prefetch_related('options').order_by('order_number')) if package else []
         total_questions_count = len(questions)
         total_max_points = sum(q.points for q in questions)
+        essay_questions = [q for q in questions if q.question_type == Question.QuestionTypeChoices.ESSAY]
+        has_essay = len(essay_questions) > 0
 
         # Ambil filter kelas dari parameter query (ID atau nama kelas)
         classroom_param = request.query_params.get('classroom') or request.query_params.get('classroom_id')
@@ -1116,8 +1179,23 @@ class SessionStudentResultsView(APIView):
                         if e_info.get('score', 0) > 0:
                             correct_count += 1
 
+                # Cek kelengkapan penilaian esai
+                all_essays_graded = True
+                essay_graded_count = 0
+                if has_essay:
+                    for eq in essay_questions:
+                        eq_id_str = str(eq.id)
+                        eq_info = essay_scores.get(eq_id_str)
+                        if isinstance(eq_info, dict) and eq_info.get('score') is not None:
+                            essay_graded_count += 1
+                        else:
+                            all_essays_graded = False
+
+                is_essay_graded = (not has_essay) or (all_essays_graded and att.status == StudentAttempt.AttemptStatus.SUBMITTED)
+                has_ungraded_essay = bool(has_essay and att.status == StudentAttempt.AttemptStatus.SUBMITTED and not all_essays_graded)
+
                 score_val = float(att.total_score) if att.total_score is not None else (0.0 if att.status == StudentAttempt.AttemptStatus.SUBMITTED else None)
-                if score_val is not None:
+                if score_val is not None and not has_ungraded_essay:
                     scores_list.append(score_val)
 
                 is_remedial_allowed = bool(isinstance(answers, dict) and answers.get('_remedial_allowed'))
@@ -1137,6 +1215,11 @@ class SessionStudentResultsView(APIView):
                     "total_score": score_val,
                     "correct_count": correct_count,
                     "total_questions": total_questions_count,
+                    "has_essay": has_essay,
+                    "is_essay_graded": is_essay_graded,
+                    "has_ungraded_essay": has_ungraded_essay,
+                    "essay_graded_count": essay_graded_count,
+                    "total_essay_questions": len(essay_questions),
                     "violation_count": att.violation_count,
                     "is_remedial_allowed": is_remedial_allowed,
                     "previous_score": float(prev_score) if prev_score is not None else None,
@@ -1160,6 +1243,11 @@ class SessionStudentResultsView(APIView):
                     "total_score": None,
                     "correct_count": 0,
                     "total_questions": total_questions_count,
+                    "has_essay": has_essay,
+                    "is_essay_graded": not has_essay,
+                    "has_ungraded_essay": False,
+                    "essay_graded_count": 0,
+                    "total_essay_questions": len(essay_questions),
                     "violation_count": 0,
                     "is_remedial_allowed": False,
                     "previous_score": None,
@@ -1186,6 +1274,8 @@ class SessionStudentResultsView(APIView):
             "exam_type": exam_type,
             "total_questions": total_questions_count,
             "total_max_points": total_max_points,
+            "has_essay": has_essay,
+            "total_essay_questions": len(essay_questions),
             "statistics": {
                 "total_students": len(students_data),
                 "submitted_count": len(scores_list),
@@ -1549,6 +1639,16 @@ class ExportSessionResultsExcelView(APIView):
                         if e_info.get('score', 0) > 0:
                             correct_count += 1
 
+                essay_questions = [q for q in questions if q.question_type == Question.QuestionTypeChoices.ESSAY]
+                has_essay = len(essay_questions) > 0
+                all_essays_graded = True
+                if has_essay:
+                    for eq in essay_questions:
+                        eq_info = essay_scores.get(str(eq.id))
+                        if not (isinstance(eq_info, dict) and eq_info.get('score') is not None):
+                            all_essays_graded = False
+                has_ungraded_essay = bool(has_essay and att.status == StudentAttempt.AttemptStatus.SUBMITTED and not all_essays_graded)
+
                 score_val = float(att.total_score) if att.total_score is not None else (0.0 if att.status == StudentAttempt.AttemptStatus.SUBMITTED else None)
                 students_data.append({
                     "student_id": st.id,
@@ -1557,6 +1657,7 @@ class ExportSessionResultsExcelView(APIView):
                     "classroom_name": st.classroom.name if getattr(st, 'classroom', None) else classroom_display_name,
                     "status": att.status,
                     "total_score": score_val,
+                    "has_ungraded_essay": has_ungraded_essay,
                     "correct_count": correct_count,
                     "violation_count": att.violation_count,
                     "finished_at": att.finished_at.isoformat() if att.finished_at else None,
@@ -1569,6 +1670,7 @@ class ExportSessionResultsExcelView(APIView):
                     "classroom_name": st.classroom.name if getattr(st, 'classroom', None) else classroom_display_name,
                     "status": "NOT_STARTED",
                     "total_score": None,
+                    "has_ungraded_essay": False,
                     "correct_count": 0,
                     "violation_count": 0,
                 })
