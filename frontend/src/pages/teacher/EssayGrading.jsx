@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   FileCheck, 
   Search, 
@@ -95,6 +96,18 @@ export default function EssayGrading() {
   useEffect(() => {
     fetchFilterData();
   }, [fetchFilterData]);
+
+  // Lock scroll background browser saat modal lembar koreksi esai aktif
+  useEffect(() => {
+    if (selectedStudent) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [selectedStudent]);
 
   // -------------------------------------------------------------
   // 2. FILTER SESI UJIAN BERJENJANG BERDASARKAN PAKET & KELAS
@@ -721,9 +734,9 @@ export default function EssayGrading() {
       {/* ======================================================== */}
       {/* 5. MODAL / LEMBAR KOREKSI JAWABAN ESAI SISWA             */}
       {/* ======================================================== */}
-      {selectedStudent && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto animate-fadeIn">
-          <div className="bg-white rounded-2xl border border-zinc-200 shadow-2xl w-full max-w-5xl my-auto max-h-[92vh] flex flex-col overflow-hidden">
+      {selectedStudent && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto animate-fade-in">
+          <div className="bg-white rounded-2xl border border-zinc-200 shadow-2xl w-full max-w-5xl my-auto max-h-[92vh] flex flex-col overflow-hidden animate-fade-in">
             {/* Modal Header: Info Siswa & Quick Navigasi */}
             <div className="p-4 sm:p-5 bg-zinc-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800 shrink-0">
               <div className="flex items-center gap-3">
@@ -1002,7 +1015,8 @@ export default function EssayGrading() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
