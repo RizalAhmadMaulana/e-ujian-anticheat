@@ -477,14 +477,17 @@ export default function ExamWorkspace() {
 
     const questions = selectedPackage?.questions || [];
     const maxPoints = questions.reduce((sum, q) => sum + (Number(q.points) || 10), 0) || 100;
-    const hasEssay = questions.some((q) => q.questionType === 'ESSAY');
+    const hasEssay = questions.some((q) => (q.questionType === 'ESSAY' || q.question_type === 'ESSAY'));
+    const isPureMultipleChoice = questions.length > 0 && questions.every((q) => (q.questionType === 'MULTIPLE_CHOICE' || q.question_type === 'MULTIPLE_CHOICE'));
+    const isForm = selectedPackage?.examType !== 'NATIVE_QUESTIONS';
+    const requiresTeacherGrading = hasEssay || !isPureMultipleChoice || isForm;
 
     // Fallback hitung skor offline/lokal jika backend belum mengembalikan skor numerik
     if (calculatedScore === null && selectedPackage?.examType === 'NATIVE_QUESTIONS') {
       let localScore = 0;
       questions.forEach((q) => {
         const studentAns = activeAttempt.studentAnswers?.[q.id];
-        if (q.questionType === 'MULTIPLE_CHOICE') {
+        if (q.questionType === 'MULTIPLE_CHOICE' || q.question_type === 'MULTIPLE_CHOICE') {
           const correctOpt = (q.options || []).find((o) => o.isCorrect || o.is_correct);
           const correctVal = correctOpt ? (correctOpt.optionLabel || correctOpt.label) : q.correctOption;
           const correctId = correctOpt?.id;
@@ -505,13 +508,16 @@ export default function ExamWorkspace() {
       score: calculatedScore !== null ? Number(calculatedScore) : (selectedPackage?.examType === 'NATIVE_QUESTIONS' ? 0 : null),
       maxPoints,
       hasEssay,
+      isPureMultipleChoice,
+      requiresTeacherGrading,
+      totalQuestions: questions.length,
       studentName: userName,
       nisn: currentUser?.nisn || currentUser?.username || '-',
       classroom: userClass,
       subjectName: selectedPackage?.subjectName || selectedPackage?.subject_name || 'Mata Pelajaran',
       packageTitle: selectedPackage?.title || 'Asesmen Mandiri',
       finishedAt: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
-      isForm: selectedPackage?.examType !== 'NATIVE_QUESTIONS'
+      isForm
     });
 
     setShowExitConfirmModal(false);
@@ -1809,51 +1815,56 @@ export default function ExamWorkspace() {
               </p>
             </div>
 
-            {/* Kartu Skor Nilai Utama */}
-            <div className="bg-zinc-950/90 border border-zinc-800 rounded-xl p-3 sm:p-3.5 text-center relative overflow-hidden">
+            {/* Kartu Status / Skor Hasil Asesmen */}
+            <div className="bg-zinc-950/90 border border-zinc-800 rounded-xl p-3.5 sm:p-4 text-center relative overflow-hidden">
               <div className="absolute top-0 right-0 transform translate-x-2 -translate-y-2 opacity-5 pointer-events-none">
                 <Award className="w-20 h-20 text-emerald-400" />
               </div>
 
-              <div className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-zinc-400 mb-0.5">
-                Perolehan Nilai Asesmen
-              </div>
-
-              {studentFinalScoreData.isForm ? (
-                <div className="py-2 space-y-1">
-                  <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-semibold">
-                    <CheckCircle className="w-3.5 h-3.5" />
-                    <span>Lembar Form Berhasil Terkirim</span>
+              {/* KONDISI 1: JIKA SOAL SELAIN PILIHAN GANDA (ESAI / FORM / MEMERLUKAN KOREKSI MANUAL GURU) */}
+              {studentFinalScoreData.requiresTeacherGrading ? (
+                <div className="py-2 space-y-2.5">
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 text-xs font-bold shadow-2xs">
+                    <Clock className="w-4 h-4 text-amber-400 animate-pulse" />
+                    <span>Menunggu Hasil Koreksi Guru (Belum Dikoreksi)</span>
                   </div>
-                  <p className="text-[11px] text-zinc-400 pt-1">
-                    Nilai dan rekap jawaban sedang diproses oleh guru mata pelajaran.
-                  </p>
+
+                  <div className="text-xs sm:text-sm text-zinc-200 font-medium leading-relaxed max-w-sm mx-auto">
+                    Selamat, Anda telah berhasil menyelesaikan ujian! Seluruh lembar jawaban Anda telah tersimpan dan nilai akhir akan diumumkan setelah hasil koreksi selesai dinilai oleh guru pengawas.
+                  </div>
+
+                  <div className="inline-flex items-center gap-2 text-[11px] text-zinc-400 bg-zinc-900/90 px-3 py-1.5 rounded-lg border border-zinc-800">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>
+                      {studentFinalScoreData.isForm 
+                        ? 'Tautan Formulir Asesmen Berhasil Terkirim' 
+                        : `${studentFinalScoreData.totalQuestions} Butir Soal Terkirim • Menunggu Hasil Evaluasi`}
+                    </span>
+                  </div>
                 </div>
               ) : (
-                <div className="py-1 space-y-0.5">
-                  <div className="text-3xl sm:text-4xl font-black font-mono tracking-tight text-emerald-400">
-                    {studentFinalScoreData.score}
+                /* KONDISI 2: JIKA SOAL PILIHAN GANDA (100% AUTO-GRADED) -> TAMPILKAN NILAI LANGSUNG */
+                <>
+                  <div className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-zinc-400 mb-0.5">
+                    Perolehan Nilai Asesmen
                   </div>
-                  <div className="text-[11px] text-zinc-400 flex items-center justify-center gap-2 flex-wrap">
-                    <span>
-                      dari total <span className="font-semibold text-zinc-200">{studentFinalScoreData.maxPoints}</span> Poin Maksimal
-                    </span>
-                    {studentFinalScoreData.maxPoints > 0 && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                        {Math.round((studentFinalScoreData.score / studentFinalScoreData.maxPoints) * 100)}% Capaian
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
 
-              {studentFinalScoreData.hasEssay && (
-                <div className="mt-2 pt-2 border-t border-zinc-800 text-[10px] sm:text-[11px] text-amber-300 bg-amber-500/10 p-2 rounded-lg flex items-center justify-center gap-1.5 text-left">
-                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-400" />
-                  <span>
-                    <strong>Catatan:</strong> Nilai di atas hasil penilaian butir objektif. Butir soal esai akan diperiksa manual oleh guru pengawas.
-                  </span>
-                </div>
+                  <div className="py-1 space-y-0.5">
+                    <div className="text-3xl sm:text-4xl font-black font-mono tracking-tight text-emerald-400">
+                      {studentFinalScoreData.score}
+                    </div>
+                    <div className="text-[11px] text-zinc-400 flex items-center justify-center gap-2 flex-wrap">
+                      <span>
+                        dari total <span className="font-semibold text-zinc-200">{studentFinalScoreData.maxPoints}</span> Poin Maksimal
+                      </span>
+                      {studentFinalScoreData.maxPoints > 0 && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                          {Math.round((studentFinalScoreData.score / studentFinalScoreData.maxPoints) * 100)}% Capaian
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </>
               )}
             </div>
 

@@ -1364,8 +1364,8 @@ export default function ExamPackageList() {
               <label className="block text-[11px] font-semibold uppercase text-zinc-500 tracking-wider mb-2">
                 2. Informasi Paket Asesmen:
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-                <div className="sm:col-span-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
                   <label className="block text-[11px] font-medium text-zinc-600 mb-1">
                     Judul Paket Ujian *
                   </label>
@@ -1379,7 +1379,7 @@ export default function ExamPackageList() {
                   />
                 </div>
 
-                <div className="sm:col-span-3">
+                <div>
                   <label className="block text-[11px] font-medium text-zinc-600 mb-1">
                     Mata Pelajaran *
                   </label>
@@ -1391,27 +1391,6 @@ export default function ExamPackageList() {
                     placeholder="Contoh: Ilmu Pengetahuan Alam"
                     className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-xs sm:text-sm font-medium focus:outline-none focus:border-zinc-400"
                   />
-                </div>
-
-                <div className="sm:col-span-3">
-                  <label className="block text-[11px] font-medium text-zinc-600 mb-1">
-                    Kelas Peserta *
-                  </label>
-                  <select
-                    value={targetClassroom}
-                    onChange={(e) => setTargetClassroom(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-zinc-200 rounded-lg text-xs sm:text-sm font-medium focus:outline-none focus:border-zinc-400"
-                  >
-                    {classroomsList.length > 0 ? (
-                      classroomsList.map((c) => (
-                        <option key={c.id} value={c.name}>
-                          Kelas {c.name}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="Semua Kelas">Semua Kelas</option>
-                    )}
-                  </select>
                 </div>
               </div>
             </div>
