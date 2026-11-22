@@ -540,6 +540,10 @@ class StudentExcelImportView(APIView):
             raw_class = get_val('class')
             raw_email = get_val('email')
 
+            # Normalisasi NISN: Jika berupa angka 9 digit (karena angka 0 terpotong format Excel), lengkapi ke standar 10 digit
+            if raw_nisn.isdigit() and len(raw_nisn) == 9:
+                raw_nisn = f"0{raw_nisn}"
+
             if not raw_nisn and not raw_name:
                 continue
 
@@ -557,20 +561,27 @@ class StudentExcelImportView(APIView):
                 target_classroom = cls_obj
 
             try:
-                user, created = User.objects.get_or_create(
-                    username=raw_nisn,
-                    defaults={
-                        "full_name": raw_name or f"Siswa {raw_nisn}",
-                        "role": User.RoleChoices.STUDENT,
-                        "classroom": target_classroom,
-                        "nisn": raw_nisn,
-                        "email": raw_email
-                    }
-                )
+                # Cari apakah akun siswa sudah ada (cocokkan username/nisn baik dengan maupun tanpa leading zero)
+                user = User.objects.filter(
+                    Q(username=raw_nisn) | 
+                    Q(nisn=raw_nisn) | 
+                    Q(username=raw_nisn.lstrip('0')) | 
+                    Q(username=raw_nisn.zfill(10))
+                ).first()
 
-                if created:
+                created = False
+                if not user:
+                    user = User.objects.create(
+                        username=raw_nisn,
+                        full_name=raw_name or f"Siswa {raw_nisn}",
+                        role=User.RoleChoices.STUDENT,
+                        classroom=target_classroom,
+                        nisn=raw_nisn,
+                        email=raw_email
+                    )
                     user.set_password(raw_nisn) # Default password siswa = NISN
                     user.save()
+                    created = True
                     created_count += 1
                 else:
                     if raw_name:
@@ -578,6 +589,11 @@ class StudentExcelImportView(APIView):
                     if raw_email:
                         user.email = raw_email
                     user.classroom = target_classroom
+                    user.nisn = raw_nisn
+                    user.role = User.RoleChoices.STUDENT
+                    user.is_active = True
+                    user.save()
+                    updated_count += 1
                     user.nisn = raw_nisn
                     user.role = User.RoleChoices.STUDENT
                     user.save()

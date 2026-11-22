@@ -31,17 +31,42 @@ export const normalizeUserData = (user) => {
  * @param {string} password - Kata sandi akun
  */
 export const loginApi = async (username, password) => {
-  const response = await axiosInstance.post('/auth/login/', { username, password });
-  if (response.data && response.data.access) {
-    localStorage.setItem('access_token', response.data.access);
-    localStorage.setItem('refresh_token', response.data.refresh);
-    const user = normalizeUserData(response.data.user);
-    if (user) {
-      response.data.user = user;
-      localStorage.setItem('user', JSON.stringify(user));
+  const cleanUsername = String(username || '').trim().replace(/[\u200B-\u200D\uFEFF]/g, '');
+  const cleanPassword = String(password || '').trim().replace(/[\u200B-\u200D\uFEFF]/g, '');
+
+  let lastError = null;
+  // Coba kirim login dengan auto-retry 1 kali jika terjadi Network Error sementara (koneksi Wi-Fi/data seluler HP baru aktif)
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const response = await axiosInstance.post('/auth/login/', { 
+        username: cleanUsername, 
+        password: cleanPassword 
+      });
+      if (response.data && response.data.access) {
+        localStorage.setItem('access_token', response.data.access);
+        localStorage.setItem('refresh_token', response.data.refresh);
+        const user = normalizeUserData(response.data.user);
+        if (user) {
+          response.data.user = user;
+          localStorage.setItem('user', JSON.stringify(user));
+        }
+      }
+      return response.data;
+    } catch (err) {
+      lastError = err;
+      // Jangan retry jika kredensial salah (400 atau 401)
+      if (err.response && (err.response.status === 400 || err.response.status === 401)) {
+        throw err;
+      }
+      // Jika kegagalan jaringan pada percobaan pertama, beri jeda 600ms lalu coba lagi
+      if (attempt === 0 && (err.message === 'Network Error' || err.code === 'ERR_NETWORK')) {
+        await new Promise((res) => setTimeout(res, 600));
+        continue;
+      }
+      throw err;
     }
   }
-  return response.data;
+  throw lastError;
 };
 
 /**

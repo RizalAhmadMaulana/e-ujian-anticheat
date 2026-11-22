@@ -35,8 +35,17 @@ export default function LoginPage() {
 
   const handleManualLogin = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
-    if (!username.trim() || !password.trim()) {
+    const cleanUsername = String(username || '').trim().replace(/[\u200B-\u200D\uFEFF]/g, '');
+    const cleanPassword = String(password || '').trim().replace(/[\u200B-\u200D\uFEFF]/g, '');
+
+    if (!cleanUsername || !cleanPassword) {
       setErrorMessage('Silakan masukkan NIP/NISN dan kata sandi Anda.');
+      return;
+    }
+
+    // Cek apakah HP/perangkat sedang offline (data seluler/Wi-Fi belum menyala)
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setErrorMessage('Perangkat Anda sedang offline. Pastikan Wi-Fi atau data seluler di HP aktif dan terhubung ke internet.');
       return;
     }
 
@@ -52,7 +61,7 @@ export default function LoginPage() {
       } catch (_) {}
 
       // 1. Login ke REST API Django
-      const res = await loginApi(username.trim(), password.trim());
+      const res = await loginApi(cleanUsername, cleanPassword);
       if (res && res.user) {
         setCurrentUser({
           id: res.user.id,
@@ -73,12 +82,21 @@ export default function LoginPage() {
       }
     } catch (err) {
       console.warn('Login error:', err?.response?.data || err.message);
-      if (err.response && (err.response.status === 401 || err.response.status === 400)) {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        setErrorMessage('Perangkat Anda sedang offline. Pastikan Wi-Fi atau data seluler di HP aktif dan terhubung ke internet.');
+      } else if (err.response && (err.response.status === 401 || err.response.status === 400)) {
         setErrorMessage('NIP/NISN atau kata sandi tidak cocok. Silakan periksa kembali.');
-      } else if (err.message === 'Network Error') {
-        setErrorMessage('Koneksi ke server gagal. Pastikan server backend aktif.');
+      } else if (err.message === 'Network Error' || err.code === 'ERR_NETWORK') {
+        setErrorMessage('Gagal terhubung ke server. Periksa jaringan internet/Wi-Fi di HP Anda atau pastikan login hotspot sekolah telah aktif.');
+      } else if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+        setErrorMessage('Koneksi waktu habis (timeout). Sinyal internet lemah, silakan coba beberapa saat lagi.');
       } else {
-        setErrorMessage('Terjadi kesalahan saat masuk. Silakan coba kembali.');
+        const detailMsg = err?.response?.data?.detail || err?.response?.data?.error;
+        if (detailMsg && typeof detailMsg === 'string') {
+          setErrorMessage(detailMsg);
+        } else {
+          setErrorMessage('Terjadi kendala saat masuk. Silakan periksa koneksi dan coba kembali.');
+        }
       }
     } finally {
       setIsLoading(false);
@@ -120,9 +138,24 @@ export default function LoginPage() {
           {/* Login Form (Bebas Dialog Simpan Password Browser & Rekomendasi Isian) */}
           <div className="space-y-4">
             {errorMessage && (
-              <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-lg flex items-center gap-2 text-rose-300 text-xs font-medium">
-                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-                <span>{errorMessage}</span>
+              <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-lg text-rose-300 text-xs font-medium space-y-2">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                  <span className="leading-relaxed">{errorMessage}</span>
+                </div>
+                {(errorMessage.includes('terhubung') || errorMessage.includes('offline') || errorMessage.includes('timeout')) && (
+                  <div className="flex items-center justify-between pt-1.5 border-t border-rose-500/20 text-[11px] text-rose-400/90">
+                    <span>Tips: Cek Wi-Fi / Data HP</span>
+                    <button
+                      type="button"
+                      onClick={handleManualLogin}
+                      disabled={isLoading}
+                      className="underline hover:text-white font-semibold cursor-pointer disabled:opacity-50"
+                    >
+                      Coba Lagi
+                    </button>
+                  </div>
+                )}
               </div>
             )}
             <div>
