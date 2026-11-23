@@ -249,6 +249,9 @@ export default function GatekeeperPin() {
 
       // 3. Berhasil diverifikasi: Daftarkan attempt siswa di backend & persist ke store/storage
       const targetOrientation = activeAttempt.screenOrientation || localStorage.getItem('exam_screen_orientation') || 'PORTRAIT';
+      const sessDuration = currentTargetSession?.duration_minutes || currentTargetSession?.durationMinutes || currentTargetSession?.duration || 60;
+      let attemptStartedAt = null;
+
       if (sessId) {
         useExamStore.getState().setSessionId(sessId, currentTargetSession?.supervisor_pin || currentTargetSession?.supervisorPin || '');
       }
@@ -257,7 +260,10 @@ export default function GatekeeperPin() {
         try {
           const attemptRes = await startExamAttemptApi(sessId, targetOrientation, true);
           if (attemptRes && attemptRes.attempt_id) {
-            setAttemptId(attemptRes.attempt_id, attemptRes.violation_count ?? 0);
+            const returnedDur = attemptRes.duration_minutes || sessDuration;
+            attemptStartedAt = attemptRes.started_at || null;
+            setAttemptId(attemptRes.attempt_id, attemptRes.violation_count ?? 0, returnedDur, attemptStartedAt);
+            useExamStore.getState().initExamTimer(returnedDur, attemptStartedAt);
           }
         } catch (attemptErr) {
           console.warn('Backend startAttempt fallback ke lokal attempt:', attemptErr);
@@ -268,6 +274,9 @@ export default function GatekeeperPin() {
           }
         }
       }
+
+      // Pastikan durasi hitung mundur terkalibrasi dengan setelan sesi ujian
+      useExamStore.getState().initExamTimer(sessDuration, attemptStartedAt);
 
       // Pastikan status terkunci dari sesi sebelumnya di-reset secara mutlak (Anti-False Lock)
       useExamStore.setState((state) => {

@@ -199,6 +199,8 @@ export default function SubjectPortal() {
 
     if (matchingSession) {
       setSessionId(matchingSession.id, matchingSession.supervisor_pin || matchingSession.supervisorPin || '');
+      const sessDur = matchingSession.duration_minutes || matchingSession.durationMinutes || 60;
+      useExamStore.getState().initExamTimer(sessDur);
     }
 
     // Arahkan ke halaman kredensial Password Masuk khusus mapel yang dipilih

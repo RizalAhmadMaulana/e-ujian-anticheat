@@ -39,6 +39,19 @@ const getInitialActiveAttempt = () => {
     if (saved) {
       const parsed = JSON.parse(saved);
       if (parsed && typeof parsed === 'object') {
+        const durMins = Number(parsed.durationMinutes) || 60;
+        let remSecs = Number(parsed.remainingSeconds);
+        let anchorMs = parsed.timerAnchorMs || null;
+        let totalSecs = Number(parsed.timerTotalSeconds) || (durMins * 60);
+
+        // Jika ada timerAnchorMs, hitung sisa detik berdasarkan wall-clock nyata
+        if (anchorMs && totalSecs > 0) {
+          const elapsed = Math.floor((Date.now() - Number(anchorMs)) / 1000);
+          remSecs = Math.max(0, totalSecs - elapsed);
+        } else if (isNaN(remSecs) || remSecs <= 0) {
+          remSecs = durMins * 60;
+        }
+
         return {
           attemptId: parsed.attemptId || null,
           sessionId: parsed.sessionId || null,
@@ -49,7 +62,10 @@ const getInitialActiveAttempt = () => {
           violationCount: Number(parsed.violationCount) || 0,
           violationLogs: Array.isArray(parsed.violationLogs) ? parsed.violationLogs : [],
           studentAnswers: (parsed.studentAnswers && typeof parsed.studentAnswers === 'object') ? parsed.studentAnswers : {},
-          remainingSeconds: Number(parsed.remainingSeconds) || 3600,
+          durationMinutes: durMins,
+          remainingSeconds: remSecs,
+          timerAnchorMs: anchorMs,
+          timerTotalSeconds: totalSecs,
           examStartedAt: parsed.examStartedAt || null,
           examSubmittedAt: parsed.examSubmittedAt || null,
           supervisorPin: parsed.supervisorPin || '',
@@ -74,7 +90,10 @@ const getInitialActiveAttempt = () => {
     violationCount: 0,
     violationLogs: [],
     studentAnswers: {},
+    durationMinutes: 60,
     remainingSeconds: 60 * 60,
+    timerAnchorMs: null,
+    timerTotalSeconds: 60 * 60,
     examStartedAt: null,
     examSubmittedAt: null,
     supervisorPin: '',
@@ -247,8 +266,64 @@ export const useExamStore = create((set, get) => ({
   // ==========================================
   activeAttempt: getInitialActiveAttempt(),
 
-  setAttemptId: (attemptId, initialViolationCount = 0) => {
+  initExamTimer: (durationMinutes, startedAt = null) => {
+    const mins = Number(durationMinutes) > 0 ? Number(durationMinutes) : 60;
+    const totalSeconds = mins * 60;
+    let remaining = totalSeconds;
+    let anchorMs = Date.now();
+
+    if (startedAt) {
+      const startedMs = new Date(startedAt).getTime();
+      if (!isNaN(startedMs)) {
+        const elapsed = Math.floor((Date.now() - startedMs) / 1000);
+        if (elapsed > 0 && elapsed < totalSeconds) {
+          remaining = totalSeconds - elapsed;
+          anchorMs = startedMs;
+        } else if (elapsed >= totalSeconds) {
+          remaining = 0;
+          anchorMs = startedMs;
+        }
+      }
+    }
+
     set((state) => {
+      const updated = {
+        ...state.activeAttempt,
+        durationMinutes: mins,
+        remainingSeconds: remaining,
+        timerAnchorMs: anchorMs,
+        timerTotalSeconds: totalSeconds,
+      };
+      persistActiveAttempt(updated);
+      return { activeAttempt: updated };
+    });
+  },
+
+  setAttemptId: (attemptId, initialViolationCount = 0, durationMinutes = null, startedAt = null) => {
+    set((state) => {
+      let durMins = state.activeAttempt.durationMinutes || 60;
+      if (durationMinutes && Number(durationMinutes) > 0) {
+        durMins = Number(durationMinutes);
+      }
+      const totalSecs = durMins * 60;
+      let remSecs = state.activeAttempt.remainingSeconds;
+      let anchorMs = state.activeAttempt.timerAnchorMs || Date.now();
+
+      if (durationMinutes || !state.activeAttempt.timerAnchorMs) {
+        if (startedAt) {
+          const sMs = new Date(startedAt).getTime();
+          if (!isNaN(sMs)) {
+            const elap = Math.floor((Date.now() - sMs) / 1000);
+            remSecs = Math.max(0, totalSecs - (elap > 0 ? elap : 0));
+            anchorMs = sMs;
+          } else {
+            remSecs = totalSecs;
+          }
+        } else {
+          remSecs = totalSecs;
+        }
+      }
+
       const updated = {
         ...state.activeAttempt,
         attemptId,
@@ -256,6 +331,10 @@ export const useExamStore = create((set, get) => ({
         violationLogs: [],
         isLocked: false,
         _lastViolationLockTime: null,
+        durationMinutes: durMins,
+        remainingSeconds: remSecs,
+        timerAnchorMs: anchorMs,
+        timerTotalSeconds: totalSecs,
       };
       persistActiveAttempt(updated);
       return { activeAttempt: updated };
@@ -288,6 +367,10 @@ export const useExamStore = create((set, get) => ({
           violationLogs: [],
           isLocked: false,
           _lastViolationLockTime: null,
+          remainingSeconds: 60 * 60,
+          timerAnchorMs: null,
+          timerTotalSeconds: 60 * 60,
+          examSubmittedAt: null,
         } : {}),
       };
       persistActiveAttempt(updated);
@@ -306,6 +389,10 @@ export const useExamStore = create((set, get) => ({
           violationLogs: [],
           isLocked: false,
           _lastViolationLockTime: null,
+          remainingSeconds: 60 * 60,
+          timerAnchorMs: null,
+          timerTotalSeconds: 60 * 60,
+          examSubmittedAt: null,
         } : {}),
       };
       persistActiveAttempt(updated);
@@ -426,16 +513,33 @@ export const useExamStore = create((set, get) => ({
 
   decrementTimer: () => {
     set((state) => {
-      const currentRemaining = state.activeAttempt.remainingSeconds;
-      if (currentRemaining <= 0) return state;
+      const attempt = state.activeAttempt;
+      // Jangan kurangi jika pengerjaan sudah selesai atau disubmit
+      if (attempt.examSubmittedAt) return state;
+
+      let nextRemaining;
+      if (attempt.timerAnchorMs && attempt.timerTotalSeconds) {
+        const elapsed = Math.floor((Date.now() - Number(attempt.timerAnchorMs)) / 1000);
+        nextRemaining = Math.max(0, Number(attempt.timerTotalSeconds) - elapsed);
+      } else {
+        const curr = Number(attempt.remainingSeconds);
+        nextRemaining = isNaN(curr) ? 0 : Math.max(0, curr - 1);
+      }
+
+      if (nextRemaining === attempt.remainingSeconds) {
+        return state;
+      }
+
       const updatedAttempt = {
-        ...state.activeAttempt,
-        remainingSeconds: currentRemaining - 1,
+        ...attempt,
+        remainingSeconds: nextRemaining,
       };
-      // Persist timer periodically (e.g. every 5 seconds) to avoid storage spam
-      if (currentRemaining % 5 === 0) {
+
+      // Simpan ke localStorage setiap 5 detik atau saat mendekati habis (<= 10 detik)
+      if (nextRemaining % 5 === 0 || nextRemaining <= 10) {
         persistActiveAttempt(updatedAttempt);
       }
+
       return {
         activeAttempt: updatedAttempt,
       };

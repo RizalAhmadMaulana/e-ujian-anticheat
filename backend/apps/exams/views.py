@@ -334,6 +334,8 @@ class StartExamSessionView(APIView):
             "status": attempt.status,
             "screen_orientation": attempt.screen_orientation,
             "duration_minutes": session.duration_minutes,
+            "duration_seconds": session.duration_minutes * 60,
+            "started_at": attempt.started_at.isoformat() if attempt.started_at else None,
             "package": package_data,
             "existing_answers": attempt.answers_json,
             "violation_count": attempt.violation_count,

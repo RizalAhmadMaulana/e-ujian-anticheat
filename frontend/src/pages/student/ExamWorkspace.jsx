@@ -199,6 +199,28 @@ export default function ExamWorkspace() {
     }
   }, [activeAttempt.selectedPackage, activeAttempt.sessionId, navigate]);
 
+  // Sinkronisasi durasi sesi ujian & inisialisasi timer jika belum ada
+  useEffect(() => {
+    const matchingSession = examSessions.find(s => s.id === activeAttempt.sessionId);
+    const sessionDuration = matchingSession?.duration_minutes || matchingSession?.durationMinutes || activeAttempt?.durationMinutes || 60;
+
+    if (!activeAttempt.timerAnchorMs && !activeAttempt.examSubmittedAt) {
+      useExamStore.getState().initExamTimer(sessionDuration);
+    }
+
+    if (!examSessions || examSessions.length === 0) {
+      useExamStore.getState().fetchSessions?.().then((sessions) => {
+        const found = sessions?.find(s => s.id === activeAttempt.sessionId);
+        if (found) {
+          const d = found.duration_minutes || found.durationMinutes || 60;
+          if (!useExamStore.getState().activeAttempt.timerAnchorMs && !useExamStore.getState().activeAttempt.examSubmittedAt) {
+            useExamStore.getState().initExamTimer(d);
+          }
+        }
+      }).catch(() => {});
+    }
+  }, [activeAttempt.sessionId, examSessions]);
+
   // Sinkronisasi status attempt dari server saat workspace pulih
   useEffect(() => {
     if (activeAttempt.attemptId) {
@@ -424,26 +446,64 @@ export default function ExamWorkspace() {
     };
   }, [activeAttempt.studentAnswers, activeAttempt.sessionId, selectedPackage?.examType]);
 
-  // Countdown Timer Interval
-  useEffect(() => {
-    const timer = setInterval(() => {
-      decrementTimer();
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [decrementTimer]);
+  // Ref untuk mengunci auto-submit saat durasi habis agar dieksekusi tepat 1 kali
+  const autoSubmittedRef = useRef(false);
 
-  // Format detik ke MM:SS
+  // Format detik ke format waktu dinamis:
+  // Jika durasi >= 60 menit, format HH:MM:SS
+  // Jika durasi < 60 menit, format MM:SS (cth: 59:59 down to 00:00)
   const formatTime = (totalSeconds) => {
-    if (totalSeconds <= 0) return '00:00';
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = totalSeconds % 60;
+    const s = Number(totalSeconds);
+    if (isNaN(s) || s <= 0) return '00:00';
+    const mins = Math.floor(s / 60);
+    const secs = s % 60;
+    if (mins >= 60) {
+      const hours = Math.floor(mins / 60);
+      const remMins = mins % 60;
+      return `${String(hours).padStart(2, '0')}:${String(remMins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    }
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
+  // Countdown Timer Interval & Otomatisasi Submit saat Durasi Waktu Habis (00:00)
+  useEffect(() => {
+    // Jika ujian sudah disubmit atau modal hasil sudah tampil, hentikan timer
+    if (isExamSubmittedRef.current || isSubmittingExam || showScoreResultModal || activeAttempt.examSubmittedAt) {
+      return;
+    }
+
+    // Jika waktu pengerjaan sudah 00:00 saat workspace dimuat, seketika tutup dan submit
+    if (typeof activeAttempt.remainingSeconds === 'number' && activeAttempt.remainingSeconds <= 0 && !autoSubmittedRef.current) {
+      autoSubmittedRef.current = true;
+      handleFinishAndExitExam(true);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      // 1. Kurangi hitungan mundur timer
+      decrementTimer();
+
+      // 2. Baca sisa detik terkini dari global store
+      const rem = useExamStore.getState().activeAttempt.remainingSeconds;
+
+      // 3. Jika waktu sudah habis (<= 0), otomatis kunci dan kirim lembar jawaban siswa
+      if (typeof rem === 'number' && rem <= 0 && !autoSubmittedRef.current && !isExamSubmittedRef.current) {
+        autoSubmittedRef.current = true;
+        clearInterval(timer);
+        handleFinishAndExitExam(true); // isAutoSubmit = true
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [decrementTimer, isSubmittingExam, showScoreResultModal, activeAttempt.examSubmittedAt, activeAttempt.remainingSeconds]);
+
   // Konfirmasi Selesai & Keluar Ujian (Merekam Nilai & Membuka Modal Skor Hasil Ujian)
-  const handleFinishAndExitExam = async () => {
+  // Mendukung pemicu manual siswa (isAutoSubmit=false) maupun otomatisasi habis waktu (isAutoSubmit=true)
+  const handleFinishAndExitExam = async (isAutoSubmit = false) => {
     isExamSubmittedRef.current = true;
     setIsSubmittingExam(true);
+    setShowExitConfirmModal(false);
+    setShowCancelConfirmModal(false);
 
     let calculatedScore = null;
 
@@ -517,10 +577,10 @@ export default function ExamWorkspace() {
       subjectName: selectedPackage?.subjectName || selectedPackage?.subject_name || 'Mata Pelajaran',
       packageTitle: selectedPackage?.title || 'Asesmen Mandiri',
       finishedAt: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB',
-      isForm
+      isForm,
+      isAutoSubmitted: Boolean(isAutoSubmit),
     });
 
-    setShowExitConfirmModal(false);
     setIsSubmittingExam(false);
     setShowScoreResultModal(true);
   };
@@ -846,9 +906,21 @@ export default function ExamWorkspace() {
             </button>
           )}
 
-          {/* Countdown Timer */}
-          <div className="flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md bg-zinc-900 border border-zinc-800 font-mono text-[11px] sm:text-xs font-semibold text-zinc-100 tabular-nums shrink-0 whitespace-nowrap">
-            <Clock className="w-3 h-3 text-zinc-400 shrink-0" />
+          {/* Countdown Timer Dinamis (Toleransi Jam & Menit, Indikator Warna Waktu Menipis) */}
+          <div className={`flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md border font-mono text-[11px] sm:text-xs font-semibold tabular-nums shrink-0 whitespace-nowrap transition-colors ${
+            Number(activeAttempt.remainingSeconds || 0) <= 60
+              ? 'bg-rose-950/80 border-rose-500/50 text-rose-300 animate-pulse'
+              : Number(activeAttempt.remainingSeconds || 0) <= 300
+              ? 'bg-amber-950/80 border-amber-500/50 text-amber-300'
+              : 'bg-zinc-900 border-zinc-800 text-zinc-100'
+          }`}>
+            <Clock className={`w-3 h-3 shrink-0 ${
+              Number(activeAttempt.remainingSeconds || 0) <= 60
+                ? 'text-rose-400'
+                : Number(activeAttempt.remainingSeconds || 0) <= 300
+                ? 'text-amber-400'
+                : 'text-zinc-400'
+            }`} />
             <span>{formatTime(activeAttempt.remainingSeconds)}</span>
           </div>
 
