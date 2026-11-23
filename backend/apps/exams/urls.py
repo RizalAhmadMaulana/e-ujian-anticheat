@@ -2,6 +2,7 @@ from django.urls import path
 from .views import (
     ExamPackageListCreateView,
     ExamPackageDetailView,
+    DuplicateExamPackageView,
     ExamSessionListCreateView,
     ExamSessionDetailView,
     VerifyEntryPasswordView,
@@ -42,6 +43,7 @@ urlpatterns = [
     # CRUD Paket Ujian
     path('packages/', ExamPackageListCreateView.as_view(), name='exam_package_list_create'),
     path('packages/<uuid:pk>/', ExamPackageDetailView.as_view(), name='exam_package_detail'),
+    path('packages/<uuid:pk>/duplicate/', DuplicateExamPackageView.as_view(), name='exam_package_duplicate'),
 
     # CRUD Sesi Ujian
     path('sessions/', ExamSessionListCreateView.as_view(), name='exam_session_list_create'),

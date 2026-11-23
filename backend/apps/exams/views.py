@@ -1,9 +1,11 @@
 import os
 import uuid
 import random
+import copy
 import mimetypes
 from io import BytesIO
 from django.conf import settings
+from django.db import transaction
 from django.db.models import Q
 from django.http import HttpResponse, Http404, FileResponse
 from django.shortcuts import get_object_or_404
@@ -61,6 +63,69 @@ class ExamPackageDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = ExamPackage.objects.all().prefetch_related('questions__options')
     serializer_class = ExamPackageSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+
+class DuplicateExamPackageView(APIView):
+    """
+    POST /api/exams/packages/<uuid:pk>/duplicate/
+    Menduplikasi paket ujian beserta seluruh butir soal, opsi jawaban, bobot poin, dan pengaturannya.
+    Hasil duplikasi diberi judul "<Judul Asli> (Copy)" atau "<Judul Asli> (Copy N)".
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        original_package = get_object_or_404(
+            ExamPackage.objects.prefetch_related('questions__options'), 
+            pk=pk
+        )
+
+        base_title = original_package.title.strip()
+        candidate_title = f"{base_title} (Copy)"
+        if ExamPackage.objects.filter(title=candidate_title).exists():
+            copy_idx = 2
+            while ExamPackage.objects.filter(title=f"{base_title} (Copy {copy_idx})").exists():
+                copy_idx += 1
+            candidate_title = f"{base_title} (Copy {copy_idx})"
+
+        creator_teacher = request.user if getattr(request.user, 'role', None) == 'TEACHER' or request.user.is_staff else original_package.teacher
+
+        with transaction.atomic():
+            new_package = ExamPackage.objects.create(
+                teacher=creator_teacher,
+                title=candidate_title,
+                subject_name=original_package.subject_name,
+                exam_type=original_package.exam_type,
+                external_url=original_package.external_url,
+            )
+
+            # Duplikasi seluruh butir soal jika paket bertipe Soal Mandiri
+            if original_package.exam_type == ExamPackage.ExamTypeChoices.NATIVE_QUESTIONS:
+                for orig_q in original_package.questions.all().order_by('order_number'):
+                    new_q = Question.objects.create(
+                        package=new_package,
+                        question_text=orig_q.question_text,
+                        image_url=orig_q.image_url,
+                        question_type=orig_q.question_type,
+                        points=orig_q.points,
+                        order_number=orig_q.order_number,
+                        extra_data=copy.deepcopy(orig_q.extra_data) if orig_q.extra_data else {},
+                    )
+                    for orig_opt in orig_q.options.all().order_by('option_label'):
+                        QuestionOption.objects.create(
+                            question=new_q,
+                            option_label=orig_opt.option_label,
+                            option_text=orig_opt.option_text,
+                            is_correct=orig_opt.is_correct,
+                        )
+
+        serializer = ExamPackageSerializer(new_package, context={'request': request})
+        return Response(
+            {
+                "message": f"Paket soal berhasil diduplikat menjadi '{candidate_title}'",
+                "package": serializer.data,
+            },
+            status=status.HTTP_201_CREATED
+        )
 
 
 class ExamSessionListCreateView(generics.ListCreateAPIView):

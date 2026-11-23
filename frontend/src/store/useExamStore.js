@@ -247,6 +247,42 @@ export const useExamStore = create((set, get) => ({
     }));
   },
 
+  duplicatePackage: async (packageId) => {
+    try {
+      const res = await examApi.duplicatePackageApi(packageId);
+      await get().fetchPackages();
+      return res;
+    } catch (err) {
+      console.warn('[useExamStore] duplicatePackage backend error, fallback lokal:', err);
+      const orig = get().examPackages.find((p) => p.id === packageId);
+      if (orig) {
+        const baseTitle = orig.title || 'Paket Ujian';
+        const candidateTitle = `${baseTitle} (Copy)`;
+        const clonedPkg = {
+          ...orig,
+          id: `pkg-${Date.now()}`,
+          title: candidateTitle,
+          createdAt: new Date().toISOString(),
+          questions: (orig.questions || []).map((q, idx) => ({
+            ...q,
+            id: `q-${Date.now()}-${idx + 1}`,
+            orderNumber: idx + 1,
+            order_number: idx + 1,
+            options: (q.options || []).map((opt, oIdx) => ({
+              ...opt,
+              id: `opt-${Date.now()}-${idx}-${oIdx}`,
+            })),
+          })),
+        };
+        set((state) => ({
+          examPackages: [clonedPkg, ...state.examPackages],
+        }));
+        return { package: clonedPkg };
+      }
+      throw err;
+    }
+  },
+
   addExamSession: (newSession) => {
     set((state) => ({
       examSessions: [

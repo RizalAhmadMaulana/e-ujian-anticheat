@@ -28,6 +28,11 @@ export const deletePackageApi = async (packageId) => {
   return response.data;
 };
 
+export const duplicatePackageApi = async (packageId) => {
+  const response = await axiosInstance.post(`/exams/packages/${packageId}/duplicate/`);
+  return response.data;
+};
+
 export const uploadExamImageApi = async (file) => {
   const formData = new FormData();
   formData.append('image', file);
@@ -248,6 +253,7 @@ export const examApi = {
   createPackageApi,
   updatePackageApi,
   deletePackageApi,
+  duplicatePackageApi,
   uploadExamImageApi,
   importDocxQuestionsApi,
   importExcelQuestionsApi,
@@ -276,6 +282,7 @@ export const examApi = {
   createPackage: createPackageApi,
   updatePackage: updatePackageApi,
   deletePackage: deletePackageApi,
+  duplicatePackage: duplicatePackageApi,
   uploadExamImage: uploadExamImageApi,
   importDocxQuestions: importDocxQuestionsApi,
   importExcelQuestions: importExcelQuestionsApi,

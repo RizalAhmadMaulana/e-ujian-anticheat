@@ -7,6 +7,7 @@ import {
   createPackageApi, 
   updatePackageApi, 
   deletePackageApi, 
+  duplicatePackageApi,
   uploadExamImageApi,
   importDocxQuestionsApi,
   importExcelQuestionsApi,
@@ -46,7 +47,9 @@ import {
   Search,
   ChevronDown,
   ArrowRight,
-  Info
+  Info,
+  MoreVertical,
+  RefreshCw
 } from 'lucide-react';
 
 export default function ExamPackageList() {
@@ -91,6 +94,29 @@ export default function ExamPackageList() {
 
   // Quick Add Question Dropdown Toggle (Khusus Mobile/Desktop)
   const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false);
+
+  // Card Actions Dropdown (Titik Tiga & Duplicate)
+  const [activeDropdownPkgId, setActiveDropdownPkgId] = useState(null);
+  const [isDuplicatingId, setIsDuplicatingId] = useState(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (!e.target.closest('.package-card-menu')) {
+        setActiveDropdownPkgId(null);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setActiveDropdownPkgId(null);
+      }
+    };
+    document.addEventListener('click', handleOutsideClick);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('click', handleOutsideClick);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   useEffect(() => {
     fetchPackages?.();
@@ -639,6 +665,30 @@ export default function ExamPackageList() {
     }
   };
 
+  // Duplikasi Paket Ujian (Termasuk Seluruh Butir Soal, Opsi, Bobot Poin, & Gambar)
+  const handleDuplicatePackage = async (pkg) => {
+    setIsDuplicatingId(pkg.id);
+    setActiveDropdownPkgId(null);
+    try {
+      const res = await duplicatePackageApi(pkg.id);
+      await fetchPackages?.();
+      const newTitle = res?.package?.title || `${pkg.title} (Copy)`;
+      alert(`Berhasil menduplikasi paket soal!\nPaket baru telah dibuat: "${newTitle}"`);
+    } catch (err) {
+      console.error('Error duplicating package:', err);
+      try {
+        await useExamStore.getState().duplicatePackage?.(pkg.id);
+        await fetchPackages?.();
+        alert(`Berhasil menduplikasi paket soal!\nPaket baru telah dibuat: "${pkg.title} (Copy)"`);
+      } catch (fallbackErr) {
+        const errMsg = err.response?.data?.error || err.response?.data?.detail || err.message;
+        alert(`Gagal menduplikasi paket soal: ${errMsg}`);
+      }
+    } finally {
+      setIsDuplicatingId(null);
+    }
+  };
+
   const handleSavePackage = async (e) => {
     e.preventDefault();
 
@@ -992,13 +1042,15 @@ export default function ExamPackageList() {
               <div
                 key={pkg.id}
                 className={`bg-white rounded-2xl p-5 sm:p-6 border-2 transition-all duration-200 flex flex-col justify-between space-y-4 group relative shadow-xs hover:shadow-md hover:-translate-y-0.5 ${
+                  activeDropdownPkgId === pkg.id ? 'z-20' : 'z-0'
+                } ${
                   pkgExamType === 'NATIVE_QUESTIONS'
                     ? 'border-slate-300 hover:border-emerald-500 border-t-4 border-t-emerald-600'
                     : 'border-slate-300 hover:border-blue-500 border-t-4 border-t-blue-600'
                 }`}
               >
                 <div>
-                  {/* Top Badges */}
+                  {/* Top Badges & Actions Menu */}
                   <div className="flex items-center justify-between gap-2 mb-3">
                     <span
                       className={`text-xs font-bold px-2.5 py-1 rounded-lg border-2 flex items-center gap-1.5 shadow-2xs ${
@@ -1019,11 +1071,61 @@ export default function ExamPackageList() {
                         </>
                       )}
                     </span>
-                    {pkgClass && (
-                      <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-800 border-2 border-slate-300 uppercase shadow-2xs">
-                        {pkgClass}
-                      </span>
-                    )}
+
+                    <div className="flex items-center gap-1.5">
+                      {pkgClass && (
+                        <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-lg bg-slate-100 text-slate-800 border-2 border-slate-300 uppercase shadow-2xs">
+                          {pkgClass}
+                        </span>
+                      )}
+
+                      {/* Tombol Titik Tiga Dropdown Menu Aksi Duplikat */}
+                      <div className="relative package-card-menu">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveDropdownPkgId(activeDropdownPkgId === pkg.id ? null : pkg.id);
+                          }}
+                          className={`p-1.5 rounded-lg transition border cursor-pointer ${
+                            activeDropdownPkgId === pkg.id
+                              ? 'bg-slate-200 text-slate-900 border-slate-300 shadow-inner'
+                              : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100 border-transparent hover:border-slate-200'
+                          }`}
+                          title="Menu Opsi Paket Soal"
+                          aria-label="Menu Opsi Paket Soal"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+
+                        {/* Dropdown Menu Popup */}
+                        {activeDropdownPkgId === pkg.id && (
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute right-0 top-full mt-1.5 w-48 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-30 animate-in fade-in zoom-in-95 duration-100"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => handleDuplicatePackage(pkg)}
+                              disabled={isDuplicatingId === pkg.id}
+                              className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2.5 transition cursor-pointer disabled:opacity-50"
+                            >
+                              {isDuplicatingId === pkg.id ? (
+                                <>
+                                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-600 shrink-0" />
+                                  <span>Menduplikasi...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-600 shrink-0" />
+                                  <span>Duplicate</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   {/* Judul & Mapel */}
