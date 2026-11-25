@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useExamStore } from '../../store/useExamStore';
 import { getSessionsApi, startExamAttemptApi } from '../../api/examApi';
+import { syncServerClock } from '../../utils/tokenGenerator';
 import { 
   BookOpen, 
   ExternalLink, 
@@ -75,6 +76,9 @@ export default function SubjectPortal() {
         }
         const sessions = await getSessionsApi();
         if (sessions && sessions.length > 0) {
+          if (sessions[0].server_timestamp || sessions[0].serverTimestamp) {
+            syncServerClock(sessions[0].server_timestamp || sessions[0].serverTimestamp);
+          }
           setAvailableSessions(sessions);
         }
       } catch (err) {

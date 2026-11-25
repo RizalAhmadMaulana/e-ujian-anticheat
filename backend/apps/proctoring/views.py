@@ -96,29 +96,32 @@ class UnlockStudentAPIView(APIView):
 
         # Jika request menyertakan PIN, validasi terhadap supervisor_pin sesi (dinamis 5 menit & fallback)
         input_pin = request.data.get('supervisor_pin')
-        if input_pin:
-            session_id = attempt.session.id if attempt.session else None
-            base_pin = attempt.session.supervisor_pin if attempt.session else ''
-            
-            is_valid = is_valid_supervisor_pin(session_id, input_pin, base_pin=base_pin)
-            if not is_valid and attempt.session:
-                other_sessions = ExamSession.objects.filter(is_active=True).prefetch_related('classrooms')
-                if hasattr(attempt.student, 'classroom') and attempt.student.classroom:
-                    other_sessions = other_sessions.filter(
-                        Q(allow_all_classes=True) |
-                        Q(classrooms=attempt.student.classroom) |
-                        Q(classroom=attempt.student.classroom)
-                    ).distinct()
-                for oses in other_sessions:
-                    if is_valid_supervisor_pin(oses.id, input_pin, base_pin=oses.supervisor_pin):
-                        is_valid = True
-                        break
+        if input_pin is not None:
+            import re
+            clean_pin = re.sub(r'[\u200B-\u200D\uFEFF\u00A0\s]+', '', str(input_pin)).upper()
+            if clean_pin:
+                session_id = attempt.session.id if attempt.session else None
+                base_pin = attempt.session.supervisor_pin if attempt.session else ''
+                
+                is_valid = is_valid_supervisor_pin(session_id, clean_pin, base_pin=base_pin)
+                if not is_valid and attempt.session:
+                    other_sessions = ExamSession.objects.filter(is_active=True).prefetch_related('classrooms')
+                    if hasattr(attempt.student, 'classroom') and attempt.student.classroom:
+                        other_sessions = other_sessions.filter(
+                            Q(allow_all_classes=True) |
+                            Q(classrooms=attempt.student.classroom) |
+                            Q(classroom=attempt.student.classroom)
+                        ).distinct()
+                    for oses in other_sessions:
+                        if is_valid_supervisor_pin(oses.id, clean_pin, base_pin=oses.supervisor_pin):
+                            is_valid = True
+                            break
 
-            if not is_valid:
-                return Response({
-                    "success": False,
-                    "error": "PIN Pengawas salah atau sudah kedaluwarsa! PIN diperbarui otomatis setiap 5 menit. Silakan periksa PIN terbaru di menu Jadwal & Sesi Ujian."
-                }, status=status.HTTP_400_BAD_REQUEST)
+                if not is_valid:
+                    return Response({
+                        "success": False,
+                        "error": "PIN Pengawas salah atau sudah kedaluwarsa! PIN diperbarui otomatis setiap 5 menit. Silakan periksa PIN terbaru di menu Jadwal & Sesi Ujian."
+                    }, status=status.HTTP_400_BAD_REQUEST)
 
         attempt.status = StudentAttempt.AttemptStatus.WORKING
         attempt.save(update_fields=['status'])

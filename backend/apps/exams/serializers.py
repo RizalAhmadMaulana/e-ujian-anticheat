@@ -386,6 +386,8 @@ class ExamSessionSerializer(serializers.ModelSerializer):
         data['token_expires_in_seconds'] = tokens['expires_in_seconds']
         data['tokenExpiresIn'] = tokens['expires_in_seconds']
         data['token_rotation_interval'] = tokens['rotation_interval']
+        data['server_timestamp'] = tokens['server_timestamp']
+        data['serverTimestamp'] = tokens['server_timestamp']
         data['base_entry_password'] = instance.entry_password
         data['base_supervisor_pin'] = instance.supervisor_pin
 

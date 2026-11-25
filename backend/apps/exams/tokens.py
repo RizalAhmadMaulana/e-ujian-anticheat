@@ -4,6 +4,7 @@ Algoritma deterministik berbasis Time-Window (TOTP-style 300 detik / 5 menit)
 Menghasilkan Token Masuk ('MSK-XXXX') dan PIN Pengawas ('PIN-YYYY') yang sinkron
 antara Server Backend (Django) dan Client Frontend (React/Vite).
 """
+import re
 import time
 
 ROTATION_INTERVAL_SECONDS = 300  # 5 menit
@@ -70,8 +71,9 @@ def get_session_tokens(session_id, timestamp=None) -> dict:
     """
     Mengambil data lengkap token aktif 5 menit untuk sebuah sesi ujian.
     """
-    slot = get_current_slot(timestamp)
-    expires_in = get_seconds_until_next_rotation(timestamp)
+    ts = timestamp if timestamp is not None else time.time()
+    slot = get_current_slot(ts)
+    expires_in = get_seconds_until_next_rotation(ts)
 
     entry_token = generate_dynamic_token(session_id, slot, 'ENTRY')
     pin_token = generate_dynamic_token(session_id, slot, 'PIN')
@@ -86,7 +88,15 @@ def get_session_tokens(session_id, timestamp=None) -> dict:
         'next_pin_token': next_pin_token,
         'expires_in_seconds': expires_in,
         'rotation_interval': ROTATION_INTERVAL_SECONDS,
+        'server_timestamp': ts,
     }
+
+
+def _clean_token_str(raw_val: str) -> str:
+    if not raw_val:
+        return ''
+    s = re.sub(r'[\u200B-\u200D\uFEFF\u00A0\s]+', '', str(raw_val))
+    return s.upper()
 
 
 def is_valid_entry_token(session_id, input_token: str, base_token: str = None, timestamp=None) -> bool:
@@ -100,8 +110,8 @@ def is_valid_entry_token(session_id, input_token: str, base_token: str = None, t
     if not input_token:
         return False
 
-    clean_input = str(input_token).strip().upper().replace(' ', '')
-    clean_input_noprefix = clean_input.replace('MSK-', '').replace('MSK', '').replace('-', '')
+    clean_input = _clean_token_str(input_token)
+    clean_input_noprefix = re.sub(r'^MSK-?', '', clean_input).replace('-', '')
 
     current_slot = get_current_slot(timestamp)
     # Cek slot aktif saat ini, 1 slot sebelumnya (grace turnover), dan 1 slot berikutnya (clock drift)
@@ -109,14 +119,14 @@ def is_valid_entry_token(session_id, input_token: str, base_token: str = None, t
 
     for s in valid_slots:
         token = generate_dynamic_token(session_id, s, 'ENTRY')
-        token_noprefix = token.replace('MSK-', '').replace('MSK', '').replace('-', '')
+        token_noprefix = re.sub(r'^MSK-?', '', token).replace('-', '')
         if clean_input == token or clean_input_noprefix == token_noprefix:
             return True
 
     # Cek base_token jika tersedia
     if base_token:
-        base_clean = str(base_token).strip().upper().replace(' ', '')
-        base_clean_noprefix = base_clean.replace('MSK-', '').replace('MSK', '').replace('-', '')
+        base_clean = _clean_token_str(base_token)
+        base_clean_noprefix = re.sub(r'^MSK-?', '', base_clean).replace('-', '')
         if clean_input == base_clean or clean_input_noprefix == base_clean_noprefix:
             return True
 
@@ -137,26 +147,26 @@ def is_valid_supervisor_pin(session_id, input_pin: str, base_pin: str = None, ti
     if not input_pin:
         return False
 
-    clean_input = str(input_pin).strip().upper().replace(' ', '')
-    clean_input_noprefix = clean_input.replace('PIN-', '').replace('PIN', '').replace('-', '')
+    clean_input = _clean_token_str(input_pin)
+    clean_input_noprefix = re.sub(r'^PIN-?', '', clean_input).replace('-', '')
 
     current_slot = get_current_slot(timestamp)
     valid_slots = [current_slot, current_slot - 1, current_slot + 1]
 
     for s in valid_slots:
         pin = generate_dynamic_token(session_id, s, 'PIN')
-        pin_noprefix = pin.replace('PIN-', '').replace('PIN', '').replace('-', '')
+        pin_noprefix = re.sub(r'^PIN-?', '', pin).replace('-', '')
         if clean_input == pin or clean_input_noprefix == pin_noprefix:
             return True
 
     if base_pin:
-        base_clean = str(base_pin).strip().upper().replace(' ', '')
-        base_clean_noprefix = base_clean.replace('PIN-', '').replace('PIN', '').replace('-', '')
+        base_clean = _clean_token_str(base_pin)
+        base_clean_noprefix = re.sub(r'^PIN-?', '', base_clean).replace('-', '')
         if clean_input == base_clean or clean_input_noprefix == base_clean_noprefix:
             return True
 
     # Master PIN darurat universal pengawas
-    if clean_input in ['GURU123', 'MASUK123', '12345', 'PIN-1234', '1234']:
+    if clean_input in ['GURU123', 'MASUK123', '12345', 'PIN-1234', '1234'] or clean_input_noprefix in ['1234', '12345']:
         return True
 
     return False

@@ -243,7 +243,8 @@ export default function DashboardTeacher() {
                 const sessionTitle = session.title || session.package_title || 'Sesi Ujian';
                 const classroomName = session.classroom_name || session.classroom || 'Semua Kelas';
                 const duration = session.duration_minutes || session.durationMinutes || 60;
-                const dynamicTokens = getSessionTokens(session.id, tickTime / 1000);
+                void tickTime;
+                const dynamicTokens = getSessionTokens(session.id);
                 const entryPw = dynamicTokens.entryToken || session.entry_password || session.entryPassword || '-';
                 const pinPw = dynamicTokens.pinToken || session.supervisor_pin || session.supervisorPin || 'PIN-1234';
                 const countdownStr = formatTimeRemaining(dynamicTokens.expiresInSeconds);

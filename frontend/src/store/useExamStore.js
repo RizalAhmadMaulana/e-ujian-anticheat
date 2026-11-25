@@ -3,7 +3,7 @@ import { examApi } from '../api/examApi';
 import { authApi } from '../api/authApi';
 import { proctoringApi } from '../api/proctoringApi';
 import { ejournalApi } from '../api/ejournalApi';
-import { isValidEntryToken } from '../utils/tokenGenerator';
+import { isValidEntryToken, syncServerClock } from '../utils/tokenGenerator';
 
 /**
  * Mock Data Pengguna Awal
@@ -225,6 +225,9 @@ export const useExamStore = create((set, get) => ({
     try {
       const data = await examApi.getSessionsApi();
       if (Array.isArray(data)) {
+        if (data.length > 0 && (data[0].server_timestamp || data[0].serverTimestamp)) {
+          syncServerClock(data[0].server_timestamp || data[0].serverTimestamp);
+        }
         set({ examSessions: data });
         return data;
       }

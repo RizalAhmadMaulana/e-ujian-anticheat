@@ -12,10 +12,13 @@ from .views import (
     StudentDetailView,
     StudentExcelTemplateView,
     StudentExcelImportView,
+    StudentResetPasswordView,
+    StudentSyncAllAccountsView,
     TeacherListCreateView,
     TeacherDetailView,
     TeacherExcelTemplateView,
     TeacherExcelImportView,
+    TeacherResetPasswordView,
     SchoolSettingView
 )
 
@@ -35,14 +38,17 @@ urlpatterns = [
     # CRUD Data Siswa & Import Excel
     path('students/template-excel/', StudentExcelTemplateView.as_view(), name='student_template_excel'),
     path('students/import-excel/', StudentExcelImportView.as_view(), name='student_import_excel'),
+    path('students/sync-accounts/', StudentSyncAllAccountsView.as_view(), name='student_sync_accounts'),
     path('students/', StudentListCreateView.as_view(), name='student_list_create'),
     path('students/<uuid:pk>/', StudentDetailView.as_view(), name='student_detail'),
+    path('students/<uuid:pk>/reset-password/', StudentResetPasswordView.as_view(), name='student_reset_password'),
 
     # CRUD Data Guru & Import Excel
     path('teachers/template-excel/', TeacherExcelTemplateView.as_view(), name='teacher_template_excel'),
     path('teachers/import-excel/', TeacherExcelImportView.as_view(), name='teacher_import_excel'),
     path('teachers/', TeacherListCreateView.as_view(), name='teacher_list_create'),
     path('teachers/<uuid:pk>/', TeacherDetailView.as_view(), name='teacher_detail'),
+    path('teachers/<uuid:pk>/reset-password/', TeacherResetPasswordView.as_view(), name='teacher_reset_password'),
 
     # CRUD Manajemen Pengguna & Import Excel
     path('users/template-excel/', UserExcelTemplateView.as_view(), name='user_template_excel'),

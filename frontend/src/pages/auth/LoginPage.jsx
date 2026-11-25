@@ -64,6 +64,7 @@ export default function LoginPage() {
       const res = await loginApi(cleanUsername, cleanPassword);
       if (res && res.user) {
         setCurrentUser({
+          ...res.user,
           id: res.user.id,
           username: res.user.username,
           fullName: res.user.full_name,
@@ -85,7 +86,12 @@ export default function LoginPage() {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
         setErrorMessage('Perangkat Anda sedang offline. Pastikan Wi-Fi atau data seluler di HP aktif dan terhubung ke internet.');
       } else if (err.response && (err.response.status === 401 || err.response.status === 400)) {
-        setErrorMessage('NIP/NISN atau kata sandi tidak cocok. Silakan periksa kembali.');
+        const detailMsg = err?.response?.data?.detail || err?.response?.data?.error;
+        if (detailMsg && typeof detailMsg === 'string' && !detailMsg.includes('No active account')) {
+          setErrorMessage(detailMsg);
+        } else {
+          setErrorMessage('NIP/NISN atau kata sandi tidak cocok. Pastikan penulisan benar atau hubungi Guru Pengawas untuk Reset Sandi ke NISN/NIP.');
+        }
       } else if (err.message === 'Network Error' || err.code === 'ERR_NETWORK') {
         setErrorMessage('Gagal terhubung ke server. Periksa jaringan internet/Wi-Fi di HP Anda atau pastikan login hotspot sekolah telah aktif.');
       } else if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {

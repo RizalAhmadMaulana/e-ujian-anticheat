@@ -194,6 +194,18 @@ export const deleteStudentApi = async (id) => {
   return response.data;
 };
 
+export const resetStudentPasswordApi = async (id) => {
+  const response = await axiosInstance.post(`/accounts/students/${id}/reset-password/`);
+  return response.data;
+};
+
+export const syncAllStudentAccountsApi = async (resetPasswords = true) => {
+  const response = await axiosInstance.post('/accounts/students/sync-accounts/', {
+    reset_passwords: resetPasswords,
+  });
+  return response.data;
+};
+
 export const downloadStudentTemplateExcelApi = async (filename = 'Template_Import_Siswa_E-Ujian.xlsx') => {
   const response = await axiosInstance.get('/accounts/students/template-excel/', {
     responseType: 'blob'
@@ -243,6 +255,11 @@ export const updateTeacherApi = async (id, data) => {
 
 export const deleteTeacherApi = async (id) => {
   const response = await axiosInstance.delete(`/accounts/teachers/${id}/`);
+  return response.data;
+};
+
+export const resetTeacherPasswordApi = async (id) => {
+  const response = await axiosInstance.post(`/accounts/teachers/${id}/reset-password/`);
   return response.data;
 };
 
@@ -316,12 +333,15 @@ export const authApi = {
   createStudentApi,
   updateStudentApi,
   deleteStudentApi,
+  resetStudentPasswordApi,
+  syncAllStudentAccountsApi,
   downloadStudentTemplateExcelApi,
   importStudentsExcelApi,
   getTeachersApi,
   createTeacherApi,
   updateTeacherApi,
   deleteTeacherApi,
+  resetTeacherPasswordApi,
   downloadTeacherTemplateExcelApi,
   importTeachersExcelApi,
   logoutApi,

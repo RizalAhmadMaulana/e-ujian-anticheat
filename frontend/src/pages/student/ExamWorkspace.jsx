@@ -634,14 +634,19 @@ export default function ExamWorkspace() {
     e.preventDefault();
     setUnlockError('');
 
-    const inputPin = supervisorUnlockPin.trim().toUpperCase().replace(/\s+/g, '');
+    const inputPin = supervisorUnlockPin.replace(/[\u200B-\u200D\uFEFF\u00A0\s]+/g, '').toUpperCase();
     const cleanInputPin = inputPin.replace(/^PIN-?/i, '').replace(/-/g, '');
 
-    // Kumpulkan kandidat PIN pengawas yang sah
+    if (!inputPin) {
+      setUnlockError('Masukkan PIN Pengawas terlebih dahulu.');
+      return;
+    }
+
+    // Kumpulkan kandidat PIN pengawas yang sah secara lokal (jam server terkalibrasi)
     const candidatePins = new Set();
     const addCandidate = (val) => {
       if (!val) return;
-      const clean = String(val).trim().toUpperCase().replace(/\s+/g, '');
+      const clean = String(val).replace(/[\u200B-\u200D\uFEFF\u00A0\s]+/g, '').toUpperCase();
       const noPre = clean.replace(/^PIN-?/i, '').replace(/-/g, '');
       candidatePins.add(clean);
       candidatePins.add(noPre);
@@ -682,7 +687,22 @@ export default function ExamWorkspace() {
       addCandidate(p);
     });
 
-    const isValid = candidatePins.has(inputPin) || candidatePins.has(cleanInputPin);
+    let isValid = candidatePins.has(inputPin) || candidatePins.has(cleanInputPin);
+    let alreadySyncedToServer = false;
+    let serverErrorMsg = '';
+
+    // 4. Jika di lokal tidak cocok (misal karena selisih jam perangkat siswa), verifikasi langsung ke Server Django!
+    if (!isValid && activeAttempt.attemptId && !activeAttempt.isSimulation) {
+      try {
+        const res = await proctoringApi.unlockStudent(activeAttempt.attemptId, inputPin);
+        if (res && res.success) {
+          isValid = true;
+          alreadySyncedToServer = true;
+        }
+      } catch (err) {
+        serverErrorMsg = err?.response?.data?.error || '';
+      }
+    }
 
     if (isValid) {
       // 1. Blur input agar keyboard virtual di HP langsung tertutup
@@ -702,16 +722,16 @@ export default function ExamWorkspace() {
       setUnlockSuccessToast('Layar berhasil dibuka kembali! Selamat mengerjakan.');
       setTimeout(() => setUnlockSuccessToast(''), 5000);
 
-      // 6. Sinkronisasi ke backend secara asynchronous
-      if (activeAttempt.attemptId) {
+      // 5. Sinkronisasi ke backend secara asynchronous jika belum dikirim
+      if (activeAttempt.attemptId && !alreadySyncedToServer) {
         try {
-          await proctoringApi.unlockStudent(activeAttempt.attemptId, supervisorUnlockPin);
+          await proctoringApi.unlockStudent(activeAttempt.attemptId, inputPin);
         } catch (err) {
           console.warn('Unlock API fallback:', err);
         }
       }
     } else {
-      setUnlockError('PIN Pengawas salah atau sudah kedaluwarsa! PIN diperbarui otomatis setiap 5 menit. Silakan periksa PIN terbaru di menu Jadwal & Sesi Ujian.');
+      setUnlockError(serverErrorMsg || 'PIN Pengawas salah atau sudah kedaluwarsa! PIN diperbarui otomatis setiap 5 menit. Silakan periksa PIN terbaru di menu Jadwal & Sesi Ujian.');
     }
   };
 

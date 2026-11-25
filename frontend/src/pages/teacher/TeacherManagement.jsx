@@ -10,7 +10,8 @@ import {
   RefreshCw, 
   GraduationCap,
   Search,
-  X
+  X,
+  KeyRound
 } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import { 
@@ -18,6 +19,7 @@ import {
   createTeacherApi, 
   updateTeacherApi, 
   deleteTeacherApi, 
+  resetTeacherPasswordApi,
   downloadTeacherTemplateExcelApi, 
   importTeachersExcelApi 
 } from '../../api/authApi';
@@ -203,6 +205,25 @@ export default function TeacherManagement() {
       alert('Gagal mengunduh template Excel: ' + err.message);
     } finally {
       setIsDownloadingTemplate(false);
+    }
+  };
+
+  // Reset Password 1 Guru ke NIP
+  const [resettingTeacherId, setResettingTeacherId] = useState(null);
+  const handleResetTeacherPassword = async (teacher) => {
+    const targetNip = teacher.nip || teacher.username;
+    if (!window.confirm(`Reset kata sandi guru "${teacher.full_name}" menjadi NIP (${targetNip})?`)) {
+      return;
+    }
+    setResettingTeacherId(teacher.id);
+    try {
+      const res = await resetTeacherPasswordApi(teacher.id);
+      showToast(res?.message || `Kata sandi ${teacher.full_name} berhasil direset menjadi ${targetNip}!`);
+      fetchTeachers();
+    } catch (err) {
+      alert('Gagal mereset kata sandi guru: ' + (err.response?.data?.error || err.response?.data?.detail || err.message));
+    } finally {
+      setResettingTeacherId(null);
     }
   };
 
@@ -400,6 +421,15 @@ export default function TeacherManagement() {
                     </td>
                     <td className="py-2.5 px-4 text-center">
                       <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => handleResetTeacherPassword(teacher)}
+                          disabled={resettingTeacherId === teacher.id}
+                          className="p-1 px-2.5 rounded-md bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 transition text-xs font-medium flex items-center gap-1 shadow-2xs hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-50"
+                          title={`Reset sandi ${teacher.full_name} menjadi NIP (${teacher.nip || teacher.username})`}
+                        >
+                          <KeyRound className={`w-3 h-3 text-amber-600 ${resettingTeacherId === teacher.id ? 'animate-spin' : ''}`} />
+                          <span>Reset Sandi</span>
+                        </button>
                         <button
                           onClick={() => handleOpenEdit(teacher)}
                           className="p-1 px-2.5 rounded-md bg-white text-zinc-700 hover:bg-zinc-50 border border-zinc-200 transition text-xs font-medium flex items-center gap-1 shadow-2xs hover:-translate-y-0.5 active:scale-[0.98]"

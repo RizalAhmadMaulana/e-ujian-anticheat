@@ -4,6 +4,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from django.db.models import Q
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 import io
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -18,7 +19,9 @@ from .serializers import (
     TeacherSerializer,
     ClassRoomSerializer, 
     CustomTokenObtainPairSerializer,
-    SchoolSettingSerializer
+    SchoolSettingSerializer,
+    clean_invisible_chars,
+    normalize_identity_code,
 )
 from .permissions import IsTeacherRole
 
@@ -272,9 +275,13 @@ class UserExcelImportView(APIView):
                     val = row[idx]
                     if val is None:
                         return ""
+                    if isinstance(val, bool):
+                        return ""
+                    if isinstance(val, int):
+                        return str(val).strip()
                     if isinstance(val, float) and val.is_integer():
                         return str(int(val)).strip()
-                    return str(val).strip()
+                    return clean_invisible_chars(val)
                 return ""
 
             raw_username = get_val('username')
@@ -295,19 +302,28 @@ class UserExcelImportView(APIView):
             if 'TEACH' in raw_role or 'GURU' in raw_role:
                 final_role = User.RoleChoices.TEACHER
 
-            final_password = raw_password if raw_password else raw_username
+            is_student = (final_role == User.RoleChoices.STUDENT)
+            raw_username = normalize_identity_code(raw_username, is_student=is_student)
+            final_password = clean_invisible_chars(raw_password) if raw_password else raw_username
 
             try:
-                user, created = User.objects.get_or_create(
-                    username=raw_username,
-                    defaults={
-                        "full_name": raw_name or raw_username,
-                        "role": final_role,
-                        "email": raw_email
-                    }
-                )
+                user_q = Q(username__iexact=raw_username)
+                if is_student:
+                    user_q |= Q(nisn__iexact=raw_username) | Q(username=raw_username.lstrip('0')) | Q(username=raw_username.zfill(10))
+                else:
+                    user_q |= Q(nip__iexact=raw_username)
 
-                if created:
+                user = User.objects.filter(user_q).first()
+                created = False
+
+                if not user:
+                    user = User.objects.create(
+                        username=raw_username,
+                        full_name=raw_name or raw_username,
+                        role=final_role,
+                        email=raw_email,
+                        is_active=True
+                    )
                     user.set_password(final_password)
                     if final_role == User.RoleChoices.TEACHER:
                         user.nip = raw_username
@@ -322,8 +338,13 @@ class UserExcelImportView(APIView):
                     if raw_email:
                         user.email = raw_email
                     user.role = final_role
+                    user.is_active = True
+                    if user.username != raw_username and not User.objects.filter(username__iexact=raw_username).exclude(id=user.id).exists():
+                        user.username = raw_username
                     if raw_password:
-                        user.set_password(raw_password)
+                        user.set_password(final_password)
+                    elif not user.has_usable_password():
+                        user.set_password(raw_username)
                     if final_role == User.RoleChoices.TEACHER:
                         user.nip = raw_username
                         user.is_staff = True
@@ -530,19 +551,19 @@ class StudentExcelImportView(APIView):
                     val = row[idx]
                     if val is None:
                         return ""
+                    if isinstance(val, bool):
+                        return ""
+                    if isinstance(val, int):
+                        return str(val).strip()
                     if isinstance(val, float) and val.is_integer():
                         return str(int(val)).strip()
-                    return str(val).strip()
+                    return clean_invisible_chars(val)
                 return ""
 
-            raw_nisn = get_val('nisn')
+            raw_nisn = normalize_identity_code(get_val('nisn'), is_student=True)
             raw_name = get_val('name')
             raw_class = get_val('class')
             raw_email = get_val('email')
-
-            # Normalisasi NISN: Jika berupa angka 9 digit (karena angka 0 terpotong format Excel), lengkapi ke standar 10 digit
-            if raw_nisn.isdigit() and len(raw_nisn) == 9:
-                raw_nisn = f"0{raw_nisn}"
 
             if not raw_nisn and not raw_name:
                 continue
@@ -562,14 +583,15 @@ class StudentExcelImportView(APIView):
 
             try:
                 # Cari apakah akun siswa sudah ada (cocokkan username/nisn baik dengan maupun tanpa leading zero)
+                stripped_nisn = raw_nisn.lstrip('0') or raw_nisn
                 user = User.objects.filter(
-                    Q(username=raw_nisn) | 
-                    Q(nisn=raw_nisn) | 
-                    Q(username=raw_nisn.lstrip('0')) | 
-                    Q(username=raw_nisn.zfill(10))
+                    Q(username__iexact=raw_nisn) | 
+                    Q(nisn__iexact=raw_nisn) | 
+                    Q(username__iexact=stripped_nisn) | 
+                    Q(nisn__iexact=stripped_nisn) | 
+                    Q(username__iexact=raw_nisn.zfill(10))
                 ).first()
 
-                created = False
                 if not user:
                     user = User.objects.create(
                         username=raw_nisn,
@@ -577,13 +599,15 @@ class StudentExcelImportView(APIView):
                         role=User.RoleChoices.STUDENT,
                         classroom=target_classroom,
                         nisn=raw_nisn,
-                        email=raw_email
+                        email=raw_email,
+                        is_active=True
                     )
                     user.set_password(raw_nisn) # Default password siswa = NISN
                     user.save()
-                    created = True
                     created_count += 1
                 else:
+                    old_nisn = user.nisn
+                    old_username = user.username
                     if raw_name:
                         user.full_name = raw_name
                     if raw_email:
@@ -592,10 +616,17 @@ class StudentExcelImportView(APIView):
                     user.nisn = raw_nisn
                     user.role = User.RoleChoices.STUDENT
                     user.is_active = True
-                    user.save()
-                    updated_count += 1
-                    user.nisn = raw_nisn
-                    user.role = User.RoleChoices.STUDENT
+                    # Sinkronkan username agar persis dengan NISN terbaru (bila tidak bentrok)
+                    if user.username != raw_nisn and not User.objects.filter(username__iexact=raw_nisn).exclude(id=user.id).exists():
+                        user.username = raw_nisn
+                    # Pulihkan password ke NISN jika belum usable, NISN berubah, atau sandi masih format lama tanpa 0
+                    if (
+                        not user.has_usable_password()
+                        or old_nisn != raw_nisn
+                        or old_username != raw_nisn
+                        or user.check_password(stripped_nisn)
+                    ):
+                        user.set_password(raw_nisn)
                     user.save()
                     updated_count += 1
             except Exception as e:
@@ -782,12 +813,16 @@ class TeacherExcelImportView(APIView):
                     val = row[idx]
                     if val is None:
                         return ""
+                    if isinstance(val, bool):
+                        return ""
+                    if isinstance(val, int):
+                        return str(val).strip()
                     if isinstance(val, float) and val.is_integer():
                         return str(int(val)).strip()
-                    return str(val).strip()
+                    return clean_invisible_chars(val)
                 return ""
 
-            raw_nip = get_val('nip')
+            raw_nip = normalize_identity_code(get_val('nip'), is_student=False)
             raw_name = get_val('name')
             raw_email = get_val('email')
 
@@ -800,21 +835,21 @@ class TeacherExcelImportView(APIView):
                 continue
 
             try:
-                user, created = User.objects.get_or_create(
-                    username=raw_nip,
-                    defaults={
-                        "full_name": raw_name or f"Guru {raw_nip}",
-                        "role": User.RoleChoices.TEACHER,
-                        "nip": raw_nip,
-                        "email": raw_email,
-                        "is_staff": True
-                    }
-                )
+                user = User.objects.filter(
+                    Q(username__iexact=raw_nip) | Q(nip__iexact=raw_nip)
+                ).first()
 
-                if created:
+                if not user:
+                    user = User.objects.create(
+                        username=raw_nip,
+                        full_name=raw_name or f"Guru {raw_nip}",
+                        role=User.RoleChoices.TEACHER,
+                        nip=raw_nip,
+                        email=raw_email,
+                        is_staff=True,
+                        is_active=True
+                    )
                     user.set_password(raw_nip) # Default password guru = NIP
-                    user.nip = raw_nip
-                    user.is_staff = True
                     user.save()
                     created_count += 1
                 else:
@@ -825,6 +860,11 @@ class TeacherExcelImportView(APIView):
                     user.nip = raw_nip
                     user.role = User.RoleChoices.TEACHER
                     user.is_staff = True
+                    user.is_active = True
+                    if user.username != raw_nip and not User.objects.filter(username__iexact=raw_nip).exclude(id=user.id).exists():
+                        user.username = raw_nip
+                    if not user.has_usable_password():
+                        user.set_password(raw_nip)
                     user.save()
                     updated_count += 1
             except Exception as e:
@@ -837,6 +877,105 @@ class TeacherExcelImportView(APIView):
             "updated_count": updated_count,
             "total_rows": total_rows,
             "errors": errors
+        }, status=status.HTTP_200_OK)
+
+
+class StudentResetPasswordView(APIView):
+    """
+    POST /api/accounts/students/<uuid:pk>/reset-password/
+    Mereset password siswa ke NISN aktifnya, membersihkan karakter tak terlihat, & menyinkronkan username.
+    """
+    permission_classes = [IsTeacherRole]
+
+    def post(self, request, pk):
+        student = get_object_or_404(User, pk=pk, role=User.RoleChoices.STUDENT)
+        target_nisn = normalize_identity_code(student.nisn or student.username, is_student=True)
+        if not target_nisn:
+            return Response({"success": False, "error": "Siswa tidak memiliki NISN valid."}, status=status.HTTP_400_BAD_REQUEST)
+
+        student.nisn = target_nisn
+        if student.username != target_nisn and not User.objects.filter(username__iexact=target_nisn).exclude(id=student.id).exists():
+            student.username = target_nisn
+        student.is_active = True
+        student.set_password(target_nisn)
+        student.save()
+
+        return Response({
+            "success": True,
+            "message": f"Kata sandi siswa {student.full_name} berhasil direset & disinkronkan menjadi NISN ({target_nisn}).",
+            "nisn": target_nisn,
+        }, status=status.HTTP_200_OK)
+
+
+class StudentSyncAllAccountsView(APIView):
+    """
+    POST /api/accounts/students/sync-accounts/
+    Membersihkan spasi/karakter tak terlihat pada NISN/Username seluruh siswa,
+    menormalkan 9-digit menjadi 10-digit, mengaktifkan akun, dan (opsional) mereset sandi = NISN.
+    """
+    permission_classes = [IsTeacherRole]
+
+    def post(self, request):
+        reset_all_passwords = request.data.get('reset_passwords', True)
+        students = User.objects.filter(role=User.RoleChoices.STUDENT)
+        fixed_count = 0
+        reset_pw_count = 0
+
+        for s in students:
+            changed = False
+            norm_nisn = normalize_identity_code(s.nisn or s.username, is_student=True)
+            if not norm_nisn:
+                continue
+            if s.nisn != norm_nisn:
+                s.nisn = norm_nisn
+                changed = True
+            if s.username != norm_nisn and not User.objects.filter(username__iexact=norm_nisn).exclude(id=s.id).exists():
+                s.username = norm_nisn
+                changed = True
+            if not s.is_active:
+                s.is_active = True
+                changed = True
+            if reset_all_passwords or not s.has_usable_password():
+                s.set_password(norm_nisn)
+                changed = True
+                reset_pw_count += 1
+            if changed:
+                s.save()
+                fixed_count += 1
+
+        return Response({
+            "success": True,
+            "message": f"Sinkronisasi selesai! {fixed_count} akun siswa diperbarui & {reset_pw_count} kata sandi disinkronkan ke NISN masing-masing.",
+            "fixed_count": fixed_count,
+            "reset_pw_count": reset_pw_count,
+        }, status=status.HTTP_200_OK)
+
+
+class TeacherResetPasswordView(APIView):
+    """
+    POST /api/accounts/teachers/<uuid:pk>/reset-password/
+    Mereset password guru ke NIP aktifnya, membersihkan karakter tak terlihat, & menyinkronkan username.
+    """
+    permission_classes = [IsTeacherRole]
+
+    def post(self, request, pk):
+        teacher = get_object_or_404(User, pk=pk, role=User.RoleChoices.TEACHER)
+        target_nip = normalize_identity_code(teacher.nip or teacher.username, is_student=False)
+        if not target_nip:
+            return Response({"success": False, "error": "Guru tidak memiliki NIP valid."}, status=status.HTTP_400_BAD_REQUEST)
+
+        teacher.nip = target_nip
+        if teacher.username != target_nip and not User.objects.filter(username__iexact=target_nip).exclude(id=teacher.id).exists():
+            teacher.username = target_nip
+        teacher.is_active = True
+        teacher.is_staff = True
+        teacher.set_password(target_nip)
+        teacher.save()
+
+        return Response({
+            "success": True,
+            "message": f"Kata sandi guru {teacher.full_name} berhasil direset & disinkronkan menjadi NIP ({target_nip}).",
+            "nip": target_nip,
         }, status=status.HTTP_200_OK)
 
 

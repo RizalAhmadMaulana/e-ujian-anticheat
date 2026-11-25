@@ -29,7 +29,7 @@ import {
   Copy,
   RotateCcw
 } from 'lucide-react';
-import { getSessionTokens, formatTimeRemaining } from '../../utils/tokenGenerator';
+import { getSessionTokens, formatTimeRemaining, syncServerClock } from '../../utils/tokenGenerator';
 
 export default function LiveProctoring() {
   const { 
@@ -95,6 +95,9 @@ export default function LiveProctoring() {
       try {
         const sessions = await examApi.getSessions();
         if (sessions && sessions.length > 0) {
+          if (sessions[0].server_timestamp || sessions[0].serverTimestamp) {
+            syncServerClock(sessions[0].server_timestamp || sessions[0].serverTimestamp);
+          }
           setAvailableSessions(sessions);
           setSelectedSessionId((prev) => (prev && sessions.some(s => s.id === prev) ? prev : sessions[0].id));
         } else {
@@ -517,7 +520,8 @@ export default function LiveProctoring() {
         {(() => {
           const selectedSession = availableSessions.find(s => s.id === selectedSessionId) || availableSessions[0];
           if (!selectedSession) return null;
-          const dynamicTokens = getSessionTokens(selectedSession.id, tickTime / 1000);
+          void tickTime;
+          const dynamicTokens = getSessionTokens(selectedSession.id);
           const entryToken = dynamicTokens.entryToken || selectedSession.entry_password || selectedSession.entryPassword || '-';
           const pinToken = dynamicTokens.pinToken || selectedSession.supervisor_pin || selectedSession.supervisorPin || 'PIN-1234';
           const countdownStr = formatTimeRemaining(dynamicTokens.expiresInSeconds);

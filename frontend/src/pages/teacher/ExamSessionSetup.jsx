@@ -509,7 +509,9 @@ export default function ExamSessionSetup() {
             : `${sDateStr} ${sTimeStr} s/d ${eDateStr} ${eTimeStr} WIB`;
 
           const isGForm = session.examType === 'EXTERNAL_LINK' || session.exam_type === 'EXTERNAL_LINK';
-          const dynamicTokens = getSessionTokens(session.id, tickTime / 1000);
+          // Gunakan jam server terkalibrasi (tickTime memicu re-render setiap detik)
+          void tickTime;
+          const dynamicTokens = getSessionTokens(session.id);
           const entryVal = dynamicTokens.entryToken || session.entryPassword || session.entry_password || '-';
           const pinVal = dynamicTokens.pinToken || session.supervisorPin || session.supervisor_pin || 'PIN-1234';
           const remainingSec = dynamicTokens.expiresInSeconds;

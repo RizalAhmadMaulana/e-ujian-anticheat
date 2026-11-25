@@ -12,7 +12,8 @@ import {
   Search, 
   Filter, 
   X,
-  School
+  School,
+  KeyRound
 } from 'lucide-react';
 import Modal from '../../components/common/Modal';
 import { 
@@ -20,6 +21,8 @@ import {
   createStudentApi, 
   updateStudentApi, 
   deleteStudentApi, 
+  resetStudentPasswordApi,
+  syncAllStudentAccountsApi,
   getClassroomsApi, 
   downloadStudentTemplateExcelApi, 
   importStudentsExcelApi 
@@ -233,6 +236,43 @@ export default function StudentManagement() {
     }
   };
 
+  // Reset Password 1 Siswa ke NISN
+  const [resettingStudentId, setResettingStudentId] = useState(null);
+  const [isSyncingAll, setIsSyncingAll] = useState(false);
+
+  const handleResetStudentPassword = async (student) => {
+    const targetNisn = student.nisn || student.username;
+    if (!window.confirm(`Reset kata sandi siswa "${student.full_name}" menjadi NISN (${targetNisn})?\nSetelah direset, siswa dapat langsung login menggunakan Username = ${targetNisn} dan Password = ${targetNisn}.`)) {
+      return;
+    }
+    setResettingStudentId(student.id);
+    try {
+      const res = await resetStudentPasswordApi(student.id);
+      showToast(res?.message || `Kata sandi ${student.full_name} berhasil direset menjadi ${targetNisn}!`);
+      fetchStudents();
+    } catch (err) {
+      alert('Gagal mereset kata sandi siswa: ' + (err.response?.data?.error || err.response?.data?.detail || err.message));
+    } finally {
+      setResettingStudentId(null);
+    }
+  };
+
+  const handleSyncAllStudentAccounts = async () => {
+    if (!window.confirm('Sinkronkan seluruh akun siswa & reset kata sandi seluruh siswa ke NISN masing-masing?\n\nFitur ini memperbaiki seluruh akun siswa yang gagal login, membersihkan spasi/karakter tersembunyi pada NISN, dan menjamin semua siswa bisa login memakai Username & Password = NISN.')) {
+      return;
+    }
+    setIsSyncingAll(true);
+    try {
+      const res = await syncAllStudentAccountsApi(true);
+      showToast(res?.message || 'Seluruh akun siswa berhasil disinkronkan (Username & Password = NISN)!');
+      fetchStudents();
+    } catch (err) {
+      alert('Gagal menyinkronkan akun siswa: ' + (err.response?.data?.error || err.response?.data?.detail || err.message));
+    } finally {
+      setIsSyncingAll(false);
+    }
+  };
+
   // Proses Upload & Impor Excel Siswa
   const handleImportSubmit = async () => {
     if (!importFile) {
@@ -324,6 +364,16 @@ export default function StudentManagement() {
           >
             <Download className="w-4 h-4 text-zinc-500" />
             <span>{isDownloadingTemplate ? 'Mengunduh...' : 'Template Excel'}</span>
+          </button>
+
+          <button
+            onClick={handleSyncAllStudentAccounts}
+            disabled={isSyncingAll}
+            className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-semibold shadow-2xs hover:-translate-y-0.5 active:scale-[0.98] transition-all flex items-center gap-2 disabled:opacity-50"
+            title="Sinkronkan Username & Reset Semua Sandi Siswa ke NISN agar semua siswa bisa login"
+          >
+            <KeyRound className={`w-4 h-4 text-amber-600 ${isSyncingAll ? 'animate-spin' : ''}`} />
+            <span>{isSyncingAll ? 'Menyinkronkan...' : 'Sinkronkan Akun'}</span>
           </button>
         </div>
       </div>
@@ -459,6 +509,15 @@ export default function StudentManagement() {
                     </td>
                     <td className="py-3 px-4 text-center">
                       <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => handleResetStudentPassword(student)}
+                          disabled={resettingStudentId === student.id}
+                          className="px-2.5 py-1 rounded-md bg-amber-50 border border-amber-200 hover:border-amber-300 hover:bg-amber-100 text-amber-800 font-medium text-xs flex items-center gap-1 shadow-2xs transition-all active:scale-[0.98] disabled:opacity-50"
+                          title={`Reset sandi ${student.full_name} menjadi NISN (${student.nisn || student.username})`}
+                        >
+                          <KeyRound className={`w-3.5 h-3.5 text-amber-600 ${resettingStudentId === student.id ? 'animate-spin' : ''}`} />
+                          <span>Reset Sandi</span>
+                        </button>
                         <button
                           onClick={() => handleOpenEdit(student)}
                           className="px-2.5 py-1 rounded-md bg-white border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50 text-zinc-700 font-medium text-xs flex items-center gap-1.5 shadow-2xs transition-all active:scale-[0.98]"

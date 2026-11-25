@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useExamStore } from '../../store/useExamStore';
 import { getSessionsApi, verifyEntryPasswordApi, startExamAttemptApi } from '../../api/examApi';
-import { isValidEntryToken } from '../../utils/tokenGenerator';
+import { isValidEntryToken, syncServerClock } from '../../utils/tokenGenerator';
 import { 
   ShieldCheck, 
   KeyRound, 
@@ -88,6 +88,9 @@ export default function GatekeeperPin() {
       try {
         const sessions = await getSessionsApi();
         if (sessions && sessions.length > 0) {
+          if (sessions[0].server_timestamp || sessions[0].serverTimestamp) {
+            syncServerClock(sessions[0].server_timestamp || sessions[0].serverTimestamp);
+          }
           setAvailableSessions(sessions);
         }
       } catch (err) {
@@ -151,7 +154,7 @@ export default function GatekeeperPin() {
       return;
     }
     setErrorMsg('');
-    const inputPin = pin.trim().toUpperCase().replace(/\s+/g, '');
+    const inputPin = pin.replace(/[\u200B-\u200D\uFEFF\u00A0\s]+/g, '').toUpperCase();
 
     if (!inputPin) {
       setErrorMsg(`Password Masuk wajib diisi untuk memulai ujian ${selectedPackage?.subjectName || ''}!`);
@@ -218,10 +221,12 @@ export default function GatekeeperPin() {
             }
           }
         } catch (apiErr) {
-          console.warn('API verifyEntryPassword fallback ke lokal token validator:', apiErr);
-          if (apiErr.response?.data?.status_code === 'ALREADY_SUBMITTED' || apiErr.response?.data?.message?.includes('sudah menyelesaikan')) {
+          console.warn('API verifyEntryPassword error:', apiErr);
+          // Jika server Django membalas secara eksplisit (400/401/403), JANGAN lanjut ke offline fallback!
+          if (apiErr.response && apiErr.response.status < 500) {
             setIsChecking(false);
-            setErrorMsg(apiErr.response.data.message);
+            const serverMsg = apiErr.response?.data?.message || apiErr.response?.data?.error;
+            setErrorMsg(serverMsg || 'Token Masuk salah atau sudah kedaluwarsa! Token ujian diperbarui secara otomatis setiap 5 menit. Silakan minta token terbaru kepada pengawas.');
             return;
           }
           if (apiErr.response?.data?.message) {
@@ -230,7 +235,7 @@ export default function GatekeeperPin() {
         }
       }
 
-      // 2. Fallback verifikasi lokal store & dynamic token generator (jika offline/mock)
+      // 2. Fallback verifikasi lokal store & dynamic token generator (HANYA jika offline / mode simulasi)
       if (!verified) {
         const baseToken = currentTargetSession?.entry_password || currentTargetSession?.entryPassword || '';
         const isValidDynamic = isValidEntryToken(sessId, inputPin, baseToken);

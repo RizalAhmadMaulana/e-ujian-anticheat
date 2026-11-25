@@ -8,11 +8,42 @@
 
 export const ROTATION_INTERVAL_SECONDS = 300; // 5 menit
 
+const CLOCK_OFFSET_STORAGE_KEY = 'eujian_server_clock_offset_ms';
+
+let _serverClockOffsetMs = (() => {
+  try {
+    const saved = sessionStorage.getItem(CLOCK_OFFSET_STORAGE_KEY);
+    return saved !== null ? Number(saved) || 0 : 0;
+  } catch {
+    return 0;
+  }
+})();
+
 /**
- * Mengembalikan indeks slot 5 menit saat ini berdasarkan UNIX epoch time.
+ * Menyelaraskan jam klien (laptop guru / HP siswa) terhadap waktu server VPS
+ * agar token 5 menit 100% sinkron meski jam perangkat klien meleset.
+ */
+export function syncServerClock(serverTimestampSec) {
+  if (!serverTimestampSec || isNaN(Number(serverTimestampSec))) return;
+  const offset = Number(serverTimestampSec) * 1000 - Date.now();
+  _serverClockOffsetMs = offset;
+  try {
+    sessionStorage.setItem(CLOCK_OFFSET_STORAGE_KEY, String(Math.round(offset)));
+  } catch (_) {}
+}
+
+/**
+ * Mengembalikan timestamp UNIX (detik) yang telah dikalibrasi dengan jam server.
+ */
+export function getServerNowSeconds() {
+  return (Date.now() + _serverClockOffsetMs) / 1000;
+}
+
+/**
+ * Mengembalikan indeks slot 5 menit saat ini berdasarkan waktu server terkalibrasi.
  */
 export function getCurrentSlot(timestamp = null) {
-  const ts = timestamp !== null ? timestamp : Date.now() / 1000;
+  const ts = timestamp !== null ? timestamp : getServerNowSeconds();
   return Math.floor(ts / ROTATION_INTERVAL_SECONDS);
 }
 
@@ -20,7 +51,7 @@ export function getCurrentSlot(timestamp = null) {
  * Mengembalikan sisa detik hingga rotasi token berikutnya.
  */
 export function getSecondsUntilNextRotation(timestamp = null) {
-  const ts = timestamp !== null ? timestamp : Date.now() / 1000;
+  const ts = timestamp !== null ? timestamp : getServerNowSeconds();
   const elapsed = Math.floor(ts) % ROTATION_INTERVAL_SECONDS;
   return ROTATION_INTERVAL_SECONDS - elapsed;
 }
@@ -93,6 +124,11 @@ export function getSessionTokens(sessionId, timestamp = null) {
   };
 }
 
+function _cleanTokenInput(rawVal) {
+  if (!rawVal) return '';
+  return String(rawVal).replace(/[\u200B-\u200D\uFEFF\u00A0\s]+/g, '').toUpperCase();
+}
+
 /**
  * Validasi Token Masuk Siswa:
  * Cocokkan terhadap slot saat ini, slot sebelumnya (grace period), atau baseToken.
@@ -100,8 +136,8 @@ export function getSessionTokens(sessionId, timestamp = null) {
 export function isValidEntryToken(sessionId, inputToken, baseToken = null, timestamp = null) {
   if (!inputToken) return false;
 
-  const cleanInput = String(inputToken).trim().toUpperCase().replace(/\s+/g, '');
-  const cleanInputNoPrefix = cleanInput.replace('MSK-', '').replace('MSK', '').replace(/-/g, '');
+  const cleanInput = _cleanTokenInput(inputToken);
+  const cleanInputNoPrefix = cleanInput.replace(/^MSK-?/i, '').replace(/-/g, '');
 
   const currentSlot = getCurrentSlot(timestamp);
   // Toleransi: slot aktif saat ini, 1 slot sebelumnya (grace turnover), dan 1 slot berikutnya (clock drift)
@@ -109,15 +145,15 @@ export function isValidEntryToken(sessionId, inputToken, baseToken = null, times
 
   for (const s of validSlots) {
     const token = generateDynamicToken(sessionId, s, 'ENTRY');
-    const tokenNoPrefix = token.replace('MSK-', '').replace('MSK', '').replace(/-/g, '');
+    const tokenNoPrefix = token.replace(/^MSK-?/i, '').replace(/-/g, '');
     if (cleanInput === token || cleanInputNoPrefix === tokenNoPrefix) {
       return true;
     }
   }
 
   if (baseToken) {
-    const baseClean = String(baseToken).trim().toUpperCase().replace(/\s+/g, '');
-    const baseCleanNoPrefix = baseClean.replace('MSK-', '').replace('MSK', '').replace(/-/g, '');
+    const baseClean = _cleanTokenInput(baseToken);
+    const baseCleanNoPrefix = baseClean.replace(/^MSK-?/i, '').replace(/-/g, '');
     if (cleanInput === baseClean || cleanInputNoPrefix === baseCleanNoPrefix) {
       return true;
     }
@@ -138,23 +174,23 @@ export function isValidEntryToken(sessionId, inputToken, baseToken = null, times
 export function isValidSupervisorPin(sessionId, inputPin, basePin = null, timestamp = null) {
   if (!inputPin) return false;
 
-  const cleanInput = String(inputPin).trim().toUpperCase().replace(/\s+/g, '');
-  const cleanInputNoPrefix = cleanInput.replace('PIN-', '').replace('PIN', '').replace(/-/g, '');
+  const cleanInput = _cleanTokenInput(inputPin);
+  const cleanInputNoPrefix = cleanInput.replace(/^PIN-?/i, '').replace(/-/g, '');
 
   const currentSlot = getCurrentSlot(timestamp);
   const validSlots = [currentSlot, currentSlot - 1, currentSlot + 1];
 
   for (const s of validSlots) {
     const pin = generateDynamicToken(sessionId, s, 'PIN');
-    const pinNoPrefix = pin.replace('PIN-', '').replace('PIN', '').replace(/-/g, '');
+    const pinNoPrefix = pin.replace(/^PIN-?/i, '').replace(/-/g, '');
     if (cleanInput === pin || cleanInputNoPrefix === pinNoPrefix) {
       return true;
     }
   }
 
   if (basePin) {
-    const baseClean = String(basePin).trim().toUpperCase().replace(/\s+/g, '');
-    const baseCleanNoPrefix = baseClean.replace('PIN-', '').replace('PIN', '').replace(/-/g, '');
+    const baseClean = _cleanTokenInput(basePin);
+    const baseCleanNoPrefix = baseClean.replace(/^PIN-?/i, '').replace(/-/g, '');
     if (cleanInput === baseClean || cleanInputNoPrefix === baseCleanNoPrefix) {
       return true;
     }
