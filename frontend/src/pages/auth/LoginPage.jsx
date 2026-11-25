@@ -87,7 +87,10 @@ export default function LoginPage() {
         setErrorMessage('Perangkat Anda sedang offline. Pastikan Wi-Fi atau data seluler di HP aktif dan terhubung ke internet.');
       } else if (err.response && (err.response.status === 401 || err.response.status === 400)) {
         const detailMsg = err?.response?.data?.detail || err?.response?.data?.error;
-        if (detailMsg && typeof detailMsg === 'string' && !detailMsg.includes('No active account')) {
+        const isGenericSimpleJwtError =
+          typeof detailMsg === 'string' &&
+          (detailMsg.includes('No active account') || detailMsg.includes('Tidak ada akun aktif'));
+        if (detailMsg && typeof detailMsg === 'string' && !isGenericSimpleJwtError) {
           setErrorMessage(detailMsg);
         } else {
           setErrorMessage('NIP/NISN atau kata sandi tidak cocok. Pastikan penulisan benar atau hubungi Guru Pengawas untuk Reset Sandi ke NISN/NIP.');

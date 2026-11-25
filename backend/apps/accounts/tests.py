@@ -102,3 +102,15 @@ class AccountLoginAndSyncTests(APITestCase):
         self.assertEqual(broken_student.nisn, '0119998887')
         self.assertEqual(broken_student.username, '0119998887')
         self.assertTrue(broken_student.check_password('0119998887'))
+
+    def test_clear_diagnostic_error_for_unknown_user_and_password_mismatch(self):
+        url = reverse('auth_login')
+        res_unknown = self.client.post(url, {'username': '9999999999', 'password': '9999999999'}, format='json')
+        self.assertEqual(res_unknown.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertIn('belum terdaftar', str(res_unknown.data.get('detail', '')))
+
+        self.student.set_password('sandi_khusus_berbeda')
+        self.student.save()
+        res_mismatch = self.client.post(url, {'username': '0117134623', 'password': '0117134623'}, format='json')
+        self.assertEqual(res_mismatch.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertIn('Reset Sandi', str(res_mismatch.data.get('detail', '')))

@@ -1,5 +1,6 @@
 import re
 from rest_framework import serializers
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.db.models import Q
 from .models import User, ClassRoom, SchoolSetting
@@ -455,7 +456,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                         seen_ids.add(u.id)
                         matched_users.append(u)
 
-            # Fallback jika di DB tersimpan spasi tersembunyi / apostrof pada username/nisn/nip
+            # Fallback jika di DB tersimpan spasi tersembunyi / spasi tengah / apostrof pada username/nisn/nip
             if not matched_users and no_space_username:
                 stripped_core = no_space_username.lstrip('0') or no_space_username
                 fallback_qs = User.objects.filter(
@@ -464,9 +465,9 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                     Q(nip__icontains=stripped_core)
                 )[:20]
                 for u in fallback_qs:
-                    u_norm = normalize_identity_code(u.username, is_student=(u.role == User.RoleChoices.STUDENT))
-                    n_norm = normalize_identity_code(u.nisn, is_student=True) if u.nisn else ''
-                    p_norm = normalize_identity_code(u.nip, is_student=False) if u.nip else ''
+                    u_norm = re.sub(r'\s+', '', normalize_identity_code(u.username, is_student=(u.role == User.RoleChoices.STUDENT)))
+                    n_norm = re.sub(r'\s+', '', normalize_identity_code(u.nisn, is_student=True)) if u.nisn else ''
+                    p_norm = re.sub(r'\s+', '', normalize_identity_code(u.nip, is_student=False)) if u.nip else ''
                     if any(x and (x.lower() == no_space_username.lower() or x.lstrip('0').lower() == stripped_core.lower()) for x in [u_norm, n_norm, p_norm]):
                         if u.id not in seen_ids:
                             seen_ids.add(u.id)
@@ -537,6 +538,14 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                         break
 
             chosen_user = verified_user or (matched_users[0] if matched_users else None)
+            if not matched_users:
+                raise AuthenticationFailed(
+                    f"Akun dengan NIP/NISN '{clean_username}' belum terdaftar di sistem. Silakan periksa penulisan NIP/NISN atau hubungi Guru Pengawas."
+                )
+            if not verified_user and chosen_user:
+                raise AuthenticationFailed(
+                    f"Akun '{chosen_user.full_name}' ditemukan, tetapi kata sandi tidak cocok dengan data di server. Minta Guru Pengawas mengklik tombol 'Reset Sandi' / 'Sinkronkan Akun' di menu Data Siswa atau Data Guru."
+                )
             if chosen_user:
                 attrs['username'] = chosen_user.username
                 attrs['password'] = clean_password
