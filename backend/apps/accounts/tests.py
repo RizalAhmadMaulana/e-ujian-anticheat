@@ -1,5 +1,7 @@
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.urls import reverse
+from io import StringIO
 from rest_framework import status
 from rest_framework.test import APITestCase
 from apps.accounts.models import ClassRoom
@@ -114,3 +116,32 @@ class AccountLoginAndSyncTests(APITestCase):
         res_mismatch = self.client.post(url, {'username': '0117134623', 'password': '0117134623'}, format='json')
         self.assertEqual(res_mismatch.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertIn('Reset Sandi', str(res_mismatch.data.get('detail', '')))
+
+    def test_sync_student_accounts_with_classroom_filter(self):
+        other_class = ClassRoom.objects.create(name='IXD', academic_year='2026/2027')
+        student_other = User.objects.create(
+            username='118887776',
+            full_name='SISWA KELAS LAIN',
+            role=User.RoleChoices.STUDENT,
+            nisn='118887776',
+            classroom=other_class,
+            is_active=False,
+        )
+
+        self.client.force_authenticate(user=self.teacher)
+        sync_url = reverse('student_sync_accounts')
+        res = self.client.post(sync_url, {'reset_passwords': True, 'classroom_id': self.classroom.id}, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        # Siswa di other_class tidak terpengaruh karena filter kelas aktif
+        student_other.refresh_from_db()
+        self.assertFalse(student_other.is_active)
+
+    def test_fix_accounts_login_command_dry_run_and_execution(self):
+        out = StringIO()
+        call_command('fix_accounts_login', '--dry-run', stdout=out)
+        self.assertIn('[DRY-RUN', out.getvalue())
+
+        out2 = StringIO()
+        call_command('fix_accounts_login', '--reset-student-passwords', stdout=out2)
+        self.assertIn('Selesai!', out2.getvalue())

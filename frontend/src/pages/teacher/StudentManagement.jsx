@@ -258,13 +258,16 @@ export default function StudentManagement() {
   };
 
   const handleSyncAllStudentAccounts = async () => {
-    if (!window.confirm('Sinkronkan seluruh akun siswa & reset kata sandi seluruh siswa ke NISN masing-masing?\n\nFitur ini memperbaiki seluruh akun siswa yang gagal login, membersihkan spasi/karakter tersembunyi pada NISN, dan menjamin semua siswa bisa login memakai Username & Password = NISN.')) {
+    const isSpecificClass = filterKelas && filterKelas !== 'Semua';
+    const targetLabel = isSpecificClass ? `kelas ${filterKelas}` : 'seluruh siswa (semua kelas)';
+    if (!window.confirm(`Sinkronkan akun siswa ${targetLabel} & reset kata sandi menjadi NISN masing-masing?\n\nFitur ini memperbaiki seluruh akun siswa yang gagal login, membersihkan spasi/karakter tersembunyi pada NISN, dan menjamin siswa bisa login memakai Username & Password = NISN.`)) {
       return;
     }
     setIsSyncingAll(true);
     try {
-      const res = await syncAllStudentAccountsApi(true);
-      showToast(res?.message || 'Seluruh akun siswa berhasil disinkronkan (Username & Password = NISN)!');
+      const classParam = isSpecificClass ? filterKelas : null;
+      const res = await syncAllStudentAccountsApi(true, classParam);
+      showToast(res?.message || `Akun siswa ${targetLabel} berhasil disinkronkan (Username & Password = NISN)!`);
       fetchStudents();
     } catch (err) {
       alert('Gagal menyinkronkan akun siswa: ' + (err.response?.data?.error || err.response?.data?.detail || err.message));

@@ -237,6 +237,7 @@
 - [x] Eksekusi **Tahap 5.89 — Pembaruan Interval Regenerasi Otomatis Token Masuk Siswa & PIN Buka Kunci Pengawas dari 10 Menit Menjadi 5 Menit (300 Detik)**.
 - [x] Eksekusi **Tahap 5.90 — Resolusi Tuntas Login Siswa & Guru (Multi-Candidate Auth, Normalisasi Excel/DB, Tombol Reset Sandi & Sinkronkan Akun, CLI `fix_accounts_login`) + Sinkronisasi Jam Server & Penguatan Verifikasi Token/PIN 5 Menit**.
 - [x] Eksekusi **Tahap 5.91 — Diagnostik Eksplisit Error Login (Eliminasi Pesan Generik `"Tidak ada akun aktif..."` SimpleJWT, Pembedaan Akun Tidak Terdaftar vs Sandi Belum Di-Reset, & Toleransi Spasi Tengah pada DB)**.
+- [x] Eksekusi **Tahap 5.92 — Optimasi Multi-Thread & Bulk Update Sinkronisasi Akun (Eliminasi Axios Timeout 15000ms, Sinkronisasi Berbasis Filter Kelas, Dukungan CLI `--dry-run` & Live Progress Bar)**.
 - [x] Seluruh sistem E-Ujian Anti-Cheat & E-Jurnal Asesmen Sekolah SIAP PRODUKSI MURNI DENGAN DATA NYATA!
 
 
@@ -307,6 +308,7 @@
 - [x] Eksekusi **Tahap 5.89 — Pembaruan Interval Regenerasi Otomatis Token Masuk Siswa & PIN Buka Kunci Pengawas dari 10 Menit Menjadi 5 Menit (300 Detik)**.
 - [x] Eksekusi **Tahap 5.90 — Resolusi Tuntas Login Siswa & Guru (Multi-Candidate Auth, Normalisasi Excel/DB, Tombol Reset Sandi & Sinkronkan Akun, CLI `fix_accounts_login`) + Sinkronisasi Jam Server & Penguatan Verifikasi Token/PIN 5 Menit**.
 - [x] Eksekusi **Tahap 5.91 — Diagnostik Eksplisit Error Login (Eliminasi Pesan Generik `"Tidak ada akun aktif..."` SimpleJWT, Pembedaan Akun Tidak Terdaftar vs Sandi Belum Di-Reset, & Toleransi Spasi Tengah pada DB)**.
+- [x] Eksekusi **Tahap 5.92 — Optimasi Multi-Thread & Bulk Update Sinkronisasi Akun (Eliminasi Axios Timeout 15000ms, Sinkronisasi Berbasis Filter Kelas, Dukungan CLI `--dry-run` & Live Progress Bar)**.
 - [x] Seluruh sistem E-Ujian Anti-Cheat & E-Jurnal Asesmen Sekolah SIAP PRODUKSI MURNI DENGAN DATA NYATA!
 
 

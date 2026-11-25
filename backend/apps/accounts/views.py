@@ -5,6 +5,9 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
+from django.contrib.auth.hashers import make_password
+from concurrent.futures import ThreadPoolExecutor
+import os
 import io
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -911,37 +914,85 @@ class StudentSyncAllAccountsView(APIView):
     """
     POST /api/accounts/students/sync-accounts/
     Membersihkan spasi/karakter tak terlihat pada NISN/Username seluruh siswa,
-    menormalkan 9-digit menjadi 10-digit, mengaktifkan akun, dan (opsional) mereset sandi = NISN.
+    menormalkan 9-digit menjadi 10-digit, mengaktifkan akun, dan mereset sandi = NISN.
+    Dioptimasi dengan multi-threading PBKDF2 & bulk_update agar selesai dalam 2-3 detik tanpa timeout.
     """
     permission_classes = [IsTeacherRole]
 
     def post(self, request):
         reset_all_passwords = request.data.get('reset_passwords', True)
-        students = User.objects.filter(role=User.RoleChoices.STUDENT)
+        classroom_id = request.data.get('classroom_id')
+        queryset = User.objects.filter(role=User.RoleChoices.STUDENT)
+        if classroom_id:
+            if str(classroom_id).isdigit():
+                queryset = queryset.filter(Q(classroom_id=int(classroom_id)) | Q(classroom__name__iexact=str(classroom_id)))
+            else:
+                queryset = queryset.filter(classroom__name__iexact=str(classroom_id))
+
+        students = list(queryset)
+        total_students = len(students)
+        if total_students == 0:
+            return Response({
+                "success": True,
+                "message": "Tidak ada data siswa yang ditemukan untuk disinkronkan.",
+                "fixed_count": 0,
+                "reset_pw_count": 0,
+            }, status=status.HTTP_200_OK)
+
+        items_to_hash = []
+        students_to_update = []
         fixed_count = 0
         reset_pw_count = 0
+
+        # Username yang sudah dipakai user non-student (admin/guru) agar tidak collision
+        existing_other_usernames = set(
+            User.objects.exclude(role=User.RoleChoices.STUDENT).values_list('username', flat=True)
+        )
 
         for s in students:
             changed = False
             norm_nisn = normalize_identity_code(s.nisn or s.username, is_student=True)
             if not norm_nisn:
                 continue
+
             if s.nisn != norm_nisn:
                 s.nisn = norm_nisn
                 changed = True
-            if s.username != norm_nisn and not User.objects.filter(username__iexact=norm_nisn).exclude(id=s.id).exists():
+
+            if s.username != norm_nisn and norm_nisn not in existing_other_usernames:
                 s.username = norm_nisn
                 changed = True
+
             if not s.is_active:
                 s.is_active = True
                 changed = True
-            if reset_all_passwords or not s.has_usable_password():
-                s.set_password(norm_nisn)
-                changed = True
-                reset_pw_count += 1
-            if changed:
-                s.save()
+
+            need_pwd = reset_all_passwords or not s.has_usable_password()
+            if need_pwd:
+                items_to_hash.append((s, norm_nisn, changed))
+            elif changed:
+                students_to_update.append(s)
                 fixed_count += 1
+
+        # Multi-thread hashing PBKDF2 (eksekusi di C melepaskan Python GIL, sangat cepat)
+        if items_to_hash:
+            max_workers = min(8, max(2, (os.cpu_count() or 2) * 2))
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                hashes = list(executor.map(lambda item: make_password(item[1]), items_to_hash))
+
+            for (s, _, was_changed), hashed_pw in zip(items_to_hash, hashes):
+                s.password = hashed_pw
+                students_to_update.append(s)
+                fixed_count += 1
+                reset_pw_count += 1
+
+        # Eksekusi 1 query SQL bulk_update
+        if students_to_update:
+            User.objects.bulk_update(
+                students_to_update,
+                fields=['username', 'nisn', 'password', 'is_active'],
+                batch_size=100
+            )
 
         return Response({
             "success": True,

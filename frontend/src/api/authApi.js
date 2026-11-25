@@ -166,7 +166,8 @@ export const importUsersExcelApi = async (file) => {
   const response = await axiosInstance.post('/accounts/users/import-excel/', formData, {
     headers: {
       'Content-Type': 'multipart/form-data'
-    }
+    },
+    timeout: 120000,
   });
   return response.data;
 };
@@ -199,9 +200,11 @@ export const resetStudentPasswordApi = async (id) => {
   return response.data;
 };
 
-export const syncAllStudentAccountsApi = async (resetPasswords = true) => {
-  const response = await axiosInstance.post('/accounts/students/sync-accounts/', {
-    reset_passwords: resetPasswords,
+export const syncAllStudentAccountsApi = async (resetPasswords = true, classroomId = null) => {
+  const payload = { reset_passwords: resetPasswords };
+  if (classroomId) payload.classroom_id = classroomId;
+  const response = await axiosInstance.post('/accounts/students/sync-accounts/', payload, {
+    timeout: 120000, // 2 menit agar operasi sinkronisasi massal ratusan akun tidak terkena timeout 15 detik
   });
   return response.data;
 };
@@ -230,7 +233,8 @@ export const importStudentsExcelApi = async (file) => {
   const response = await axiosInstance.post('/accounts/students/import-excel/', formData, {
     headers: {
       'Content-Type': 'multipart/form-data'
-    }
+    },
+    timeout: 120000,
   });
   return response.data;
 };
@@ -287,7 +291,8 @@ export const importTeachersExcelApi = async (file) => {
   const response = await axiosInstance.post('/accounts/teachers/import-excel/', formData, {
     headers: {
       'Content-Type': 'multipart/form-data'
-    }
+    },
+    timeout: 120000,
   });
   return response.data;
 };
