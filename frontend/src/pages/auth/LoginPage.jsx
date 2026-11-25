@@ -39,7 +39,7 @@ export default function LoginPage() {
     const cleanPassword = String(password || '').trim().replace(/[\u200B-\u200D\uFEFF]/g, '');
 
     if (!cleanUsername || !cleanPassword) {
-      setErrorMessage('Silakan masukkan NIP/NISN dan kata sandi Anda.');
+      setErrorMessage('Silakan masukkan NIY/NISN dan kata sandi Anda.');
       return;
     }
 

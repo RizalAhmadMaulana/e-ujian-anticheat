@@ -109,7 +109,7 @@ export default function ProfileSettings() {
     }
 
     if (!formData.username.trim()) {
-      setErrorMessage('Username / NIP tidak boleh kosong!');
+      setErrorMessage('Username / NIY tidak boleh kosong!');
       return;
     }
 

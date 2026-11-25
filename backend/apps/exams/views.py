@@ -219,7 +219,7 @@ class VerifyEntryPasswordView(APIView):
 
         if not is_valid:
             return Response(
-                {"success": False, "message": "Token Masuk salah atau sudah kedaluwarsa! Token diperbarui otomatis setiap 10 menit. Silakan minta token terbaru kepada pengawas."}, 
+                {"success": False, "message": "Token Masuk salah atau sudah kedaluwarsa! Token diperbarui otomatis setiap 5 menit. Silakan minta token terbaru kepada pengawas."}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
 

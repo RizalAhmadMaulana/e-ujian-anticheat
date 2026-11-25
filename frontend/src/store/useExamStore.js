@@ -528,7 +528,7 @@ export const useExamStore = create((set, get) => ({
     }
     return { 
       success: false, 
-      message: 'Token Masuk salah atau sudah kedaluwarsa! Token diperbarui otomatis setiap 10 menit. Silakan minta token terbaru kepada pengawas.' 
+      message: 'Token Masuk salah atau sudah kedaluwarsa! Token diperbarui otomatis setiap 5 menit. Silakan minta token terbaru kepada pengawas.' 
     };
   },
 

@@ -94,7 +94,7 @@ class UnlockStudentAPIView(APIView):
     def post(self, request, attempt_id):
         attempt = get_object_or_404(StudentAttempt.objects.select_related('student', 'session'), id=attempt_id)
 
-        # Jika request menyertakan PIN, validasi terhadap supervisor_pin sesi (dinamis 10 menit & fallback)
+        # Jika request menyertakan PIN, validasi terhadap supervisor_pin sesi (dinamis 5 menit & fallback)
         input_pin = request.data.get('supervisor_pin')
         if input_pin:
             session_id = attempt.session.id if attempt.session else None
@@ -117,7 +117,7 @@ class UnlockStudentAPIView(APIView):
             if not is_valid:
                 return Response({
                     "success": False,
-                    "error": "PIN Pengawas salah atau sudah kedaluwarsa! PIN diperbarui otomatis setiap 10 menit. Silakan periksa PIN terbaru di menu Jadwal & Sesi Ujian."
+                    "error": "PIN Pengawas salah atau sudah kedaluwarsa! PIN diperbarui otomatis setiap 5 menit. Silakan periksa PIN terbaru di menu Jadwal & Sesi Ujian."
                 }, status=status.HTTP_400_BAD_REQUEST)
 
         attempt.status = StudentAttempt.AttemptStatus.WORKING

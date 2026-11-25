@@ -377,7 +377,7 @@ class ExamSessionSerializer(serializers.ModelSerializer):
         data['classroom_ids'] = [c.id for c in active_classrooms]
         data['classroomIds'] = [c.id for c in active_classrooms]
 
-        # Regenerasi Otomatis Token Masuk & PIN Pengawas setiap 10 menit
+        # Regenerasi Otomatis Token Masuk & PIN Pengawas setiap 5 menit
         tokens = get_session_tokens(instance.id)
         data['entry_password'] = tokens['entry_token']
         data['entryPassword'] = tokens['entry_token']

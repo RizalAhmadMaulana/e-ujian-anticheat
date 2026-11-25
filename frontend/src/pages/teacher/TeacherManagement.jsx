@@ -138,7 +138,7 @@ export default function TeacherManagement() {
       return;
     }
     if (!formData.nip.trim()) {
-      setModalError('NIP guru wajib diisi!');
+      setModalError('NIY guru wajib diisi!');
       return;
     }
 

@@ -1,15 +1,15 @@
 /**
- * Dynamic 10-Minute Token & PIN Rotation System for E-Ujian Pro
+ * Dynamic 5-Minute Token & PIN Rotation System for E-Ujian Pro
  * 
- * Sistem deterministik berbasis time-window 600 detik (10 menit) yang menghasilkan
+ * Sistem deterministik berbasis time-window 300 detik (5 menit) yang menghasilkan
  * Token Masuk Siswa ('MSK-XXXX') dan PIN Pengawas Ruangan ('PIN-YYYY') yang sinkron
  * secara presisi antara Frontend (React) dan Backend (Django).
  */
 
-export const ROTATION_INTERVAL_SECONDS = 600; // 10 menit
+export const ROTATION_INTERVAL_SECONDS = 300; // 5 menit
 
 /**
- * Mengembalikan indeks slot 10 menit saat ini berdasarkan UNIX epoch time.
+ * Mengembalikan indeks slot 5 menit saat ini berdasarkan UNIX epoch time.
  */
 export function getCurrentSlot(timestamp = null) {
   const ts = timestamp !== null ? timestamp : Date.now() / 1000;
@@ -48,7 +48,7 @@ function _hashSeed(seedStr) {
 /**
  * Menghasilkan token dinamis deterministik untuk sesi ujian pada slot waktu tertentu.
  * @param {string} sessionId ID Sesi Ujian (UUID atau string)
- * @param {number} slot Indeks slot 10 menit
+ * @param {number} slot Indeks slot 5 menit
  * @param {'ENTRY' | 'PIN'} tokenType Tipe token yang digenerate
  */
 export function generateDynamicToken(sessionId, slot, tokenType = 'ENTRY') {
@@ -71,7 +71,7 @@ export function generateDynamicToken(sessionId, slot, tokenType = 'ENTRY') {
 }
 
 /**
- * Mengambil data lengkap token aktif 10 menit untuk sebuah sesi ujian.
+ * Mengambil data lengkap token aktif 5 menit untuk sebuah sesi ujian.
  */
 export function getSessionTokens(sessionId, timestamp = null) {
   const slot = getCurrentSlot(timestamp);

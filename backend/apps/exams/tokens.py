@@ -1,16 +1,16 @@
 """
-Dynamic 10-Minute Token & PIN Rotation System for E-Ujian Pro
-Algoritma deterministik berbasis Time-Window (TOTP-style 600 detik / 10 menit)
+Dynamic 5-Minute Token & PIN Rotation System for E-Ujian Pro
+Algoritma deterministik berbasis Time-Window (TOTP-style 300 detik / 5 menit)
 Menghasilkan Token Masuk ('MSK-XXXX') dan PIN Pengawas ('PIN-YYYY') yang sinkron
 antara Server Backend (Django) dan Client Frontend (React/Vite).
 """
 import time
 
-ROTATION_INTERVAL_SECONDS = 600  # 10 menit
+ROTATION_INTERVAL_SECONDS = 300  # 5 menit
 
 
 def get_current_slot(timestamp=None) -> int:
-    """Mengembalikan indeks slot interval 10 menit saat ini."""
+    """Mengembalikan indeks slot interval 5 menit saat ini."""
     if timestamp is None:
         timestamp = time.time()
     return int(timestamp // ROTATION_INTERVAL_SECONDS)
@@ -68,7 +68,7 @@ def generate_dynamic_token(session_id, slot: int, token_type: str = 'ENTRY') -> 
 
 def get_session_tokens(session_id, timestamp=None) -> dict:
     """
-    Mengambil data lengkap token aktif 10 menit untuk sebuah sesi ujian.
+    Mengambil data lengkap token aktif 5 menit untuk sebuah sesi ujian.
     """
     slot = get_current_slot(timestamp)
     expires_in = get_seconds_until_next_rotation(timestamp)
@@ -92,8 +92,8 @@ def get_session_tokens(session_id, timestamp=None) -> dict:
 def is_valid_entry_token(session_id, input_token: str, base_token: str = None, timestamp=None) -> bool:
     """
     Memvalidasi Token Masuk yang dimasukkan siswa:
-    1. Mencocokkan dengan token slot 10 menit saat ini.
-    2. Mencocokkan dengan token slot 10 menit sebelumnya (Grace Period jika siswa baru menerima token tepat saat pergantian slot).
+    1. Mencocokkan dengan token slot 5 menit saat ini.
+    2. Mencocokkan dengan token slot 5 menit sebelumnya (Grace Period jika siswa baru menerima token tepat saat pergantian slot).
     3. Mencocokkan dengan base_token statis di database (opsional/cadangan pengawas).
     4. Mendukung input dengan prefix 'MSK-' maupun tanpa prefix.
     """
@@ -130,7 +130,7 @@ def is_valid_entry_token(session_id, input_token: str, base_token: str = None, t
 def is_valid_supervisor_pin(session_id, input_pin: str, base_pin: str = None, timestamp=None) -> bool:
     """
     Memvalidasi PIN Pengawas yang dimasukkan untuk membuka kunci layar siswa:
-    1. Mencocokkan dengan PIN slot 10 menit saat ini, sebelumnya, dan berikutnya.
+    1. Mencocokkan dengan PIN slot 5 menit saat ini, sebelumnya, dan berikutnya.
     2. Mencocokkan dengan base_pin pengawas di database.
     3. Mencocokkan dengan master PIN universal pengawas sekolah.
     """

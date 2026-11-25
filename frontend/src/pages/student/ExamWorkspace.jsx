@@ -647,7 +647,7 @@ export default function ExamWorkspace() {
       candidatePins.add(noPre);
     };
 
-    // 0. Dynamic 10-Minute PIN (Slot Saat Ini, Slot Sebelumnya, dan Toleransi Drift +1 Slot)
+    // 0. Dynamic 5-Minute PIN (Slot Saat Ini, Slot Sebelumnya, dan Toleransi Drift +1 Slot)
     const targetSessionId = activeAttempt.sessionId;
     if (targetSessionId) {
       const dyn = getSessionTokens(targetSessionId);
@@ -711,7 +711,7 @@ export default function ExamWorkspace() {
         }
       }
     } else {
-      setUnlockError('PIN Pengawas salah atau sudah kedaluwarsa! PIN diperbarui otomatis setiap 10 menit. Silakan periksa PIN terbaru di menu Jadwal & Sesi Ujian.');
+      setUnlockError('PIN Pengawas salah atau sudah kedaluwarsa! PIN diperbarui otomatis setiap 5 menit. Silakan periksa PIN terbaru di menu Jadwal & Sesi Ujian.');
     }
   };
 

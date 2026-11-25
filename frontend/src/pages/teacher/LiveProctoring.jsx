@@ -60,7 +60,7 @@ export default function LiveProctoring() {
   const [isUnlockingAll, setIsUnlockingAll] = useState(false);
   const [unlockAllSuccessToast, setUnlockAllSuccessToast] = useState('');
 
-  // Live Timer State untuk Sinkronisasi Rotasi Token 10 Menit
+  // Live Timer State untuk Sinkronisasi Rotasi Token 5 Menit
   const [tickTime, setTickTime] = useState(Date.now());
   const [copiedToken, setCopiedToken] = useState(null);
 
@@ -513,7 +513,7 @@ export default function LiveProctoring() {
           </div>
         </div>
 
-        {/* DUO TOKEN AKTIF PENGAWAS (ROTASI 10 MENIT) */}
+        {/* DUO TOKEN AKTIF PENGAWAS (ROTASI 5 MENIT) */}
         {(() => {
           const selectedSession = availableSessions.find(s => s.id === selectedSessionId) || availableSessions[0];
           if (!selectedSession) return null;
@@ -531,7 +531,7 @@ export default function LiveProctoring() {
                 </span>
                 <span className="text-zinc-400 hidden md:inline">|</span>
                 <span className="text-zinc-300 font-medium text-[11px] hidden md:inline">
-                  Token berganti otomatis tiap 10 menit
+                  Token berganti otomatis tiap 5 menit
                 </span>
               </div>
 

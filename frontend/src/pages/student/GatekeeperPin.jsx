@@ -243,7 +243,7 @@ export default function GatekeeperPin() {
 
       if (!verified) {
         setIsChecking(false);
-        setErrorMsg((prev) => prev || `Token Masuk tidak valid atau sudah kedaluwarsa! Token ujian diperbarui secara otomatis setiap 10 menit. Silakan minta token terbaru kepada pengawas.`);
+        setErrorMsg((prev) => prev || `Token Masuk tidak valid atau sudah kedaluwarsa! Token ujian diperbarui secara otomatis setiap 5 menit. Silakan minta token terbaru kepada pengawas.`);
         return;
       }
 

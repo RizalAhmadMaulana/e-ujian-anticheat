@@ -52,7 +52,7 @@ export default function ExamSessionSetup() {
   const [shuffleQuestions, setShuffleQuestions] = useState(false);
   const [shuffleOptions, setShuffleOptions] = useState(false);
 
-  // Live Timer State untuk Sinkronisasi Rotasi Token 10 Menit
+  // Live Timer State untuk Sinkronisasi Rotasi Token 5 Menit
   const [tickTime, setTickTime] = useState(Date.now());
 
   useEffect(() => {
@@ -613,13 +613,13 @@ export default function ExamSessionSetup() {
                 </div>
               </div>
 
-              {/* Baris 3: Status Regenerasi 10 Menit & DUO TOKEN TILES */}
+              {/* Baris 3: Status Regenerasi 5 Menit & DUO TOKEN TILES */}
               <div className="space-y-2.5 pt-1">
-                {/* Banner Status Regenerasi 10 Menit */}
+                {/* Banner Status Regenerasi 5 Menit */}
                 <div className="flex items-center justify-between text-xs px-3.5 py-2 rounded-xl bg-slate-50 border-2 border-slate-200 text-slate-700 shadow-2xs">
                   <span className="flex items-center gap-2 font-medium">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                    <span className="text-slate-900 font-bold">Regenerasi Otomatis 10 Menit Aktif</span>
+                    <span className="text-slate-900 font-bold">Regenerasi Otomatis 5 Menit Aktif</span>
                     <span className="hidden md:inline text-slate-500">• Token & PIN otomatis berganti demi keamanan ujian</span>
                   </span>
                   <span className="font-mono text-slate-600 flex items-center gap-1.5 shrink-0">
@@ -648,7 +648,7 @@ export default function ExamSessionSetup() {
                         <KeyRound className="w-3.5 h-3.5 text-slate-600 shrink-0" />
                         Token Masuk Siswa
                       </span>
-                      <span className="font-mono text-[11px] text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2 py-0.5 rounded-md flex items-center gap-1 font-bold shrink-0 shadow-2xs" title="Token berganti setiap 10 menit">
+                      <span className="font-mono text-[11px] text-emerald-800 bg-emerald-100/90 border border-emerald-300 px-2 py-0.5 rounded-md flex items-center gap-1 font-bold shrink-0 shadow-2xs" title="Token berganti setiap 5 menit">
                         <RotateCcw className="w-3 h-3 animate-spin" style={{ animationDuration: '6s' }} />
                         <span>{countdownStr}</span>
                       </span>
@@ -663,7 +663,7 @@ export default function ExamSessionSetup() {
                         </span>
                       ) : (
                         <span className="text-slate-500 group-hover:text-slate-800 flex items-center justify-center gap-1">
-                          <Copy className="w-3 h-3" /> Salin Token • Berganti tiap 10 mnt
+                          <Copy className="w-3 h-3" /> Salin Token • Berganti tiap 5 mnt
                         </span>
                       )}
                     </div>
@@ -685,7 +685,7 @@ export default function ExamSessionSetup() {
                         <ShieldCheck className="w-3.5 h-3.5 text-amber-700 shrink-0" />
                         PIN Buka Kunci Pengawas
                       </span>
-                      <span className="font-mono text-[11px] text-amber-900 bg-amber-200/90 border border-amber-300 px-2 py-0.5 rounded-md flex items-center gap-1 font-bold shrink-0 shadow-2xs" title="PIN berganti setiap 10 menit">
+                      <span className="font-mono text-[11px] text-amber-900 bg-amber-200/90 border border-amber-300 px-2 py-0.5 rounded-md flex items-center gap-1 font-bold shrink-0 shadow-2xs" title="PIN berganti setiap 5 menit">
                         <RotateCcw className="w-3 h-3 animate-spin" style={{ animationDuration: '6s' }} />
                         <span>{countdownStr}</span>
                       </span>
@@ -700,7 +700,7 @@ export default function ExamSessionSetup() {
                         </span>
                       ) : (
                         <span className="text-amber-800 group-hover:text-amber-950 flex items-center justify-center gap-1">
-                          <Copy className="w-3 h-3" /> Salin PIN • Berganti tiap 10 mnt
+                          <Copy className="w-3 h-3" /> Salin PIN • Berganti tiap 5 mnt
                         </span>
                       )}
                     </div>
@@ -1017,14 +1017,14 @@ export default function ExamSessionSetup() {
               <span className="text-[10px] text-zinc-400 block">Dipegang guru untuk membuka layar siswa yang terkunci</span>
             </div>
 
-            {/* Kotak Informasi Regenerasi Otomatis 10 Menit */}
+            {/* Kotak Informasi Regenerasi Otomatis 5 Menit */}
             <div className="p-3 rounded-lg bg-emerald-50/70 border border-emerald-200/80 col-span-1 sm:col-span-2 text-[11px] text-emerald-900 space-y-1">
               <div className="font-semibold flex items-center gap-1.5 text-emerald-950">
                 <RotateCcw className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                <span>Fitur Keamanan Aktif: Regenerasi Token Otomatis Setiap 10 Menit</span>
+                <span>Fitur Keamanan Aktif: Regenerasi Token Otomatis Setiap 5 Menit</span>
               </div>
               <p className="text-emerald-700 leading-relaxed text-[10.5px]">
-                Sistem E-Ujian Pro secara otomatis me-regenerate Token Masuk Siswa dan PIN Pengawas menjadi kode baru setiap 10 menit saat asesmen berjalan. Siswa tidak dapat menggunakan token lama berulang kali dan harus meminta token terbaru kepada pengawas ruangan.
+                Sistem E-Ujian Pro secara otomatis me-regenerate Token Masuk Siswa dan PIN Pengawas menjadi kode baru setiap 5 menit saat asesmen berjalan. Siswa tidak dapat menggunakan token lama berulang kali dan harus meminta token terbaru kepada pengawas ruangan.
               </p>
             </div>
           </div>

@@ -39,7 +39,7 @@ export default function DashboardTeacher() {
     fetchSessions?.();
   }, [fetchPackages, fetchSessions]);
 
-  // Live Timer State untuk Sinkronisasi Rotasi Token 10 Menit
+  // Live Timer State untuk Sinkronisasi Rotasi Token 5 Menit
   const [tickTime, setTickTime] = useState(Date.now());
 
   useEffect(() => {
